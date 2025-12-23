@@ -349,6 +349,12 @@ const NyvarraLanding: React.FC = () => {
               >
                 Black Magic
               </a>
+              <Link
+                href="/changelog"
+                className="transition-colors hover:text-white"
+              >
+                Changelog
+              </Link>
             </div>
 
             <Link
@@ -380,7 +386,7 @@ const NyvarraLanding: React.FC = () => {
 
           <div className="flex flex-col items-center animate-fade-in-up">
             <span className="mb-8 border-b border-amber-900/30 pb-4 font-mono text-[10px] font-bold uppercase tracking-[0.4em] text-amber-500/80">
-              v1.0 - Coded 060605 - Updated 060605
+              Built out of Yearning.
             </span>
 
             <h1 className="mb-8 bg-gradient-to-b from-white via-white to-gray-500 bg-clip-text text-center font-serif text-5xl font-light tracking-tight text-transparent md:text-7xl lg:text-8xl">

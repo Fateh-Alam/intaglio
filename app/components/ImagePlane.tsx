@@ -51,9 +51,83 @@ const fragmentShader = `
   uniform float uAnamorphicStreaks;
   uniform float uGodLightStrength;
   uniform vec2 uGodLightPos;
+  uniform vec3 uGodLightColor;
+  uniform float uGodLightSpecular;
+  uniform float uGodLightRim;
+  uniform float uGodLightFalloff;
   uniform sampler2D uLutTexture;
   uniform float uLutStrength;
   uniform float uLutSize;
+  
+  uniform sampler2D uToneCurve;
+  uniform float uToneCurveEnabled;
+
+  // Masking uniforms
+  uniform float uRadialMaskEnabled;
+  uniform vec2 uRadialMaskCenter;
+  uniform float uRadialMaskRadius;
+  uniform float uRadialMaskFeather;
+  uniform float uRadialMaskInvert;
+  uniform float uRadialMaskExposure;
+  uniform float uRadialMaskContrast;
+  uniform float uRadialMaskSaturation;
+
+  uniform float uLinearMaskEnabled;
+  uniform float uLinearMaskAngle;
+  uniform float uLinearMaskPosition;
+  uniform float uLinearMaskFeather;
+  uniform float uLinearMaskExposure;
+  uniform float uLinearMaskContrast;
+
+  uniform float uLuminosityMaskEnabled;
+  uniform float uLuminosityMaskTarget;
+  uniform float uLuminosityMaskRange;
+  uniform float uLuminosityMaskExposure;
+  uniform float uLuminosityMaskSaturation;
+
+  // Brush Mask uniforms
+  uniform sampler2D uBrushMask;
+  uniform float uBrushMaskEnabled;
+  uniform float uBrushMaskExposure;
+  uniform float uBrushMaskContrast;
+  uniform float uBrushMaskSaturation;
+  uniform float uBrushMaskTemperature;
+  uniform float uBrushMaskClarity;
+
+  // HSL Panel - 8 color channels (x=hue, y=sat, z=lum)
+  uniform vec3 uHSLRed;
+  uniform vec3 uHSLOrange;
+  uniform vec3 uHSLYellow;
+  uniform vec3 uHSLGreen;
+  uniform vec3 uHSLAqua;
+  uniform vec3 uHSLBlue;
+  uniform vec3 uHSLPurple;
+  uniform vec3 uHSLMagenta;
+
+  // Color Grading (vec4: rgb=tint, a=luminance corection)
+  uniform vec4 uColorGradingShadows;
+  uniform vec4 uColorGradingMidtones;
+  uniform vec4 uColorGradingHighlights;
+  uniform float uColorGradingBalance;
+  uniform float uColorGradingGlobalExposure; // Global Offset
+  uniform float uColorGradingGlobalContrast; // Global Gamma?
+
+  // A/B Comparison
+  uniform sampler2D uCompareTexture;
+  uniform float uCompareEnabled;
+  uniform float uCompareSplit;
+
+  // Film Emulation
+  uniform int uFilmEmulation;
+  uniform float uFilmEmulationStrength;
+
+  // Lens Corrections
+  uniform float uLensDistortion;      // Barrel/Pincushion distortion
+  uniform float uKeystoneH;           // Horizontal perspective correction
+  uniform float uKeystoneV;           // Vertical perspective correction
+  uniform float uTiltShiftAmount;     // Tilt-shift blur amount
+  uniform float uTiltShiftPosition;   // Position of focus band (0-1)
+  uniform float uTiltShiftAngle;      // Angle of focus band
 
   varying vec2 vUv;
 
@@ -104,9 +178,178 @@ const fragmentShader = `
     return mask;
   }
 
+  // HSL Color Channel Weight - how much a hue belongs to a color channel
+  float getColorChannelWeight(float hue, float targetHue, float range) {
+    float diff = abs(hue - targetHue);
+    diff = min(diff, 1.0 - diff); // Wrap around for hue
+    return 1.0 - smoothstep(0.0, range, diff);
+  }
+
+  // Apply HSL adjustments per color channel
+  vec3 applyHSLChannels(vec3 color) {
+    vec3 hsl = rgb2hsl(color);
+    float range = 0.12; // Color channel width
+    
+    // Color channel target hues (0-1 range)
+    // Red=0.0, Orange=0.083, Yellow=0.167, Green=0.333, Aqua=0.5, Blue=0.667, Purple=0.75, Magenta=0.917
+    
+    float weightRed = getColorChannelWeight(hsl.x, 0.0, range);
+    float weightOrange = getColorChannelWeight(hsl.x, 0.083, range);
+    float weightYellow = getColorChannelWeight(hsl.x, 0.167, range);
+    float weightGreen = getColorChannelWeight(hsl.x, 0.333, range);
+    float weightAqua = getColorChannelWeight(hsl.x, 0.5, range);
+    float weightBlue = getColorChannelWeight(hsl.x, 0.667, range);
+    float weightPurple = getColorChannelWeight(hsl.x, 0.75, range);
+    float weightMagenta = getColorChannelWeight(hsl.x, 0.917, range);
+    
+    // Apply hue shifts
+    hsl.x += uHSLRed.x * weightRed * 0.1;
+    hsl.x += uHSLOrange.x * weightOrange * 0.1;
+    hsl.x += uHSLYellow.x * weightYellow * 0.1;
+    hsl.x += uHSLGreen.x * weightGreen * 0.1;
+    hsl.x += uHSLAqua.x * weightAqua * 0.1;
+    hsl.x += uHSLBlue.x * weightBlue * 0.1;
+    hsl.x += uHSLPurple.x * weightPurple * 0.1;
+    hsl.x += uHSLMagenta.x * weightMagenta * 0.1;
+    
+    // Apply saturation adjustments
+    float satMod = 0.0;
+    satMod += uHSLRed.y * weightRed;
+    satMod += uHSLOrange.y * weightOrange;
+    satMod += uHSLYellow.y * weightYellow;
+    satMod += uHSLGreen.y * weightGreen;
+    satMod += uHSLAqua.y * weightAqua;
+    satMod += uHSLBlue.y * weightBlue;
+    satMod += uHSLPurple.y * weightPurple;
+    satMod += uHSLMagenta.y * weightMagenta;
+    hsl.y = clamp(hsl.y + satMod * 0.5, 0.0, 1.0);
+    
+    // Apply luminance adjustments
+    float lumMod = 0.0;
+    lumMod += uHSLRed.z * weightRed;
+    lumMod += uHSLOrange.z * weightOrange;
+    lumMod += uHSLYellow.z * weightYellow;
+    lumMod += uHSLGreen.z * weightGreen;
+    lumMod += uHSLAqua.z * weightAqua;
+    lumMod += uHSLBlue.z * weightBlue;
+    lumMod += uHSLPurple.z * weightPurple;
+    lumMod += uHSLMagenta.z * weightMagenta;
+    hsl.z = clamp(hsl.z + lumMod * 0.3, 0.0, 1.0);
+    
+    // Wrap hue
+    hsl.x = fract(hsl.x);
+    
+    return hsl2rgb(hsl);
+  }
+
+  // Film Emulation - authentic film stock simulation
+  vec3 applyFilmEmulation(vec3 color, int filmType, float strength) {
+    if (filmType == 0) return color; // None
+    
+    vec3 filmColor = color;
+    
+    if (filmType == 1) { // Kodak Portra 400 - warm skin tones, pastel highlights
+      // Lift shadows, soften contrast
+      filmColor = pow(filmColor, vec3(0.95));
+      // Warm highlight bias
+      filmColor.r += 0.02 * filmColor.r;
+      filmColor.g += 0.01 * filmColor.g;
+      // Reduce saturation in shadows
+      float luma = getLuma(filmColor);
+      float shadowMask = 1.0 - smoothstep(0.0, 0.4, luma);
+      filmColor = mix(filmColor, mix(vec3(luma), filmColor, 0.7), shadowMask * 0.3);
+      // Pastel highlight rolloff
+      float highlightMask = smoothstep(0.6, 1.0, luma);
+      filmColor = mix(filmColor, filmColor * 0.95 + 0.05, highlightMask);
+    }
+    else if (filmType == 2) { // Kodak Ektar 100 - vivid, punchy
+      // Increase saturation
+      float luma = getLuma(filmColor);
+      filmColor = mix(vec3(luma), filmColor, 1.15);
+      // S-curve contrast
+      filmColor = filmColor * filmColor * (3.0 - 2.0 * filmColor);
+      // Warm cast
+      filmColor.r *= 1.03;
+      filmColor.b *= 0.97;
+    }
+    else if (filmType == 3) { // Fuji Velvia 50 - hyper-saturated, deep shadows
+      // Crush blacks
+      filmColor = max(filmColor - 0.03, 0.0) * 1.03;
+      // Boost saturation heavily
+      float luma = getLuma(filmColor);
+      filmColor = mix(vec3(luma), filmColor, 1.3);
+      // Push greens and blues
+      filmColor.g *= 1.02;
+      filmColor.b *= 1.04;
+    }
+    else if (filmType == 4) { // Fuji Pro 400H - soft pastels, lifted shadows
+      // Lift shadows significantly
+      filmColor = mix(filmColor, sqrt(filmColor), 0.15);
+      // Reduce saturation overall
+      float luma = getLuma(filmColor);
+      filmColor = mix(vec3(luma), filmColor, 0.85);
+      // Cool highlight bias
+      filmColor.b += 0.015 * smoothstep(0.5, 1.0, luma);
+    }
+    else if (filmType == 5) { // Cinestill 800T - tungsten, halation glow
+      // Tungsten white balance (cool shadows, warm highlights)
+      float luma = getLuma(filmColor);
+      filmColor.r += 0.03 * smoothstep(0.5, 1.0, luma);
+      filmColor.b += 0.04 * (1.0 - luma);
+      // Teal shadows
+      float shadowMask = 1.0 - smoothstep(0.0, 0.3, luma);
+      filmColor.r -= 0.02 * shadowMask;
+      filmColor.g += 0.01 * shadowMask;
+      filmColor.b += 0.03 * shadowMask;
+      // Halation effect on highlights
+      float highlightMask = smoothstep(0.7, 1.0, luma);
+      filmColor.r += 0.05 * highlightMask;
+    }
+    else if (filmType == 6) { // Kodak Vision3 500T - cinema tungsten
+      // Orange-teal split
+      float luma = getLuma(filmColor);
+      filmColor.r += 0.025 * smoothstep(0.4, 0.9, luma);
+      filmColor.b += 0.035 * (1.0 - smoothstep(0.3, 0.7, luma));
+      // Deep shadows
+      filmColor = max(filmColor - 0.02, 0.0) * 1.02;
+      // Cinema contrast curve
+      filmColor = pow(filmColor, vec3(0.98, 1.0, 1.02));
+    }
+    
+    return mix(color, clamp(filmColor, 0.0, 1.0), strength);
+  }
+
   void main() {
     vec2 uv = vUv;
     
+    // Lens Distortion (Barrel/Pincushion)
+    if (uLensDistortion != 0.0) {
+        vec2 d = uv - 0.5;
+        float r2 = dot(d, d);
+        float f = 1.0 + r2 * uLensDistortion;
+        // Zoom slightly to hide edges when distorting
+        float zoomComp = 1.0 / (1.0 + uLensDistortion * 0.2); 
+        uv = d * f * zoomComp + 0.5;
+    }
+
+    // Perspective Correction (Keystone)
+    if (uKeystoneH != 0.0 || uKeystoneV != 0.0) {
+        vec2 d = uv - 0.5;
+        // Horizontal keystone (trapezoid shape)
+        if (uKeystoneH != 0.0) {
+            float amount = uKeystoneH * d.y * 2.0; 
+            // Simple expansion/contraction based on Y
+            d.x *= (1.0 + amount);
+        }
+        // Vertical keystone
+        if (uKeystoneV != 0.0) {
+            float amount = uKeystoneV * d.x * 2.0;
+            d.y *= (1.0 + amount);
+        }
+        uv = d + 0.5;
+    }
+    
+    // Anamorphic Distortion (existing)
     if (uAnamorphicDistortion > 0.0) {
         vec2 d = uv - 0.5;
         float r2 = dot(d, d);
@@ -120,6 +363,37 @@ const fragmentShader = `
     vec4 originalPixel = vec4(r, g, b, 1.0);
     
     vec3 color = originalPixel.rgb;
+
+    // Tilt-Shift Blur
+    if (uTiltShiftAmount > 0.0) {
+        // Calculate distance from focus band
+        vec2 center = vec2(0.5);
+        vec2 d = uv - center;
+        // Rotate coords by angle
+        float s = sin(uTiltShiftAngle);
+        float c = cos(uTiltShiftAngle);
+        vec2 rotated = vec2(d.x * c - d.y * s, d.x * s + d.y * c);
+        
+        // Vertical distance from line defines blur amount
+        float blurAmt = abs(rotated.y + (uTiltShiftPosition - 0.5));
+        blurAmt = smoothstep(0.05, 0.4, blurAmt); // Focus area width
+        
+        if (blurAmt > 0.01) {
+            vec3 blur = vec3(0.0);
+            float total = 0.0;
+            float radius = uTiltShiftAmount * blurAmt * 0.01;
+            
+            // Simple box blur
+            for (float x = -2.0; x <= 2.0; x += 1.0) {
+                for (float y = -2.0; y <= 2.0; y += 1.0) {
+                    vec2 offset = vec2(x, y) * radius;
+                    blur += texture2D(uTexture, uv + offset).rgb;
+                    total += 1.0;
+                }
+            }
+            color = mix(color, blur / total, blurAmt);
+        }
+    }
     
     if (uAnamorphicStreaks > 0.0) {
         vec3 streak = vec3(0.0);
@@ -151,6 +425,50 @@ const fragmentShader = `
     color += uBrightness;
     color = (color - 0.5) * (uContrast + 1.0) + 0.5;
     
+    // Tone Curve Application
+    if (uToneCurveEnabled > 0.5) {
+        vec3 c = clamp(color, 0.0, 1.0);
+        // Apply RGB Curves (stored in R, G, B channels)
+        float r = texture2D(uToneCurve, vec2(c.r, 0.5)).r;
+        float g = texture2D(uToneCurve, vec2(c.g, 0.5)).g;
+        float b = texture2D(uToneCurve, vec2(c.b, 0.5)).b;
+        
+        // Apply Master Curve (stored in Alpha channel)
+        r = texture2D(uToneCurve, vec2(r, 0.5)).a;
+        g = texture2D(uToneCurve, vec2(g, 0.5)).a;
+        b = texture2D(uToneCurve, vec2(b, 0.5)).a;
+        
+        color = vec3(r, g, b);
+    }
+
+    // Color Grading (Shadows/Midtones/Highlights)
+    {
+        float luma = getLuma(color);
+        // Balance shifts the midpoint
+        float shadowEdge = 0.33 + uColorGradingBalance * 0.2;
+        float highlightEdge = 0.66 + uColorGradingBalance * 0.2;
+        
+        float shadowFactor = 1.0 - smoothstep(0.0, shadowEdge, luma);
+        float highlightFactor = smoothstep(highlightEdge, 1.0, luma);
+        float midtoneFactor = 1.0 - shadowFactor - highlightFactor;
+        
+        // Apply Tints (Additive)
+        vec3 tint = uColorGradingShadows.rgb * shadowFactor +
+                    uColorGradingMidtones.rgb * midtoneFactor +
+                    uColorGradingHighlights.rgb * highlightFactor;
+        
+        // Soft overlay of tint
+        color += tint * 0.5; // Scale down for subtlety
+        
+        // Apply Luminance (Exposure per range)
+        float lumaAdj = uColorGradingShadows.a * shadowFactor +
+                        uColorGradingMidtones.a * midtoneFactor +
+                        uColorGradingHighlights.a * highlightFactor;
+                        
+        // Simple exposure adjustment
+        color *= (1.0 + lumaAdj * 0.5);
+    }
+
     if (uDehaze > 0.0) {
         vec3 dehazed = pow(color, vec3(1.0 + uDehaze * 0.5));
         dehazed = adjustSaturation(dehazed, 1.0 + uDehaze * 0.2);
@@ -226,7 +544,13 @@ const fragmentShader = `
     float skinFactor = getSkinMask(originalColor);
     color = mix(gradedColor, color, skinFactor * uSkinProtectStrength);
 
-    // God Light (3D Relighting effect)
+    // HSL Panel - per-channel color adjustments
+    color = applyHSLChannels(color);
+    
+    // Film Emulation - authentic film stock simulation
+    color = applyFilmEmulation(color, uFilmEmulation, uFilmEmulationStrength);
+
+    // Advanced God Light (3D Relighting with specular, rim, color)
     if (uGodLightStrength > 0.0) {
         vec2 step = 1.0 / uResolution;
         float t = getLuma(texture2D(uTexture, vUv + vec2(0.0, step.y)).rgb);
@@ -239,9 +563,110 @@ const fragmentShader = `
         vec3 normal = normalize(vec3(dx, dy, 1.0));
         
         vec3 lightDir = normalize(vec3(uGodLightPos - vUv, 0.5));
-        float diffuse = max(dot(normal, lightDir), 0.0);
         
-        color += color * diffuse * uGodLightStrength * 0.5;
+        // Distance falloff
+        float dist = length(uGodLightPos - vUv);
+        float falloff = 1.0 / (1.0 + dist * dist * uGodLightFalloff * 5.0);
+        
+        // Diffuse lighting with color
+        float diffuse = max(dot(normal, lightDir), 0.0);
+        vec3 diffuseLight = uGodLightColor * diffuse * uGodLightStrength * falloff;
+        
+        // Specular highlights
+        vec3 viewDir = vec3(0.0, 0.0, 1.0);
+        vec3 reflectDir = reflect(-lightDir, normal);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+        vec3 specularLight = uGodLightColor * spec * uGodLightSpecular * falloff;
+        
+        // Rim lighting (backlit effect)
+        float rim = 1.0 - max(dot(viewDir, normal), 0.0);
+        rim = pow(rim, 3.0);
+        vec3 rimLight = uGodLightColor * rim * uGodLightRim;
+        
+        color += color * diffuseLight * 0.5;
+        color += specularLight * 0.3;
+        color += rimLight * 0.2;
+    }
+
+    // Radial Gradient Mask
+    if (uRadialMaskEnabled > 0.5) {
+        float dist = length(vUv - uRadialMaskCenter);
+        float mask = smoothstep(uRadialMaskRadius - uRadialMaskFeather, uRadialMaskRadius + uRadialMaskFeather, dist);
+        if (uRadialMaskInvert > 0.5) mask = 1.0 - mask;
+        
+        // Apply adjustments within mask
+        vec3 maskedColor = color;
+        maskedColor *= (1.0 + uRadialMaskExposure * mask);
+        maskedColor = (maskedColor - 0.5) * (1.0 + uRadialMaskContrast * mask) + 0.5;
+        float grey = getLuma(maskedColor);
+        maskedColor = mix(vec3(grey), maskedColor, 1.0 + uRadialMaskSaturation * mask);
+        color = maskedColor;
+    }
+
+    // Linear Gradient Mask
+    if (uLinearMaskEnabled > 0.5) {
+        float angle = uLinearMaskAngle * 3.14159 * 2.0;
+        vec2 dir = vec2(cos(angle), sin(angle));
+        float proj = dot(vUv - 0.5, dir) + 0.5;
+        float mask = smoothstep(uLinearMaskPosition - uLinearMaskFeather, uLinearMaskPosition + uLinearMaskFeather, proj);
+        
+        vec3 maskedColor = color;
+        maskedColor *= (1.0 + uLinearMaskExposure * mask);
+        maskedColor = (maskedColor - 0.5) * (1.0 + uLinearMaskContrast * mask) + 0.5;
+        color = maskedColor;
+    }
+
+    // Luminosity Mask
+    if (uLuminosityMaskEnabled > 0.5) {
+        float luma = getLuma(color);
+        float diff = abs(luma - uLuminosityMaskTarget);
+        float mask = 1.0 - smoothstep(0.0, uLuminosityMaskRange, diff);
+        
+        vec3 maskedColor = color;
+        maskedColor *= (1.0 + uLuminosityMaskExposure * mask);
+        float grey = getLuma(maskedColor);
+        maskedColor = mix(vec3(grey), maskedColor, 1.0 + uLuminosityMaskSaturation * mask);
+        color = maskedColor;
+    }
+
+    // Brush Mask (painted mask from canvas)
+    if (uBrushMaskEnabled > 0.5) {
+        // Sample the brush mask texture - red channel contains mask intensity
+        vec4 brushSample = texture2D(uBrushMask, vUv);
+        float brushMask = brushSample.r; // Mask is stored in red channel
+        
+        if (brushMask > 0.01) {
+            vec3 brushMaskedColor = color;
+            
+            // Exposure adjustment
+            brushMaskedColor *= (1.0 + uBrushMaskExposure * brushMask * 2.0);
+            
+            // Contrast adjustment
+            brushMaskedColor = (brushMaskedColor - 0.5) * (1.0 + uBrushMaskContrast * brushMask) + 0.5;
+            
+            // Saturation adjustment
+            float brushGrey = getLuma(brushMaskedColor);
+            brushMaskedColor = mix(vec3(brushGrey), brushMaskedColor, 1.0 + uBrushMaskSaturation * brushMask * 2.0);
+            
+            // Temperature adjustment (warm/cool shift)
+            brushMaskedColor.r += uBrushMaskTemperature * brushMask * 0.15;
+            brushMaskedColor.b -= uBrushMaskTemperature * brushMask * 0.15;
+            
+            // Clarity (local contrast enhancement)
+            if (uBrushMaskClarity > 0.0) {
+                vec2 clarityStep = 1.0 / uResolution * 3.0;
+                vec3 clarityBlur = vec3(0.0);
+                clarityBlur += texture2D(uTexture, vUv + vec2(clarityStep.x, 0.0)).rgb;
+                clarityBlur += texture2D(uTexture, vUv - vec2(clarityStep.x, 0.0)).rgb;
+                clarityBlur += texture2D(uTexture, vUv + vec2(0.0, clarityStep.y)).rgb;
+                clarityBlur += texture2D(uTexture, vUv - vec2(0.0, clarityStep.y)).rgb;
+                clarityBlur /= 4.0;
+                vec3 clarityDetail = brushMaskedColor - clarityBlur;
+                brushMaskedColor += clarityDetail * uBrushMaskClarity * brushMask * 0.5;
+            }
+            
+            color = brushMaskedColor;
+        }
     }
 
     if (uHueShift != 0.0) {
@@ -296,7 +721,13 @@ const fragmentShader = `
 
     if (uMouseX < 1.0) {
        float wiper = step(vUv.x, uMouseX);
-       vec3 final = mix(originalPixel.rgb, color, wiper);
+       
+       vec3 source = originalPixel.rgb;
+       if (uCompareEnabled > 0.5) {
+           source = texture2D(uCompareTexture, vUv).rgb;
+       }
+       
+       vec3 final = mix(source, color, wiper);
        float line = step(abs(vUv.x - uMouseX), 0.002);
        final = mix(final, vec3(1.0), line);
        gl_FragColor = vec4(final, 1.0);
@@ -309,9 +740,21 @@ const fragmentShader = `
 export default function ImagePlane({
   imageUrl,
   settings,
+  brushMaskData,
+  brushMaskExposure = 0,
+  brushMaskContrast = 0,
+  brushMaskSaturation = 0,
+  brushMaskTemperature = 0,
+  brushMaskClarity = 0,
 }: {
   imageUrl: string;
   settings: any;
+  brushMaskData?: string;
+  brushMaskExposure?: number;
+  brushMaskContrast?: number;
+  brushMaskSaturation?: number;
+  brushMaskTemperature?: number;
+  brushMaskClarity?: number;
 }) {
   const texture = useLoader(THREE.TextureLoader, imageUrl);
   const { size, viewport } = useThree();
@@ -336,8 +779,34 @@ export default function ImagePlane({
 
   // Create a key that changes when settings change to force material remount
   const materialKey = useMemo(() => {
-    return JSON.stringify(settings);
-  }, [settings]);
+    return (
+      JSON.stringify(settings) +
+      (brushMaskData ? brushMaskData.slice(0, 100) : "")
+    );
+  }, [settings, brushMaskData]);
+
+  // Create brush mask texture from data URL
+  const brushMaskTexture = useMemo(() => {
+    if (!brushMaskData) {
+      // Return a 1x1 transparent texture when no brush mask
+      const data = new Uint8Array([0, 0, 0, 0]);
+      const fallbackTexture = new THREE.DataTexture(
+        data,
+        1,
+        1,
+        THREE.RGBAFormat
+      );
+      fallbackTexture.needsUpdate = true;
+      return fallbackTexture;
+    }
+
+    // Create texture from canvas data URL
+    const loader = new THREE.TextureLoader();
+    const tex = loader.load(brushMaskData);
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return tex;
+  }, [brushMaskData]);
 
   useFrame((state) => {
     if (materialRef.current) {
@@ -388,13 +857,238 @@ export default function ImagePlane({
           uGodLightPos: {
             value: new THREE.Vector2(settings.godLightX, settings.godLightY),
           },
+          uGodLightColor: {
+            value: new THREE.Vector3(
+              settings.godLightColorR || 1.0,
+              settings.godLightColorG || 0.95,
+              settings.godLightColorB || 0.9
+            ),
+          },
+          uGodLightSpecular: { value: settings.godLightSpecular || 0 },
+          uGodLightRim: { value: settings.godLightRim || 0 },
+          uGodLightFalloff: { value: settings.godLightFalloff || 1.0 },
           uLutTexture: { value: settings.lutTexture || null },
           uLutStrength: { value: settings.lutStrength || 0 },
           uLutSize: { value: (settings.lutTexture as any)?.lutSize || 0 },
+          uToneCurve: { value: settings.toneCurveTexture || null },
+          uToneCurveEnabled: { value: settings.toneCurveTexture ? 1.0 : 0.0 },
           uTargetHue: { value: settings.targetHue },
           uHueShift: { value: settings.hueShift },
           uRotate: { value: settings.rotate },
           uZoom: { value: settings.zoom },
+          // Radial Mask
+          uRadialMaskEnabled: { value: settings.radialMaskEnabled ? 1.0 : 0.0 },
+          uRadialMaskCenter: {
+            value: new THREE.Vector2(
+              settings.radialMaskX || 0.5,
+              settings.radialMaskY || 0.5
+            ),
+          },
+          uRadialMaskRadius: { value: settings.radialMaskRadius || 0.5 },
+          uRadialMaskFeather: { value: settings.radialMaskFeather || 0.3 },
+          uRadialMaskInvert: { value: settings.radialMaskInvert ? 1.0 : 0.0 },
+          uRadialMaskExposure: { value: settings.radialMaskExposure || 0 },
+          uRadialMaskContrast: { value: settings.radialMaskContrast || 0 },
+          uRadialMaskSaturation: { value: settings.radialMaskSaturation || 0 },
+          // Linear Mask
+          uLinearMaskEnabled: { value: settings.linearMaskEnabled ? 1.0 : 0.0 },
+          uLinearMaskAngle: { value: settings.linearMaskAngle || 0 },
+          uLinearMaskPosition: { value: settings.linearMaskPosition || 0.5 },
+          uLinearMaskFeather: { value: settings.linearMaskFeather || 0.3 },
+          uLinearMaskExposure: { value: settings.linearMaskExposure || 0 },
+          uLinearMaskContrast: { value: settings.linearMaskContrast || 0 },
+          // Luminosity Mask
+          uLuminosityMaskEnabled: {
+            value: settings.luminosityMaskEnabled ? 1.0 : 0.0,
+          },
+          uLuminosityMaskTarget: {
+            value: settings.luminosityMaskTarget || 0.5,
+          },
+          uLuminosityMaskRange: { value: settings.luminosityMaskRange || 0.3 },
+          uLuminosityMaskExposure: {
+            value: settings.luminosityMaskExposure || 0,
+          },
+          uLuminosityMaskSaturation: {
+            value: settings.luminosityMaskSaturation || 0,
+          },
+          // Brush Mask
+          uBrushMask: { value: brushMaskTexture },
+          uBrushMaskEnabled: { value: brushMaskData ? 1.0 : 0.0 },
+          uBrushMaskExposure: { value: brushMaskExposure },
+          uBrushMaskContrast: { value: brushMaskContrast },
+          uBrushMaskSaturation: { value: brushMaskSaturation },
+          uBrushMaskTemperature: { value: brushMaskTemperature },
+          uBrushMaskClarity: { value: brushMaskClarity },
+          // HSL Panel - 8 color channels
+          uHSLRed: {
+            value: new THREE.Vector3(
+              settings.hslRedHue || 0,
+              settings.hslRedSat || 0,
+              settings.hslRedLum || 0
+            ),
+          },
+          uHSLOrange: {
+            value: new THREE.Vector3(
+              settings.hslOrangeHue || 0,
+              settings.hslOrangeSat || 0,
+              settings.hslOrangeLum || 0
+            ),
+          },
+          uHSLYellow: {
+            value: new THREE.Vector3(
+              settings.hslYellowHue || 0,
+              settings.hslYellowSat || 0,
+              settings.hslYellowLum || 0
+            ),
+          },
+          uHSLGreen: {
+            value: new THREE.Vector3(
+              settings.hslGreenHue || 0,
+              settings.hslGreenSat || 0,
+              settings.hslGreenLum || 0
+            ),
+          },
+          uHSLAqua: {
+            value: new THREE.Vector3(
+              settings.hslAquaHue || 0,
+              settings.hslAquaSat || 0,
+              settings.hslAquaLum || 0
+            ),
+          },
+          uHSLBlue: {
+            value: new THREE.Vector3(
+              settings.hslBlueHue || 0,
+              settings.hslBlueSat || 0,
+              settings.hslBlueLum || 0
+            ),
+          },
+          uHSLPurple: {
+            value: new THREE.Vector3(
+              settings.hslPurpleHue || 0,
+              settings.hslPurpleSat || 0,
+              settings.hslPurpleLum || 0
+            ),
+          },
+          uHSLMagenta: {
+            value: new THREE.Vector3(
+              settings.hslMagentaHue || 0,
+              settings.hslMagentaSat || 0,
+              settings.hslMagentaLum || 0
+            ),
+          },
+          // Color Grading
+          uColorGradingShadows: {
+            value: new THREE.Vector4(
+              settings.colorGrading?.shadows?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.shadows.h,
+                    settings.colorGrading.shadows.s,
+                    0.5
+                  ).r
+                : 0,
+              settings.colorGrading?.shadows?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.shadows.h,
+                    settings.colorGrading.shadows.s,
+                    0.5
+                  ).g
+                : 0,
+              settings.colorGrading?.shadows?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.shadows.h,
+                    settings.colorGrading.shadows.s,
+                    0.5
+                  ).b
+                : 0,
+              settings.colorGrading?.shadows?.l || 0
+            ),
+          },
+          uColorGradingMidtones: {
+            value: new THREE.Vector4(
+              settings.colorGrading?.midtones?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.midtones.h,
+                    settings.colorGrading.midtones.s,
+                    0.5
+                  ).r
+                : 0,
+              settings.colorGrading?.midtones?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.midtones.h,
+                    settings.colorGrading.midtones.s,
+                    0.5
+                  ).g
+                : 0,
+              settings.colorGrading?.midtones?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.midtones.h,
+                    settings.colorGrading.midtones.s,
+                    0.5
+                  ).b
+                : 0,
+              settings.colorGrading?.midtones?.l || 0
+            ),
+          },
+          uColorGradingHighlights: {
+            value: new THREE.Vector4(
+              settings.colorGrading?.highlights?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.highlights.h,
+                    settings.colorGrading.highlights.s,
+                    0.5
+                  ).r
+                : 0,
+              settings.colorGrading?.highlights?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.highlights.h,
+                    settings.colorGrading.highlights.s,
+                    0.5
+                  ).g
+                : 0,
+              settings.colorGrading?.highlights?.h !== undefined
+                ? new THREE.Color().setHSL(
+                    settings.colorGrading.highlights.h,
+                    settings.colorGrading.highlights.s,
+                    0.5
+                  ).b
+                : 0,
+              settings.colorGrading?.highlights?.l || 0
+            ),
+          },
+          uColorGradingBalance: { value: settings.colorGrading?.balance || 0 },
+
+          // A/B Comparison
+          uCompareTexture: { value: settings.compareTexture || null },
+          uCompareEnabled: { value: settings.compareEnabled ? 1.0 : 0.0 },
+          uCompareSplit: { value: settings.compareSplit || 0.5 },
+
+          // Film Emulation
+          uFilmEmulation: {
+            value:
+              settings.filmEmulation === "portra400"
+                ? 1
+                : settings.filmEmulation === "ektar100"
+                  ? 2
+                  : settings.filmEmulation === "velvia50"
+                    ? 3
+                    : settings.filmEmulation === "pro400h"
+                      ? 4
+                      : settings.filmEmulation === "cinestill800t"
+                        ? 5
+                        : settings.filmEmulation === "vision3500t"
+                          ? 6
+                          : 0,
+          },
+          uFilmEmulationStrength: {
+            value: settings.filmEmulationStrength || 1.0,
+          },
+          // Lens Corrections
+          uLensDistortion: { value: settings.lensDistortion || 0 },
+          uKeystoneH: { value: settings.keystoneH || 0 },
+          uKeystoneV: { value: settings.keystoneV || 0 },
+          uTiltShiftAmount: { value: settings.tiltShiftAmount || 0 },
+          uTiltShiftPosition: { value: settings.tiltShiftPosition || 0.5 },
+          uTiltShiftAngle: { value: settings.tiltShiftAngle || 0 },
         }}
       />
     </mesh>
