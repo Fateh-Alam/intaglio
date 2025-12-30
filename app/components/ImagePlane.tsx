@@ -33,6 +33,11 @@ const fragmentShader = `
 
   uniform float uContrast;
   uniform float uBrightness;
+  uniform float uHighlights;
+  uniform float uShadows;
+  uniform float uWhites;
+  uniform float uBlacks;
+  uniform float uVibrance;
   uniform float uTealOrange;
   uniform float uTemperature;
   uniform float uTint;
@@ -134,10 +139,6 @@ const fragmentShader = `
   float random(vec2 st) {
     return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
   }
-  
-  float getLuma(vec3 color) {
-    return dot(color, vec3(0.299, 0.587, 0.114));
-  }
 
   vec3 rgb2hsl(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -154,18 +155,171 @@ const fragmentShader = `
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
   }
 
-  vec3 applyWhiteBalance(vec3 color) {
-    vec3 corrected = color;
-    corrected.r *= (1.0 + uTemperature);
-    corrected.b *= (1.0 - uTemperature);
-    corrected.g *= (1.0 + uTint);
-    return corrected;
+  // ============================================
+  // PROFESSIONAL COLOR SCIENCE FUNCTIONS
+  // ============================================
+
+  // sRGB to Linear (decode gamma) - IEC 61966-2-1 standard
+  float sRGBToLinear(float c) {
+    return c <= 0.04045 
+        ? c / 12.92 
+        : pow((c + 0.055) / 1.055, 2.4);
+  }
+  
+  vec3 sRGBToLinear3(vec3 c) {
+    return vec3(sRGBToLinear(c.r), sRGBToLinear(c.g), sRGBToLinear(c.b));
   }
 
-  vec3 adjustSaturation(vec3 color, float saturation) {
-    float grey = getLuma(color);
-    return mix(vec3(grey), color, saturation);
+  // Linear to sRGB (encode gamma) - IEC 61966-2-1 standard
+  float linearToSRGB(float c) {
+    return c <= 0.0031308
+        ? c * 12.92
+        : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
   }
+  
+  vec3 linearToSRGB3(vec3 c) {
+    return vec3(linearToSRGB(c.r), linearToSRGB(c.g), linearToSRGB(c.b));
+  }
+
+  // Rec. 709 Luminance (proper coefficients for HD video/sRGB)
+  float getLuma(vec3 color) {
+    return dot(color, vec3(0.2126, 0.7152, 0.0722));
+  }
+
+  // Kelvin temperature to RGB multipliers (approximation of Planckian locus)
+  vec3 kelvinToRGB(float kelvin) {
+    float temp = kelvin / 100.0;
+    vec3 rgb;
+    
+    // Red
+    if (temp <= 66.0) {
+      rgb.r = 1.0;
+    } else {
+      rgb.r = 1.292936 * pow(temp - 60.0, -0.1332047);
+    }
+    
+    // Green
+    if (temp <= 66.0) {
+      rgb.g = 0.390082 * log(temp) - 0.631841;
+    } else {
+      rgb.g = 1.129890 * pow(temp - 60.0, -0.0755148);
+    }
+    
+    // Blue
+    if (temp <= 19.0) {
+      rgb.b = 0.0;
+    } else if (temp < 66.0) {
+      rgb.b = 0.543207 * log(temp - 10.0) - 1.196254;
+    } else {
+      rgb.b = 1.0;
+    }
+    
+    return clamp(rgb, 0.0, 1.0);
+  }
+
+  // White balance using Kelvin-based temperature and tint
+  // Temperature: -100 to +100 maps to 2000K-50000K offset from 6500K (D65)
+  // Tint: green-magenta axis
+  vec3 applyWhiteBalance(vec3 color, float temperature, float tint) {
+    // Map temperature to Kelvin: -100 = 2000K, 0 = 6500K, +100 = 50000K
+    float kelvinOffset = temperature * 100.0; // Each unit = 100K roughly
+    float kelvin = 6500.0 - kelvinOffset; // Invert because warmer = lower K
+    kelvin = clamp(kelvin, 2000.0, 50000.0);
+    
+    // Get the color cast from this temperature
+    vec3 tempColor = kelvinToRGB(kelvin);
+    vec3 d65 = kelvinToRGB(6500.0); // Reference white (D65)
+    
+    // Apply as ratio relative to D65
+    color *= d65 / tempColor;
+    
+    // Apply tint (green-magenta on green channel)
+    color.g *= (1.0 + tint * 0.05);
+    color.r *= (1.0 - tint * 0.025); // Magenta = less green, more R+B
+    color.b *= (1.0 - tint * 0.025);
+    
+    return color;
+  }
+
+  // Exposure in EV stops (proper photographic exposure)
+  vec3 applyExposure(vec3 color, float ev) {
+    return color * pow(2.0, ev);
+  }
+
+  // S-curve contrast centered at mid-gray (0.18 in linear = 18% gray)
+  vec3 applyContrast(vec3 color, float contrast) {
+    float midGray = 0.18;
+    // Contrast range: -1 to +1, where 0 = no change
+    float factor = 1.0 + contrast;
+    return midGray * pow(color / midGray, vec3(factor));
+  }
+
+  // Highlights recovery (soft-clip bright areas) - like Lightroom
+  vec3 applyHighlights(vec3 color, float amount) {
+    float luma = getLuma(color);
+    float highlightMask = smoothstep(0.5, 1.0, luma);
+    // Compress highlights (amount negative = recover, positive = boost)
+    color += (vec3(1.0) - color) * highlightMask * amount * 0.5;
+    return color;
+  }
+
+  // Shadows lift (brighten dark areas) - like Lightroom
+  vec3 applyShadows(vec3 color, float amount) {
+    float luma = getLuma(color);
+    float shadowMask = 1.0 - smoothstep(0.0, 0.5, luma);
+    // Lift shadows (amount positive = brighten shadows)
+    color += color * shadowMask * amount * 0.5;
+    return color;
+  }
+
+  // Whites (adjust highlight clip point)
+  vec3 applyWhites(vec3 color, float amount) {
+    float luma = getLuma(color);
+    float whiteMask = smoothstep(0.7, 1.0, luma);
+    color = mix(color, color * (1.0 + amount * 0.3), whiteMask);
+    return color;
+  }
+
+  // Blacks (adjust shadow clip point)
+  vec3 applyBlacks(vec3 color, float amount) {
+    float luma = getLuma(color);
+    float blackMask = 1.0 - smoothstep(0.0, 0.3, luma);
+    // Negative amount crushes blacks, positive lifts them
+    color = mix(color, color * (1.0 - amount * 0.3), blackMask);
+    return clamp(color, 0.0, 1.0);
+  }
+
+  // Luminance-preserving saturation (proper algorithm)
+  vec3 adjustSaturation(vec3 color, float saturation) {
+    float luma = getLuma(color);
+    return mix(vec3(luma), color, saturation);
+  }
+
+  // Vibrance (smart saturation - boosts less saturated colors more)
+  vec3 applyVibrance(vec3 color, float vibrance) {
+    float luma = getLuma(color);
+    float maxC = max(color.r, max(color.g, color.b));
+    float minC = min(color.r, min(color.g, color.b));
+    float sat = (maxC - minC) / (maxC + 0.001);
+    
+    // Less saturated colors get more boost
+    float vibranceWeight = 1.0 - sat;
+    return mix(vec3(luma), color, 1.0 + vibrance * vibranceWeight);
+  }
+
+  // Dehaze (proper implementation)
+  vec3 applyDehaze(vec3 color, float amount) {
+    // Increase contrast in shadows and saturation
+    float luma = getLuma(color);
+    vec3 dehazed = color;
+    
+    // Lift blacks and increase local contrast
+    dehazed = pow(dehazed, vec3(1.0 + amount * 0.3));
+    dehazed = adjustSaturation(dehazed, 1.0 + amount * 0.2);
+    
+    return mix(color, dehazed, amount);
+  }
+
 
   float getSkinMask(vec3 color) {
     vec3 hsl = rgb2hsl(color);
@@ -315,6 +469,79 @@ const fragmentShader = `
       // Cinema contrast curve
       filmColor = pow(filmColor, vec3(0.98, 1.0, 1.02));
     }
+    else if (filmType == 7) { // Ilford HP5 Plus - classic B&W
+      float luma = getLuma(filmColor);
+      // Classic B&W with slight green sensitivity boost
+      float bw = filmColor.r * 0.25 + filmColor.g * 0.65 + filmColor.b * 0.10;
+      // Add slight grain texture in shadows
+      bw = pow(bw, 0.95);
+      // Lift shadows slightly
+      bw = bw * 0.9 + 0.03;
+      filmColor = vec3(bw);
+    }
+    else if (filmType == 8) { // Agfa Vista 400 - vintage warm tones
+      float luma = getLuma(filmColor);
+      // Strong warm cast
+      filmColor.r *= 1.08;
+      filmColor.g *= 1.02;
+      filmColor.b *= 0.90;
+      // Slight saturation boost
+      filmColor = mix(vec3(luma), filmColor, 1.1);
+      // Lifted blacks with warm tint
+      filmColor = filmColor * 0.95 + vec3(0.04, 0.03, 0.01);
+    }
+    else if (filmType == 9) { // Lomography 800 - cross-processed look
+      float luma = getLuma(filmColor);
+      // Push contrast
+      filmColor = pow(filmColor, vec3(1.1));
+      // Cyan shadows, yellow highlights
+      float shadowMask = 1.0 - smoothstep(0.0, 0.5, luma);
+      float highlightMask = smoothstep(0.5, 1.0, luma);
+      filmColor.r -= 0.03 * shadowMask;
+      filmColor.g += 0.02 * shadowMask;
+      filmColor.b += 0.04 * shadowMask;
+      filmColor.r += 0.04 * highlightMask;
+      filmColor.g += 0.02 * highlightMask;
+      // High saturation
+      filmColor = mix(vec3(luma), filmColor, 1.25);
+    }
+    else if (filmType == 10) { // Technicolor 3-Strip - vintage cinema
+      float luma = getLuma(filmColor);
+      // Boost primaries separately
+      filmColor.r = pow(filmColor.r, 0.9) * 1.1;
+      filmColor.g = pow(filmColor.g, 0.95) * 0.95;
+      filmColor.b = pow(filmColor.b, 0.85) * 1.05;
+      // S-curve for that cinema punch
+      filmColor = filmColor * filmColor * (3.0 - 2.0 * filmColor);
+      // Slight color bleed
+      filmColor = mix(filmColor, vec3(luma), 0.05);
+    }
+    else if (filmType == 11) { // Bleach Bypass - desaturated, high contrast
+      float luma = getLuma(filmColor);
+      // Desaturate significantly
+      filmColor = mix(vec3(luma), filmColor, 0.5);
+      // High contrast S-curve
+      filmColor = pow(filmColor, vec3(1.2));
+      filmColor = filmColor * filmColor * (3.0 - 2.0 * filmColor);
+      // Slight blue-gray cast
+      filmColor.b += 0.02;
+      filmColor = filmColor * 0.95 + 0.02;
+    }
+    else if (filmType == 12) { // Cross Process E-6 to C-41 - wild colors
+      float luma = getLuma(filmColor);
+      // Heavy contrast push
+      filmColor = pow(filmColor, vec3(1.15));
+      // Shift colors dramatically
+      filmColor.r = pow(filmColor.r, 0.85);
+      filmColor.g = pow(filmColor.g, 1.1);
+      filmColor.b = pow(filmColor.b, 0.75);
+      // Green-cyan in shadows, magenta in highlights
+      float shadowMask = 1.0 - smoothstep(0.0, 0.4, luma);
+      float highlightMask = smoothstep(0.6, 1.0, luma);
+      filmColor.g += 0.05 * shadowMask;
+      filmColor.r += 0.04 * highlightMask;
+      filmColor.b += 0.02 * highlightMask;
+    }
     
     return mix(color, clamp(filmColor, 0.0, 1.0), strength);
   }
@@ -421,9 +648,42 @@ const fragmentShader = `
     }
     
     vec3 originalColor = color;
-    color = applyWhiteBalance(color);
-    color += uBrightness;
-    color = (color - 0.5) * (uContrast + 1.0) + 0.5;
+
+    // ============================================
+    // PROFESSIONAL COLOR GRADING PIPELINE
+    // Lightroom-style processing order
+    // ============================================
+    
+    // Step 1: Convert sRGB input to Linear
+    color = sRGBToLinear3(color);
+    
+    // Step 2: White Balance (Temperature + Tint) - first adjustment
+    color = applyWhiteBalance(color, uTemperature, uTint);
+    
+    // Step 3: Exposure in EV stops (like camera)
+    color = applyExposure(color, uBrightness);
+    
+    // Step 4: S-curve Contrast (centered at mid-gray)
+    color = applyContrast(color, uContrast);
+    
+    // Step 5: Highlights recovery (soft-clip bright areas)
+    color = applyHighlights(color, uHighlights);
+    
+    // Step 6: Shadows lift (brighten dark areas)
+    color = applyShadows(color, uShadows);
+    
+    // Step 7: Whites (highlight clip point)
+    color = applyWhites(color, uWhites);
+    
+    // Step 8: Blacks (shadow clip point)
+    color = applyBlacks(color, uBlacks);
+    
+    // Step 9: Vibrance (smart saturation)
+    color = applyVibrance(color, uVibrance);
+    
+    // Step 10: Convert back to sRGB for remaining processing
+    color = linearToSRGB3(color);
+    color = clamp(color, 0.0, 1.0);
     
     // Tone Curve Application
     if (uToneCurveEnabled > 0.5) {
@@ -740,6 +1000,7 @@ const fragmentShader = `
 export default function ImagePlane({
   imageUrl,
   settings,
+  wiperPosition = 0.5,
   brushMaskData,
   brushMaskExposure = 0,
   brushMaskContrast = 0,
@@ -749,6 +1010,7 @@ export default function ImagePlane({
 }: {
   imageUrl: string;
   settings: any;
+  wiperPosition?: number;
   brushMaskData?: string;
   brushMaskExposure?: number;
   brushMaskContrast?: number;
@@ -816,8 +1078,9 @@ export default function ImagePlane({
         size.height
       );
 
+      // Use wiperPosition prop instead of state.pointer
       if (settings.wiperActive) {
-        materialRef.current.uniforms.uMouseX.value = (state.pointer.x + 1) / 2;
+        materialRef.current.uniforms.uMouseX.value = wiperPosition;
       } else {
         materialRef.current.uniforms.uMouseX.value = 1.0;
       }
@@ -839,6 +1102,11 @@ export default function ImagePlane({
           uMouseX: { value: 1.0 },
           uContrast: { value: settings.contrast },
           uBrightness: { value: settings.brightness },
+          uHighlights: { value: settings.highlights || 0 },
+          uShadows: { value: settings.shadows || 0 },
+          uWhites: { value: settings.whites || 0 },
+          uBlacks: { value: settings.blacks || 0 },
+          uVibrance: { value: settings.vibrance || 0 },
           uTealOrange: { value: settings.tealOrange },
           uTemperature: { value: settings.temperature },
           uTint: { value: settings.tint },
@@ -1077,7 +1345,19 @@ export default function ImagePlane({
                         ? 5
                         : settings.filmEmulation === "vision3500t"
                           ? 6
-                          : 0,
+                          : settings.filmEmulation === "hp5"
+                            ? 7
+                            : settings.filmEmulation === "vista400"
+                              ? 8
+                              : settings.filmEmulation === "lomo800"
+                                ? 9
+                                : settings.filmEmulation === "technicolor"
+                                  ? 10
+                                  : settings.filmEmulation === "bleachbypass"
+                                    ? 11
+                                    : settings.filmEmulation === "crossprocess"
+                                      ? 12
+                                      : 0,
           },
           uFilmEmulationStrength: {
             value: settings.filmEmulationStrength || 1.0,

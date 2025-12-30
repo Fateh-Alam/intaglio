@@ -14,6 +14,11 @@ import {
   Camera,
   SplitSquareHorizontal,
   Sliders,
+  Type,
+  Paintbrush,
+  Monitor,
+  Cpu,
+  Smartphone,
 } from "lucide-react";
 
 export default function Changelog() {
@@ -64,6 +69,73 @@ export default function Changelog() {
 
         {/* Timeline */}
         <div className="relative border-l border-white/10 ml-4 md:ml-12 pl-8 md:pl-16 space-y-24">
+          {/* v2.0 ENTRY */}
+          <div className="relative group animate-fade-in-up">
+            {/* Node */}
+            <div className="absolute -left-[37px] md:-left-[69px] top-2 h-4 w-4 md:h-5 md:w-5 rounded-full bg-[#050505] border-2 border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.6)] group-hover:scale-125 transition-transform duration-500 z-10">
+              <div className="absolute inset-0 bg-amber-500 animate-ping opacity-20 hover:opacity-0" />
+            </div>
+
+            {/* Date */}
+            <div className="flex items-center gap-4 mb-4">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] px-3 py-1 bg-amber-900/20 text-amber-500 border border-amber-500/20 rounded">
+                2025-12-31
+              </span>
+              <span className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+            </div>
+
+            {/* Content */}
+            <div className="bg-white/5 border border-white/10 p-8 rounded-2xl md:p-10 backdrop-blur-sm group-hover:border-amber-500/30 transition-colors duration-500 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-3 opacity-20">
+                <Wand2
+                  size={120}
+                  strokeWidth={0.5}
+                  className="text-amber-500 rotate-12"
+                />
+              </div>
+
+              <h2 className="text-3xl md:text-4xl font-light text-white mb-2">
+                v2.0.0
+              </h2>
+              <h3 className="text-xl font-serif italic text-gray-400 mb-8">
+                The Cinematic Update
+              </h3>
+
+              <div className="space-y-6 relative z-10">
+                <ChangeItem
+                  icon={Type}
+                  title="Advanced Typography Engine"
+                  desc="Dynamic Google Fonts integration, character spacing (tracking), variable weight control (100-900), text transforms (Small Caps, Uppercase), and italic support."
+                />
+                <ChangeItem
+                  icon={Wand2}
+                  title="Expanded Film & Style Library"
+                  desc="Added 6 new cinematic styles including Matrix, Fight Club, Barbie, Drive, Pulp Fiction, and Lost in Translation (18 Total)."
+                />
+                <ChangeItem
+                  icon={Paintbrush}
+                  title="Masking Studio"
+                  desc="Precision local adjustments with Paint-to-Select Brush, Luminosity targeting (Shadows/Highlights), and Linear/Radial Gradient masks."
+                />
+                <ChangeItem
+                  icon={Monitor}
+                  title="Premium UI Overhaul"
+                  desc="Replaced native browser inputs with custom animated Toggles and premium Select components. Removed all emojis for a strictly professional aesthetic."
+                />
+                <ChangeItem
+                  icon={Smartphone}
+                  title="Mobile Optimisation"
+                  desc="Fully responsive, touch-first interface design. Optimised layout for phones and tablets with thumb-friendly sliders and collapsible panels."
+                />
+                <ChangeItem
+                  icon={Cpu}
+                  title="Algorithmic Core Rebuild"
+                  desc="Completely re-engineered the color science engine to 32-bit floating point precision. Rewrote masking algorithms for sub-pixel accuracy and optimized GLSL shaders for 60fps realtime rendering."
+                />
+              </div>
+            </div>
+          </div>
+
           {/* v1.0 ENTRY */}
           <div className="relative group animate-fade-in-up">
             {/* Node */}

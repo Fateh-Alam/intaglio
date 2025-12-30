@@ -1,7 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 
+/**
+ * CinematicTextOverlay: Renders the film-emulation text over the image.
+ * Handles extensive typography styles and dynamic font loading.
+ */
 export interface TextOverlaySettings {
   // Subtitle
   subtitleEnabled: boolean;
@@ -18,7 +22,13 @@ export interface TextOverlaySettings {
     | "joker"
     | "nineteen17"
     | "mad_max"
-    | "her";
+    | "her"
+    | "matrix"
+    | "fight_club"
+    | "pulp_fiction"
+    | "lost_in_translation"
+    | "barbie"
+    | "drive";
 
   // Date/Location
   dateEnabled: boolean;
@@ -27,7 +37,16 @@ export interface TextOverlaySettings {
 
   // Common
   fontSize: number;
+  letterSpacing: number;
   opacity: number;
+
+  // Custom Font & Typography
+  customFontEnabled: boolean;
+  customFontName: string;
+  customFontWeight: string; // "100" to "900"
+  customFontStyle: "normal" | "italic";
+  customTextTransform: "none" | "uppercase" | "lowercase" | "capitalize";
+  customFontVariant: "normal" | "small-caps";
 }
 
 export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
@@ -44,11 +63,18 @@ export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
     .toUpperCase(),
   locationText: "",
   fontSize: 1,
+  letterSpacing: 0,
   opacity: 1,
+  customFontEnabled: false,
+  customFontName: "Inter",
+  customFontWeight: "400",
+  customFontStyle: "normal",
+  customTextTransform: "none",
+  customFontVariant: "normal",
 };
 
 // Oscar-level film style presets
-const FILM_STYLES = {
+export const FILM_STYLES = {
   blade_runner: {
     name: "BLADE RUNNER 2049",
     titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
@@ -230,6 +256,96 @@ const FILM_STYLES = {
     gradient:
       "linear-gradient(to top, rgba(40,20,25,0.85) 0%, rgba(40,20,25,0.3) 60%, transparent 100%)",
   },
+  matrix: {
+    name: "THE MATRIX",
+    titleFont: "var(--font-inter), monospace, sans-serif",
+    metaFont: "var(--font-inter), monospace, sans-serif",
+    titleColor: "#4ade80",
+    metaColor: "rgba(74, 222, 128, 0.8)",
+    titleWeight: "400",
+    titleTracking: "0.25em",
+    metaTracking: "0.4em",
+    textTransform: "uppercase" as const,
+    shadow: "0 0 20px rgba(74, 222, 128, 0.6), 0 4px 15px rgba(0,0,0,0.9)",
+    metaShadow: "0 0 10px rgba(74, 222, 128, 0.4), 0 2px 8px rgba(0,0,0,0.9)",
+    gradient:
+      "linear-gradient(to top, rgba(0,20,0,0.95) 0%, rgba(0,20,0,0.4) 60%, transparent 100%)",
+  },
+  fight_club: {
+    name: "FIGHT CLUB",
+    titleFont: "var(--font-bebas), 'Bebas Neue', Helvetica, sans-serif",
+    metaFont: "var(--font-inter), system-ui, sans-serif",
+    titleColor: "#f472b6",
+    metaColor: "rgba(244, 114, 182, 0.8)",
+    titleWeight: "700",
+    titleTracking: "0.05em",
+    metaTracking: "0.25em",
+    textTransform: "uppercase" as const,
+    shadow: "0 0 40px rgba(244, 114, 182, 0.4), 0 4px 20px rgba(0,0,0,0.9)",
+    metaShadow: "0 2px 10px rgba(0,0,0,0.9)",
+    gradient:
+      "linear-gradient(to top, rgba(20,5,10,0.95) 0%, rgba(20,5,10,0.5) 60%, transparent 100%)",
+  },
+  pulp_fiction: {
+    name: "PULP FICTION",
+    titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
+    metaFont: "var(--font-bebas), 'Bebas Neue', sans-serif",
+    titleColor: "#fbbf24",
+    metaColor: "#ef4444",
+    titleWeight: "400",
+    titleTracking: "0.1em",
+    metaTracking: "0.2em",
+    textTransform: "uppercase" as const,
+    shadow: "3px 3px 0px #000000, 0 0 40px rgba(0,0,0,0.5)",
+    metaShadow: "2px 2px 0px #000000",
+    gradient:
+      "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)",
+  },
+  lost_in_translation: {
+    name: "LOST IN TRANSLATION",
+    titleFont: "var(--font-inter), system-ui, sans-serif",
+    metaFont: "var(--font-inter), system-ui, sans-serif",
+    titleColor: "#cbd5e1",
+    metaColor: "rgba(203, 213, 225, 0.7)",
+    titleWeight: "200",
+    titleTracking: "0.15em",
+    metaTracking: "0.3em",
+    textTransform: "none" as const,
+    shadow: "0 0 30px rgba(255,100,200,0.2), 0 2px 15px rgba(0,0,0,0.9)",
+    metaShadow: "0 2px 10px rgba(0,0,0,0.9)",
+    gradient:
+      "linear-gradient(to top, rgba(10,5,20,0.9) 0%, rgba(10,5,20,0.4) 60%, transparent 100%)",
+  },
+  barbie: {
+    name: "BARBIE",
+    titleFont: "var(--font-playfair), 'Playfair Display', serif",
+    metaFont: "var(--font-inter), system-ui, sans-serif",
+    titleColor: "#ec4899",
+    metaColor: "rgba(255, 255, 255, 0.9)",
+    titleWeight: "700",
+    titleTracking: "0.05em",
+    metaTracking: "0.25em",
+    textTransform: "uppercase" as const,
+    shadow: "2px 2px 0px #fff, 0 0 60px rgba(236, 72, 153, 0.4)",
+    metaShadow: "0 2px 10px rgba(0,0,0,0.5)",
+    gradient:
+      "linear-gradient(to top, rgba(255,192,203,0.3) 0%, transparent 100%)",
+  },
+  drive: {
+    name: "DRIVE",
+    titleFont: "var(--font-bebas), 'Brush Script MT', cursive",
+    metaFont: "var(--font-inter), system-ui, sans-serif",
+    titleColor: "#ec4899",
+    metaColor: "#3b82f6",
+    titleWeight: "400",
+    titleTracking: "0.1em",
+    metaTracking: "0.2em",
+    textTransform: "none" as const,
+    shadow: "0 0 20px #ec4899, 0 0 60px #ec4899, 2px 2px 0 #000",
+    metaShadow: "0 0 10px #3b82f6",
+    gradient:
+      "linear-gradient(to top, rgba(20,0,20,0.9) 0%, rgba(0,0,10,0.5) 60%, transparent 100%)",
+  },
 };
 
 export default function CinematicTextOverlay({
@@ -237,10 +353,75 @@ export default function CinematicTextOverlay({
 }: {
   settings: TextOverlaySettings;
 }) {
+  if (!settings) return null;
   if (!settings.subtitleEnabled && !settings.dateEnabled) return null;
 
   const style = FILM_STYLES[settings.subtitleStyle];
   const baseFontSize = settings.fontSize;
+
+  // Dynamically load Google Font
+  useEffect(() => {
+    if (settings.customFontEnabled && settings.customFontName) {
+      const fontName = settings.customFontName.trim();
+      if (!fontName) return;
+
+      // Construct Google Fonts URL with specific weight and style
+      // Example: Family:ital,wght@0,400;0,700;1,400;1,700
+      // For simplicity, we'll request the specific weight selected, plus italic if needed.
+      // But standard Google Fonts API usually works best if we request a range or the specific combo.
+
+      const weight = settings.customFontWeight || "400";
+      const isItalic = settings.customFontStyle === "italic";
+
+      // Requesting the specific variant
+      // axis tag: ital,wght
+      // values: 0,400 .. 1,400
+      const axisParam = isItalic ? `1,${weight}` : `0,${weight}`;
+
+      const link = document.createElement("link");
+      link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(
+        /\s+/g,
+        "+"
+      )}:ital,wght@${axisParam}&display=swap`;
+
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+
+      return () => {
+        document.head.removeChild(link);
+      };
+    }
+  }, [
+    settings.customFontEnabled,
+    settings.customFontName,
+    settings.customFontWeight,
+    settings.customFontStyle,
+  ]);
+
+  const titleFontFamily =
+    settings.customFontEnabled && settings.customFontName
+      ? `'${settings.customFontName}', sans-serif`
+      : style.titleFont;
+
+  const titleStyle = settings.customFontEnabled
+    ? {
+        fontWeight: settings.customFontWeight,
+        fontStyle: settings.customFontStyle,
+        textTransform: settings.customTextTransform,
+        fontVariant: settings.customFontVariant,
+        letterSpacing: `${settings.letterSpacing}em`,
+        textShadow: style.shadow,
+        color: style.titleColor,
+      }
+    : {
+        fontWeight: style.titleWeight,
+        fontStyle: "normal",
+        textTransform: style.textTransform,
+        fontVariant: "normal",
+        letterSpacing: `${settings.letterSpacing}em`,
+        textShadow: style.shadow,
+        color: style.titleColor,
+      };
 
   return (
     <div
@@ -284,15 +465,11 @@ export default function CinematicTextOverlay({
           <div>
             <span
               style={{
-                fontFamily: style.titleFont,
+                fontFamily: titleFontFamily,
                 fontSize: `${baseFontSize * 2.2}rem`,
-                color: style.titleColor,
-                fontWeight: style.titleWeight,
-                letterSpacing: style.titleTracking,
-                textTransform: style.textTransform,
-                textShadow: style.shadow,
                 lineHeight: 1.1,
                 display: "inline-block",
+                ...titleStyle, // Spread the computed styles
               }}
             >
               {settings.subtitleText}

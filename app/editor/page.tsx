@@ -35,11 +35,24 @@ import {
   IconChartLine,
   IconCircles,
   IconCamera,
+  IconX,
+  IconMenu2,
+  IconSpacingHorizontal,
+  IconMoon,
+  IconItalic,
+  IconLetterCase,
+  IconLetterCaseUpper,
+  IconLetterCaseLower,
+  IconBold,
+  IconCircleFilled,
 } from "@tabler/icons-react";
 import {
   DEFAULT_TEXT_OVERLAY,
   TextOverlaySettings,
 } from "../components/CinematicTextOverlay";
+import CinematicTextControls from "../components/CinematicTextControls";
+import ControlGroup from "../components/ControlGroup";
+import Slider from "../components/Slider";
 import HistoryPanel, { HistoryState } from "../components/HistoryPanel";
 import CurveEditor from "../components/CurveEditor";
 import ColorWheel from "../components/ColorWheel";
@@ -47,6 +60,12 @@ import { solveCatmullRom } from "../utils/spline";
 import * as THREE from "three";
 import { parseCubeLUT } from "../utils/lutParser";
 import { generatePaletteHeist2DLUT } from "../utils/colorTransfer";
+import TutorialModal, { TutorialTrigger } from "../components/TutorialModal";
+import {
+  TUTORIAL_CONTENT,
+  getSeenTutorials,
+  markTutorialSeen,
+} from "../utils/tutorialContent";
 
 // Dynamic import for the WebGL component to avoid SSR issues
 const CinematicEditor = dynamic(() => import("../components/CinematicEditor"), {
@@ -59,9 +78,14 @@ const CinematicEditor = dynamic(() => import("../components/CinematicEditor"), {
 });
 
 const DEFAULT_SETTINGS = {
-  // Basic
+  // Basic - Light
   contrast: 0.0,
   brightness: 0.0,
+  highlights: 0.0,
+  shadows: 0.0,
+  whites: 0.0,
+  blacks: 0.0,
+  vibrance: 0.0,
 
   // Grading
   tealOrange: 0.0,
@@ -211,7 +235,13 @@ const DEFAULT_SETTINGS = {
     | "velvia50"
     | "pro400h"
     | "cinestill800t"
-    | "vision3500t",
+    | "vision3500t"
+    | "hp5"
+    | "vista400"
+    | "lomo800"
+    | "technicolor"
+    | "bleachbypass"
+    | "crossprocess",
   filmEmulationStrength: 1.0,
 
   // UI State
@@ -225,13 +255,38 @@ export default function Home() {
   const [clipboard, setClipboard] = useState<typeof DEFAULT_SETTINGS | null>(
     null
   );
-  const [imageSrc, setImageSrc] = useState("/demo.png");
+  const [imageSrc, setImageSrc] = useState("/demo.jpg");
   const [histogram, setHistogram] = useState<{
     r: number[];
     g: number[];
     b: number[];
   } | null>(null);
   const [activeTab, setActiveTab] = useState("basic");
+
+  // Handle tab change with tutorial check
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setIsMobileMenuOpen(false);
+
+    // Show tutorial if not seen
+    if (!seenTutorials[tabId] && TUTORIAL_CONTENT[tabId]) {
+      setActiveTutorial(tabId);
+    }
+  };
+
+  const handleTutorialClose = () => {
+    if (activeTutorial) {
+      markTutorialSeen(activeTutorial);
+      setSeenTutorials((prev) => ({ ...prev, [activeTutorial]: true }));
+      setActiveTutorial(null);
+    }
+  };
+
+  const showTutorial = (tabId: string) => {
+    if (TUTORIAL_CONTENT[tabId]) {
+      setActiveTutorial(tabId);
+    }
+  };
 
   // History State
   const [history, setHistory] = useState<HistoryState[]>([]);
@@ -242,6 +297,20 @@ export default function Home() {
   const [snapshots, setSnapshots] = useState<
     { id: string; url: string; date: number }[]
   >([]);
+
+  // Tutorial State
+  const [seenTutorials, setSeenTutorials] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
+
+  // Mobile State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Initialize tutorials from localStorage
+  useEffect(() => {
+    setSeenTutorials(getSeenTutorials());
+  }, []);
 
   // Tone Curve State (Derived)
   const [toneCurveTexture, setToneCurveTexture] =
@@ -636,7 +705,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex h-screen w-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-amber-500 selection:text-white relative">
+    <main className="flex flex-col md:flex-row h-screen w-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-amber-500 selection:text-white relative">
       {/* Film grain overlay */}
       <div
         className="pointer-events-none fixed inset-0 z-50 opacity-[0.05] mix-blend-overlay"
@@ -646,12 +715,12 @@ export default function Home() {
       />
 
       {/* LEFT: The Editor (WebGL Canvas) */}
-      <div className="flex-grow relative bg-[#020202] flex items-center justify-center overflow-hidden">
-        {/* Toolbar Overlay */}
-        <div className="absolute top-6 left-6 z-10 flex gap-4">
-          <label className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/20 hover:bg-white/5 transition cursor-pointer font-mono text-[10px] uppercase tracking-[0.25em]">
-            <IconUpload size={14} />
-            <span>Open Image</span>
+      <div className="flex-1 relative bg-[#020202] flex items-center justify-center overflow-hidden min-h-[40vh] md:min-h-0">
+        {/* Toolbar Overlay - Responsive */}
+        <div className="absolute top-3 md:top-6 left-3 md:left-6 z-10 flex gap-2 md:gap-4">
+          <label className="flex items-center justify-center gap-2 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 bg-black/60 md:bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/20 hover:bg-white/5 transition cursor-pointer font-mono text-[10px] uppercase tracking-[0.25em] rounded-xl md:rounded">
+            <IconUpload size={16} className="md:w-3.5 md:h-3.5" />
+            <span className="hidden md:inline">Open Image</span>
             <input
               type="file"
               accept="image/*"
@@ -662,18 +731,21 @@ export default function Home() {
 
           <button
             onClick={() => updateSetting("wiperActive", !settings.wiperActive)}
-            className={`flex items-center gap-2 px-4 py-2 backdrop-blur-xl border transition font-mono text-[10px] uppercase tracking-[0.25em] ${settings.wiperActive ? "bg-amber-500/20 border-amber-500/50 text-amber-400" : "bg-black/40 border-white/10 hover:border-white/20 hover:bg-white/5"}`}
+            className={`flex items-center justify-center gap-2 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 backdrop-blur-xl border transition font-mono text-[10px] uppercase tracking-[0.25em] rounded-xl md:rounded ${settings.wiperActive ? "bg-amber-500/20 border-amber-500/50 text-amber-400" : "bg-black/60 md:bg-black/40 border-white/10 hover:border-white/20 hover:bg-white/5"}`}
           >
-            <IconAdjustmentsHorizontal size={14} />
-            <span>Compare</span>
+            <IconAdjustmentsHorizontal
+              size={16}
+              className="md:w-3.5 md:h-3.5"
+            />
+            <span className="hidden md:inline">Compare</span>
           </button>
 
           <button
             onClick={() => updateSetting("falseColor", !settings.falseColor)}
-            className={`flex items-center gap-2 px-4 py-2 backdrop-blur-xl border transition font-mono text-[10px] uppercase tracking-[0.25em] ${settings.falseColor ? "bg-purple-500/20 border-purple-500/50 text-purple-400" : "bg-black/40 border-white/10 hover:border-white/20 hover:bg-white/5"}`}
+            className={`flex items-center justify-center gap-2 w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2 backdrop-blur-xl border transition font-mono text-[10px] uppercase tracking-[0.25em] rounded-xl md:rounded ${settings.falseColor ? "bg-purple-500/20 border-purple-500/50 text-purple-400" : "bg-black/60 md:bg-black/40 border-white/10 hover:border-white/20 hover:bg-white/5"}`}
           >
-            <IconEye size={14} />
-            <span>False Color</span>
+            <IconEye size={16} className="md:w-3.5 md:h-3.5" />
+            <span className="hidden md:inline">False Color</span>
           </button>
         </div>
 
@@ -705,10 +777,26 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Mobile Menu Toggle */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-amber-500 text-black shadow-2xl shadow-amber-500/30 flex items-center justify-center"
+      >
+        {isMobileMenuOpen ? <IconX size={24} /> : <IconMenu2 size={24} />}
+      </button>
+
       {/* RIGHT: The Control Panel with Icon Sidebar */}
-      <div className="flex h-full">
+      <div
+        className={`fixed md:relative inset-0 md:inset-auto flex h-full transition-transform duration-300 z-40 ${isMobileMenuOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"}`}
+      >
+        {/* Mobile backdrop */}
+        <div
+          className={`md:hidden absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity ${isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+
         {/* Icon Sidebar */}
-        <div className="w-16 bg-black/40 backdrop-blur-xl border-l border-white/5 flex flex-col items-center py-4 gap-1 z-30">
+        <div className="hidden md:flex w-16 bg-black/40 backdrop-blur-xl border-l border-white/5 flex-col items-center py-4 gap-1 z-30">
           {/* Logo */}
           <div className="mb-4 pb-4 border-b border-white/10 w-full flex justify-center">
             <div className="relative h-7 w-7">
@@ -813,12 +901,15 @@ export default function Home() {
               green: isActive
                 ? "bg-green-500/20 text-green-400 border-green-500/50"
                 : "",
+              rose: isActive
+                ? "bg-rose-500/20 text-rose-400 border-rose-500/50"
+                : "",
             };
 
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 border group relative ${
                   isActive
                     ? `${colorClasses[tab.color]} shadow-[0_0_15px_rgba(255,255,255,0.1)] border-${tab.color}-500/50`
@@ -863,7 +954,117 @@ export default function Home() {
         </div>
 
         {/* Control Panel */}
-        <div className="w-[360px] bg-black/60 backdrop-blur-2xl border-l border-white/5 flex flex-col z-20 shadow-2xl">
+        <div className="w-full md:w-[360px] bg-black/60 backdrop-blur-2xl border-l border-white/5 flex flex-col z-20 shadow-2xl ml-auto">
+          {/* Premium Mobile Tab Bar */}
+          <div
+            className="md:hidden flex overflow-x-auto snap-x snap-mandatory custom-scrollbar border-b border-white/10 py-3 px-3 gap-2 bg-black/40"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {[
+              { id: "basic", icon: <IconSun size={16} />, color: "amber" },
+              { id: "color", icon: <IconPalette size={16} />, color: "purple" },
+              {
+                id: "curves",
+                icon: <IconChartLine size={16} />,
+                color: "blue",
+              },
+              {
+                id: "grading",
+                icon: <IconCircles size={16} />,
+                color: "purple",
+              },
+              { id: "hsl", icon: <IconCircle size={16} />, color: "cyan" },
+              { id: "films", icon: <IconMovie size={16} />, color: "orange" },
+              {
+                id: "effects",
+                icon: <IconSparkles size={16} />,
+                color: "cyan",
+              },
+              {
+                id: "masking",
+                icon: <IconLayersIntersect size={16} />,
+                color: "orange",
+              },
+              {
+                id: "text",
+                icon: <IconTypography size={16} />,
+                color: "green",
+              },
+              {
+                id: "transform",
+                icon: <IconArrowsMaximize size={16} />,
+                color: "amber",
+              },
+              { id: "history", icon: <IconHistory size={16} />, color: "rose" },
+              {
+                id: "snapshots",
+                icon: <IconCamera size={16} />,
+                color: "green",
+              },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              const colorClasses: Record<
+                string,
+                { active: string; inactive: string }
+              > = {
+                amber: {
+                  active:
+                    "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-amber-500/20",
+                  inactive: "text-gray-500",
+                },
+                purple: {
+                  active:
+                    "bg-purple-500/20 text-purple-400 border-purple-500/40 shadow-purple-500/20",
+                  inactive: "text-gray-500",
+                },
+                blue: {
+                  active:
+                    "bg-blue-500/20 text-blue-400 border-blue-500/40 shadow-blue-500/20",
+                  inactive: "text-gray-500",
+                },
+                cyan: {
+                  active:
+                    "bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-cyan-500/20",
+                  inactive: "text-gray-500",
+                },
+                orange: {
+                  active:
+                    "bg-orange-500/20 text-orange-400 border-orange-500/40 shadow-orange-500/20",
+                  inactive: "text-gray-500",
+                },
+                green: {
+                  active:
+                    "bg-green-500/20 text-green-400 border-green-500/40 shadow-green-500/20",
+                  inactive: "text-gray-500",
+                },
+                rose: {
+                  active:
+                    "bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-rose-500/20",
+                  inactive: "text-gray-500",
+                },
+              };
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`snap-start flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl text-[9px] font-mono uppercase whitespace-nowrap transition-all duration-200 border shrink-0 ${
+                    isActive
+                      ? `${colorClasses[tab.color].active} border shadow-lg`
+                      : `${colorClasses[tab.color].inactive} border-transparent hover:bg-white/5 active:scale-95`
+                  }`}
+                >
+                  <span
+                    className={`transition-transform duration-200 ${isActive ? "scale-110" : ""}`}
+                  >
+                    {tab.icon}
+                  </span>
+                  <span className="font-semibold">{tab.id}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Panel Header */}
           <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -872,8 +1073,11 @@ export default function Home() {
                 {activeTab}
               </h2>
             </div>
-            <div className="text-[9px] text-gray-600 font-mono uppercase tracking-widest">
-              v1.0
+            <div className="flex items-center gap-3">
+              <TutorialTrigger onClick={() => showTutorial(activeTab)} />
+              <div className="text-[9px] text-gray-600 font-mono uppercase tracking-widest">
+                v1.0
+              </div>
             </div>
           </div>
 
@@ -1068,20 +1272,68 @@ export default function Home() {
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <ControlGroup title="Light">
                   <Slider
-                    label="Exposure"
+                    label="Exposure (EV)"
                     value={settings.brightness}
-                    min={-0.5}
-                    max={0.5}
+                    min={-5}
+                    max={5}
+                    step={0.05}
                     onChange={(v: any) => updateSetting("brightness", v)}
                     icon={<IconSun size={14} />}
+                    bipolar
                   />
                   <Slider
                     label="Contrast"
                     value={settings.contrast}
-                    min={-0.5}
-                    max={0.5}
+                    min={-1}
+                    max={1}
                     onChange={(v: any) => updateSetting("contrast", v)}
                     icon={<IconContrast size={14} />}
+                    bipolar
+                  />
+                  <Slider
+                    label="Highlights"
+                    value={settings.highlights || 0}
+                    min={-1}
+                    max={1}
+                    onChange={(v: any) => updateSetting("highlights", v)}
+                    icon={<IconSun size={14} />}
+                    bipolar
+                  />
+                  <Slider
+                    label="Shadows"
+                    value={settings.shadows || 0}
+                    min={-1}
+                    max={1}
+                    onChange={(v: any) => updateSetting("shadows", v)}
+                    icon={<IconMoon size={14} />}
+                    bipolar
+                  />
+                  <Slider
+                    label="Whites"
+                    value={settings.whites || 0}
+                    min={-1}
+                    max={1}
+                    onChange={(v: any) => updateSetting("whites", v)}
+                    icon={<IconSun size={14} />}
+                    bipolar
+                  />
+                  <Slider
+                    label="Blacks"
+                    value={settings.blacks || 0}
+                    min={-1}
+                    max={1}
+                    onChange={(v: any) => updateSetting("blacks", v)}
+                    icon={<IconMoon size={14} />}
+                    bipolar
+                  />
+                  <Slider
+                    label="Vibrance"
+                    value={settings.vibrance || 0}
+                    min={-1}
+                    max={1}
+                    onChange={(v: any) => updateSetting("vibrance", v)}
+                    icon={<IconPalette size={14} />}
+                    bipolar
                   />
                   <Slider
                     label="Dehaze"
@@ -1148,7 +1400,7 @@ export default function Home() {
                           updateSetting("godLightColorG", 0.85);
                           updateSetting("godLightColorB", 0.7);
                         }}
-                        className="flex-1 py-2 text-[9px] uppercase bg-gradient-to-r from-orange-500/20 to-yellow-500/20 border border-orange-500/30 rounded text-orange-300"
+                        className="flex-1 py-2.5 text-[9px] uppercase bg-gradient-to-r from-orange-500/20 to-yellow-500/20 border border-orange-500/30 rounded text-orange-300 cursor-pointer hover:from-orange-500/30 hover:to-yellow-500/30 hover:border-orange-500/50 active:scale-95 transition-all"
                       >
                         Warm
                       </button>
@@ -1158,7 +1410,7 @@ export default function Home() {
                           updateSetting("godLightColorG", 1.0);
                           updateSetting("godLightColorB", 1.0);
                         }}
-                        className="flex-1 py-2 text-[9px] uppercase bg-white/5 border border-white/10 rounded text-white"
+                        className="flex-1 py-2.5 text-[9px] uppercase bg-white/5 border border-white/10 rounded text-white cursor-pointer hover:bg-white/10 hover:border-white/20 active:scale-95 transition-all"
                       >
                         Neutral
                       </button>
@@ -1168,7 +1420,7 @@ export default function Home() {
                           updateSetting("godLightColorG", 0.9);
                           updateSetting("godLightColorB", 1.0);
                         }}
-                        className="flex-1 py-2 text-[9px] uppercase bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded text-blue-300"
+                        className="flex-1 py-2.5 text-[9px] uppercase bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded text-blue-300 cursor-pointer hover:from-blue-500/30 hover:to-cyan-500/30 hover:border-blue-500/50 active:scale-95 transition-all"
                       >
                         Cool
                       </button>
@@ -1326,7 +1578,10 @@ export default function Home() {
                 </p>
 
                 {/* Red Channel */}
-                <ControlGroup title="🔴 Red">
+                <ControlGroup
+                  title="Red"
+                  icon={<IconCircleFilled size={12} className="text-red-500" />}
+                >
                   <Slider
                     label="Hue"
                     value={settings.hslRedHue}
@@ -1354,7 +1609,12 @@ export default function Home() {
                 </ControlGroup>
 
                 {/* Orange Channel */}
-                <ControlGroup title="🟠 Orange">
+                <ControlGroup
+                  title="Orange"
+                  icon={
+                    <IconCircleFilled size={12} className="text-orange-500" />
+                  }
+                >
                   <Slider
                     label="Hue"
                     value={settings.hslOrangeHue}
@@ -1382,7 +1642,12 @@ export default function Home() {
                 </ControlGroup>
 
                 {/* Yellow Channel */}
-                <ControlGroup title="🟡 Yellow">
+                <ControlGroup
+                  title="Yellow"
+                  icon={
+                    <IconCircleFilled size={12} className="text-yellow-500" />
+                  }
+                >
                   <Slider
                     label="Hue"
                     value={settings.hslYellowHue}
@@ -1410,7 +1675,12 @@ export default function Home() {
                 </ControlGroup>
 
                 {/* Green Channel */}
-                <ControlGroup title="🟢 Green">
+                <ControlGroup
+                  title="Green"
+                  icon={
+                    <IconCircleFilled size={12} className="text-green-500" />
+                  }
+                >
                   <Slider
                     label="Hue"
                     value={settings.hslGreenHue}
@@ -1438,7 +1708,12 @@ export default function Home() {
                 </ControlGroup>
 
                 {/* Aqua Channel */}
-                <ControlGroup title="🩵 Aqua">
+                <ControlGroup
+                  title="Aqua"
+                  icon={
+                    <IconCircleFilled size={12} className="text-cyan-400" />
+                  }
+                >
                   <Slider
                     label="Hue"
                     value={settings.hslAquaHue}
@@ -1466,7 +1741,12 @@ export default function Home() {
                 </ControlGroup>
 
                 {/* Blue Channel */}
-                <ControlGroup title="🔵 Blue">
+                <ControlGroup
+                  title="Blue"
+                  icon={
+                    <IconCircleFilled size={12} className="text-blue-500" />
+                  }
+                >
                   <Slider
                     label="Hue"
                     value={settings.hslBlueHue}
@@ -1494,7 +1774,12 @@ export default function Home() {
                 </ControlGroup>
 
                 {/* Purple Channel */}
-                <ControlGroup title="🟣 Purple">
+                <ControlGroup
+                  title="Purple"
+                  icon={
+                    <IconCircleFilled size={12} className="text-purple-500" />
+                  }
+                >
                   <Slider
                     label="Hue"
                     value={settings.hslPurpleHue}
@@ -1522,7 +1807,12 @@ export default function Home() {
                 </ControlGroup>
 
                 {/* Magenta Channel */}
-                <ControlGroup title="🩷 Magenta">
+                <ControlGroup
+                  title="Magenta"
+                  icon={
+                    <IconCircleFilled size={12} className="text-pink-500" />
+                  }
+                >
                   <Slider
                     label="Hue"
                     value={settings.hslMagentaHue}
@@ -1671,7 +1961,7 @@ export default function Home() {
                       onClick={() =>
                         updateSetting("filmEmulation", "vision3500t")
                       }
-                      className={`p-3 rounded-lg border transition-all col-span-2 ${
+                      className={`p-3 rounded-lg border transition-all ${
                         settings.filmEmulation === "vision3500t"
                           ? "bg-indigo-900/20 border-indigo-500/50 ring-1 ring-indigo-500/30"
                           : "bg-white/5 border-white/10 hover:border-white/20"
@@ -1681,7 +1971,115 @@ export default function Home() {
                         Vision3 500T
                       </div>
                       <div className="text-[9px] text-gray-500 mt-1">
-                        Cinema tungsten look
+                        Cinema tungsten
+                      </div>
+                    </button>
+
+                    {/* Ilford HP5 Plus - B&W */}
+                    <button
+                      onClick={() => updateSetting("filmEmulation", "hp5")}
+                      className={`p-3 rounded-lg border transition-all ${
+                        settings.filmEmulation === "hp5"
+                          ? "bg-gray-700/50 border-gray-400/50 ring-1 ring-gray-400/30"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="text-xs font-medium text-gray-200">
+                        Ilford HP5
+                      </div>
+                      <div className="text-[9px] text-gray-500 mt-1">
+                        Classic B&W
+                      </div>
+                    </button>
+
+                    {/* Agfa Vista 400 */}
+                    <button
+                      onClick={() => updateSetting("filmEmulation", "vista400")}
+                      className={`p-3 rounded-lg border transition-all ${
+                        settings.filmEmulation === "vista400"
+                          ? "bg-yellow-900/20 border-yellow-500/50 ring-1 ring-yellow-500/30"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="text-xs font-medium text-yellow-200">
+                        Agfa Vista
+                      </div>
+                      <div className="text-[9px] text-gray-500 mt-1">
+                        Vintage warm
+                      </div>
+                    </button>
+
+                    {/* Lomography 800 */}
+                    <button
+                      onClick={() => updateSetting("filmEmulation", "lomo800")}
+                      className={`p-3 rounded-lg border transition-all ${
+                        settings.filmEmulation === "lomo800"
+                          ? "bg-cyan-900/20 border-cyan-500/50 ring-1 ring-cyan-500/30"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="text-xs font-medium text-cyan-200">
+                        Lomo 800
+                      </div>
+                      <div className="text-[9px] text-gray-500 mt-1">
+                        Vivid & punchy
+                      </div>
+                    </button>
+
+                    {/* Technicolor 3-Strip */}
+                    <button
+                      onClick={() =>
+                        updateSetting("filmEmulation", "technicolor")
+                      }
+                      className={`p-3 rounded-lg border transition-all ${
+                        settings.filmEmulation === "technicolor"
+                          ? "bg-rose-900/20 border-rose-500/50 ring-1 ring-rose-500/30"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="text-xs font-medium text-rose-200">
+                        Technicolor
+                      </div>
+                      <div className="text-[9px] text-gray-500 mt-1">
+                        Vintage cinema
+                      </div>
+                    </button>
+
+                    {/* Bleach Bypass */}
+                    <button
+                      onClick={() =>
+                        updateSetting("filmEmulation", "bleachbypass")
+                      }
+                      className={`p-3 rounded-lg border transition-all ${
+                        settings.filmEmulation === "bleachbypass"
+                          ? "bg-slate-700/50 border-slate-400/50 ring-1 ring-slate-400/30"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="text-xs font-medium text-slate-200">
+                        Bleach Bypass
+                      </div>
+                      <div className="text-[9px] text-gray-500 mt-1">
+                        High contrast
+                      </div>
+                    </button>
+
+                    {/* Cross Process */}
+                    <button
+                      onClick={() =>
+                        updateSetting("filmEmulation", "crossprocess")
+                      }
+                      className={`p-3 rounded-lg border transition-all col-span-2 ${
+                        settings.filmEmulation === "crossprocess"
+                          ? "bg-fuchsia-900/20 border-fuchsia-500/50 ring-1 ring-fuchsia-500/30"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="text-xs font-medium text-fuchsia-200">
+                        Cross Process
+                      </div>
+                      <div className="text-[9px] text-gray-500 mt-1">
+                        E-6 to C-41 wild colors
                       </div>
                     </button>
                   </div>
@@ -2170,198 +2568,10 @@ export default function Home() {
             )}
 
             {activeTab === "text" && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                <ControlGroup title="Cinematic Subtitle">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <IconTypography size={14} />
-                      <span className="text-xs font-medium">
-                        Enable Subtitle
-                      </span>
-                    </div>
-                    <button
-                      onClick={() =>
-                        setTextOverlay((prev) => ({
-                          ...prev,
-                          subtitleEnabled: !prev.subtitleEnabled,
-                        }))
-                      }
-                      className={`w-10 h-5 rounded-full relative transition ${textOverlay.subtitleEnabled ? "bg-amber-500" : "bg-gray-700"}`}
-                    >
-                      <div
-                        className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${textOverlay.subtitleEnabled ? "left-6" : "left-1"}`}
-                      />
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Enter your subtitle text..."
-                    value={textOverlay.subtitleText}
-                    onChange={(e) =>
-                      setTextOverlay((prev) => ({
-                        ...prev,
-                        subtitleText: e.target.value,
-                      }))
-                    }
-                    className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
-                  />
-                </ControlGroup>
-
-                <ControlGroup title="Date & Location Stamp">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <IconCalendar size={14} />
-                      <span className="text-xs font-medium">
-                        Enable Date Stamp
-                      </span>
-                    </div>
-                    <button
-                      onClick={() =>
-                        setTextOverlay((prev) => ({
-                          ...prev,
-                          dateEnabled: !prev.dateEnabled,
-                        }))
-                      }
-                      className={`w-10 h-5 rounded-full relative transition ${textOverlay.dateEnabled ? "bg-amber-500" : "bg-gray-700"}`}
-                    >
-                      <div
-                        className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${textOverlay.dateEnabled ? "left-6" : "left-1"}`}
-                      />
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="DECEMBER 23, 2024"
-                    value={textOverlay.dateText}
-                    onChange={(e) =>
-                      setTextOverlay((prev) => ({
-                        ...prev,
-                        dateText: e.target.value,
-                      }))
-                    }
-                    className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition mb-3"
-                  />
-                  <div className="relative">
-                    <IconMapPin
-                      size={14}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Location (e.g., LAHORE, PAKISTAN)"
-                      value={textOverlay.locationText}
-                      onChange={(e) =>
-                        setTextOverlay((prev) => ({
-                          ...prev,
-                          locationText: e.target.value,
-                        }))
-                      }
-                      className="w-full bg-black/30 border border-white/10 rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
-                    />
-                  </div>
-                </ControlGroup>
-
-                <ControlGroup title="Film Style">
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      {
-                        id: "blade_runner",
-                        label: "Blade Runner",
-                        color: "text-orange-300",
-                      },
-                      {
-                        id: "interstellar",
-                        label: "Interstellar",
-                        color: "text-white",
-                      },
-                      {
-                        id: "sicario",
-                        label: "Sicario",
-                        color: "text-amber-400",
-                      },
-                      { id: "dune", label: "Dune", color: "text-amber-200" },
-                      {
-                        id: "arrival",
-                        label: "Arrival",
-                        color: "text-gray-300",
-                      },
-                      {
-                        id: "revenant",
-                        label: "Revenant",
-                        color: "text-stone-300",
-                      },
-                      {
-                        id: "oppenheimer",
-                        label: "Oppenheimer",
-                        color: "text-white",
-                      },
-                      {
-                        id: "the_batman",
-                        label: "The Batman",
-                        color: "text-red-500",
-                      },
-                      { id: "joker", label: "Joker", color: "text-lime-400" },
-                      {
-                        id: "nineteen17",
-                        label: "1917",
-                        color: "text-stone-400",
-                      },
-                      {
-                        id: "mad_max",
-                        label: "Mad Max",
-                        color: "text-orange-500",
-                      },
-                      { id: "her", label: "Her", color: "text-pink-300" },
-                    ].map((style) => (
-                      <button
-                        key={style.id}
-                        onClick={() =>
-                          setTextOverlay((prev) => ({
-                            ...prev,
-                            subtitleStyle: style.id as any,
-                          }))
-                        }
-                        className={`py-2 px-2 text-[8px] uppercase tracking-wider font-medium rounded-lg transition border ${
-                          textOverlay.subtitleStyle === style.id
-                            ? `bg-white/10 border-amber-500/50 ${style.color}`
-                            : "bg-white/5 border-white/5 text-gray-500 hover:text-gray-300 hover:bg-white/10"
-                        }`}
-                      >
-                        {style.label}
-                      </button>
-                    ))}
-                  </div>
-                </ControlGroup>
-
-                <ControlGroup title="Appearance">
-                  <Slider
-                    label="Font Size"
-                    value={textOverlay.fontSize}
-                    min={0.5}
-                    max={2}
-                    onChange={(v: any) =>
-                      setTextOverlay((prev) => ({
-                        ...prev,
-                        fontSize: parseFloat(v),
-                      }))
-                    }
-                    icon={<IconTypography size={14} />}
-                  />
-                  <Slider
-                    label="Opacity"
-                    value={textOverlay.opacity}
-                    min={0}
-                    max={1}
-                    onChange={(v: any) =>
-                      setTextOverlay((prev) => ({
-                        ...prev,
-                        opacity: parseFloat(v),
-                      }))
-                    }
-                    icon={<IconEye size={14} />}
-                  />
-                </ControlGroup>
-              </div>
+              <CinematicTextControls
+                textOverlay={textOverlay}
+                setTextOverlay={setTextOverlay}
+              />
             )}
 
             {activeTab === "transform" && (
@@ -2498,6 +2708,15 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Tutorial Modal */}
+      {activeTutorial && TUTORIAL_CONTENT[activeTutorial] && (
+        <TutorialModal
+          isOpen={!!activeTutorial}
+          onClose={handleTutorialClose}
+          content={TUTORIAL_CONTENT[activeTutorial]}
+        />
+      )}
     </main>
   );
 }
@@ -2551,184 +2770,5 @@ const HistogramGraph = ({
       height={100}
       className="w-[200px] h-[100px]"
     />
-  );
-};
-
-const ControlGroup = ({
-  title,
-  children,
-  defaultOpen = true,
-  accentColor = "amber",
-}: {
-  title: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-  accentColor?: string;
-}) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  const accentBorders: Record<string, string> = {
-    amber: "border-l-amber-500/50",
-    purple: "border-l-purple-500/50",
-    cyan: "border-l-cyan-500/50",
-    orange: "border-l-orange-500/50",
-    green: "border-l-green-500/50",
-  };
-
-  return (
-    <div
-      className={`border-l-2 ${accentBorders[accentColor] || accentBorders.amber} pl-3 transition-all`}
-    >
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-2 group"
-      >
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.35em] text-amber-900/70 group-hover:text-amber-700/90 font-semibold transition">
-          {title}
-        </h3>
-        <svg
-          className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-        }`}
-      >
-        <div className="space-y-4 pb-2">{children}</div>
-      </div>
-    </div>
-  );
-};
-
-const Slider = ({
-  label,
-  value,
-  defaultValue = 0,
-  min,
-  max,
-  step = 0.01,
-  onChange,
-  icon,
-  accentColor = "amber",
-  bipolar = false,
-}: {
-  label: string;
-  value: number;
-  defaultValue?: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (v: any) => void;
-  icon: React.ReactNode;
-  accentColor?: string;
-  bipolar?: boolean;
-}) => {
-  const percentage = ((value - min) / (max - min)) * 100;
-  const isModified = Math.abs(value - defaultValue) > 0.001;
-
-  // For bipolar sliders (e.g., -1 to 1), calculate center position
-  const centerPercentage = bipolar ? ((0 - min) / (max - min)) * 100 : 0;
-
-  const accentColors: Record<string, string> = {
-    amber: "bg-gradient-to-r from-amber-600 to-amber-400",
-    purple: "bg-gradient-to-r from-purple-600 to-purple-400",
-    cyan: "bg-gradient-to-r from-cyan-600 to-cyan-400",
-    orange: "bg-gradient-to-r from-orange-600 to-orange-400",
-    green: "bg-gradient-to-r from-green-600 to-green-400",
-  };
-
-  return (
-    <div className="space-y-2 group relative">
-      <div className="flex justify-between items-center text-gray-400 group-hover:text-gray-200 transition">
-        <div className="flex items-center gap-2">
-          <span className="text-gray-500 group-hover:text-gray-400 transition">
-            {icon}
-          </span>
-          <label className="font-mono text-[11px] font-medium">{label}</label>
-        </div>
-        <div className="flex items-center gap-2">
-          {isModified && (
-            <button
-              onClick={() => onChange(defaultValue)}
-              className="opacity-0 group-hover:opacity-100 text-[8px] uppercase tracking-widest px-2 py-0.5 bg-white/5 hover:bg-white/10 rounded transition text-gray-500 hover:text-white"
-            >
-              Reset
-            </button>
-          )}
-          <span
-            className={`text-[10px] font-mono tracking-wider px-2 py-0.5 rounded ${isModified ? "bg-amber-500/20 text-amber-400" : "bg-white/5 text-gray-500"}`}
-          >
-            {value.toFixed(2)}
-          </span>
-        </div>
-      </div>
-      <div className="relative h-2 bg-gray-800/80 rounded-full overflow-hidden group-hover:bg-gray-700/80 transition">
-        {/* Background track */}
-        <div className="absolute inset-0 rounded-full" />
-
-        {/* Center zero indicator for bipolar sliders */}
-        {bipolar && (
-          <div
-            className="absolute top-0 bottom-0 w-0.5 bg-white/30 z-10"
-            style={{ left: `${centerPercentage}%` }}
-          />
-        )}
-
-        {/* Value track */}
-        {bipolar ? (
-          // Bipolar: fill from center
-          value >= 0 ? (
-            <div
-              className={`absolute top-0 bottom-0 ${accentColors[accentColor] || accentColors.amber} rounded-r-full transition-all duration-150`}
-              style={{
-                left: `${centerPercentage}%`,
-                width: `${percentage - centerPercentage}%`,
-              }}
-            />
-          ) : (
-            <div
-              className={`absolute top-0 bottom-0 ${accentColors[accentColor] || accentColors.amber} rounded-l-full transition-all duration-150`}
-              style={{
-                left: `${percentage}%`,
-                width: `${centerPercentage - percentage}%`,
-              }}
-            />
-          )
-        ) : (
-          // Regular: fill from left
-          <div
-            className={`absolute top-0 bottom-0 left-0 ${accentColors[accentColor] || accentColors.amber} rounded-full transition-all duration-150`}
-            style={{ width: `${percentage}%` }}
-          />
-        )}
-
-        {/* Thumb indicator */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg shadow-black/50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-          style={{ left: `calc(${percentage}% - 6px)` }}
-        />
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onDoubleClick={() => onChange(defaultValue)}
-        className="absolute bottom-0 left-0 right-0 h-6 opacity-0 cursor-pointer"
-      />
-    </div>
   );
 };

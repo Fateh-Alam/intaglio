@@ -133,20 +133,37 @@ export default function CinematicEditor({
     // Clear handler
   }, []);
 
+  // Wiper position tracking
+  const [wiperPosition, setWiperPosition] = useState(0.5);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (settings.wiperActive && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        setWiperPosition(Math.max(0, Math.min(1, x)));
+      }
+    },
+    [settings.wiperActive]
+  );
+
   return (
     <div
       ref={containerRef}
       className="w-full h-full relative bg-gray-900 overflow-hidden"
+      onMouseMove={handleMouseMove}
     >
       <Canvas
         gl={{ preserveDrawingBuffer: true }}
         camera={{ position: [0, 0, 5], fov: 50 }}
+        style={{ cursor: settings.wiperActive ? "ew-resize" : "default" }}
       >
         <Suspense fallback={null}>
           <ImagePlane
             key={imageUrl}
             imageUrl={imageUrl}
             settings={settings}
+            wiperPosition={wiperPosition}
             brushMaskData={brushMaskData}
             brushMaskExposure={brushMaskExposure}
             brushMaskContrast={brushMaskContrast}
@@ -193,7 +210,7 @@ export default function CinematicEditor({
       )}
 
       {/* Cinematic Text Overlay - positioned within image bounds */}
-      {textOverlay && imageBounds && (
+      {imageBounds && textOverlay && (
         <div
           className="absolute pointer-events-none"
           style={{
