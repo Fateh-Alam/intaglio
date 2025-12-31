@@ -355,6 +355,9 @@ export default function Home() {
       }
     }
   }, []);
+
+  const [isMobileControlsExpanded, setIsMobileControlsExpanded] =
+    useState(false);
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const [isReferenceOpen, setIsReferenceOpen] = useState(false);
   const [isLUTCreatorOpen, setIsLUTCreatorOpen] = useState(false);
@@ -1224,9 +1227,12 @@ export default function Home() {
       </div>
 
       {/* CENTER - EDITOR CANVAS */}
-      <div className="flex-1 relative bg-[#020202] flex flex-col overflow-hidden border-r border-white/5">
-        {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-white/5 px-6 py-4 bg-[#050505]">
+      <div
+        onClick={() => setIsMobileControlsExpanded(false)}
+        className="fixed inset-0 z-0 bg-[#020202] flex flex-col overflow-hidden md:relative md:flex-1 md:border-r border-white/5"
+      >
+        {/* Top Header - Transparent Overlay on Mobile */}
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none md:relative md:bg-[#050505] md:pointer-events-auto">
           <div className="flex items-center gap-3">
             <div className="h-2 w-2 rounded-full bg-white/30" />
             <div className="h-2 w-2 rounded-full bg-white/20" />
@@ -1235,8 +1241,19 @@ export default function Home() {
           <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/50">
             Studio Preview
           </div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-amber-500/70">
-            Live
+          <div className="flex items-center gap-3">
+            <div className="hidden md:block font-mono text-[10px] uppercase tracking-[0.35em] text-amber-500/70">
+              Live
+            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExportModalOpen(true);
+              }}
+              className="md:hidden pointer-events-auto flex items-center justify-center p-2 rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/20 transition-all backdrop-blur-md active:scale-95"
+            >
+              <IconDownload size={16} />
+            </button>
           </div>
         </div>
 
@@ -1457,13 +1474,21 @@ export default function Home() {
         </div>
       </div>
 
-      {/* RIGHT SIDEBAR - CONTROLS */}
+      {/* RIGHT SIDEBAR - CONTROLS (Mobile Bottom Sheet) */}
       <div
         className={`${
           isRightSidebarOpen
             ? "md:w-80 md:w-[25%] md:min-w-[300px] md:max-w-[400px]"
             : "md:w-[60px]"
-        } w-full h-[45vh] md:h-full bg-[#050505] flex flex-col z-20 relative transition-all duration-300 flex-shrink-0 border-t border-white/10 md:border-t-0 md:border-l md:border-white/5`}
+        } fixed bottom-0 left-0 right-0 h-auto max-h-[60vh] flex flex-col-reverse z-40 transition-transform duration-300 ease-out bg-black/95 backdrop-blur-xl border-t border-white/10 md:relative md:h-full md:bg-[#050505] md:flex-col md:max-h-none md:transform-none md:border-t-0 md:border-l md:border-white/5`}
+        style={{
+          transform:
+            typeof window !== "undefined" &&
+            window.innerWidth < 768 &&
+            !isMobileControlsExpanded
+              ? "translateY(calc(100% - 68px))"
+              : "translateY(0)",
+        }}
       >
         {/* Toggle Button */}
         <button
@@ -1483,7 +1508,7 @@ export default function Home() {
         />
 
         {/* Control Panel */}
-        <div className="w-full flex flex-col z-20 h-full overflow-hidden">
+        <div className="w-full flex flex-col-reverse md:flex-col z-20 h-full overflow-hidden">
           <div className={`h-full w-full ${!isRightSidebarOpen && "hidden"}`}>
             <div className="w-full min-w-[320px] h-full flex flex-col">
               {/* Premium Mobile Tab Bar */}
@@ -1544,11 +1569,6 @@ export default function Home() {
                     icon: <IconCamera size={16} />,
                     color: "green",
                   },
-                  {
-                    id: "export",
-                    icon: <IconDownload size={16} />,
-                    color: "rose",
-                  },
                 ].map((tab) => {
                   const isActive = activeTab === tab.id;
                   const colorClasses: Record<
@@ -1596,8 +1616,20 @@ export default function Home() {
                     <button
                       key={tab.id}
                       onClick={() => {
-                        if (tab.id === "export") {
-                          setIsExportModalOpen(true);
+                        // Toggle logic for mobile
+                        if (
+                          typeof window !== "undefined" &&
+                          window.innerWidth < 768
+                        ) {
+                          if (
+                            activeTab === tab.id &&
+                            isMobileControlsExpanded
+                          ) {
+                            setIsMobileControlsExpanded(false);
+                          } else {
+                            handleTabChange(tab.id);
+                            setIsMobileControlsExpanded(true);
+                          }
                         } else {
                           handleTabChange(tab.id);
                         }
