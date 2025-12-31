@@ -73,6 +73,7 @@ import { generatePaletteHeist2DLUT } from "../utils/colorTransfer";
 import TutorialModal, { TutorialTrigger } from "../components/TutorialModal";
 import PresetCreatorModal from "../components/PresetCreatorModal";
 import ReferenceViewer from "../components/ReferenceViewer";
+import MobileLimitationModal from "../components/MobileLimitationModal";
 import LUTCreatorModal from "../components/LUTCreatorModal";
 import VideoGradingPanel from "../components/VideoGradingPanel";
 import StartScreen from "../components/StartScreen";
@@ -344,6 +345,16 @@ export default function Home() {
   // Advanced Features State
   const [isHistogramHelpOpen, setIsHistogramHelpOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        setShowMobileWarning(true);
+      }
+    }
+  }, []);
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const [isReferenceOpen, setIsReferenceOpen] = useState(false);
   const [isLUTCreatorOpen, setIsLUTCreatorOpen] = useState(false);
@@ -977,6 +988,11 @@ export default function Home() {
         }}
       />
 
+      <MobileLimitationModal
+        isOpen={showMobileWarning}
+        onClose={() => setShowMobileWarning(false)}
+      />
+
       {/* LEFT SIDEBAR - MODULES & ANALYZER */}
       <div
         className={`${
@@ -1403,8 +1419,8 @@ export default function Home() {
           {isMobileMenuOpen ? <IconX size={24} /> : <IconMenu2 size={24} />}
         </button>
 
-        {/* Bottom Actions Panel */}
-        <div className="h-[180px] border-t border-white/10 bg-[#050505] p-6 grid grid-cols-3 gap-4">
+        {/* Bottom Actions Panel - Hidden on Mobile */}
+        <div className="hidden md:grid h-[180px] border-t border-white/10 bg-[#050505] p-6 grid-cols-3 gap-4">
           <button
             onClick={() => updateSetting("wiperActive", !settings.wiperActive)}
             className={`border text-left p-4 transition-all group ${settings.wiperActive ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 bg-black/30 hover:border-white/25"}`}
@@ -1528,6 +1544,11 @@ export default function Home() {
                     icon: <IconCamera size={16} />,
                     color: "green",
                   },
+                  {
+                    id: "export",
+                    icon: <IconDownload size={16} />,
+                    color: "rose",
+                  },
                 ].map((tab) => {
                   const isActive = activeTab === tab.id;
                   const colorClasses: Record<
@@ -1574,7 +1595,13 @@ export default function Home() {
                   return (
                     <button
                       key={tab.id}
-                      onClick={() => handleTabChange(tab.id)}
+                      onClick={() => {
+                        if (tab.id === "export") {
+                          setIsExportModalOpen(true);
+                        } else {
+                          handleTabChange(tab.id);
+                        }
+                      }}
                       className={`snap-start flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl text-[9px] font-mono uppercase whitespace-nowrap transition-all duration-200 border shrink-0 ${
                         isActive
                           ? `${colorClasses[tab.color].active} border shadow-lg`
