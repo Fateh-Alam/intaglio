@@ -353,15 +353,9 @@ export default function CinematicTextOverlay({
 }: {
   settings: TextOverlaySettings;
 }) {
-  if (!settings) return null;
-  if (!settings.subtitleEnabled && !settings.dateEnabled) return null;
-
-  const style = FILM_STYLES[settings.subtitleStyle];
-  const baseFontSize = settings.fontSize;
-
   // Dynamically load Google Font
   useEffect(() => {
-    if (settings.customFontEnabled && settings.customFontName) {
+    if (settings && settings.customFontEnabled && settings.customFontName) {
       const fontName = settings.customFontName.trim();
       if (!fontName) return;
 
@@ -384,6 +378,7 @@ export default function CinematicTextOverlay({
         "+"
       )}:ital,wght@${axisParam}&display=swap`;
 
+      link.crossOrigin = "anonymous";
       link.rel = "stylesheet";
       document.head.appendChild(link);
 
@@ -392,11 +387,17 @@ export default function CinematicTextOverlay({
       };
     }
   }, [
-    settings.customFontEnabled,
-    settings.customFontName,
-    settings.customFontWeight,
-    settings.customFontStyle,
+    settings?.customFontEnabled,
+    settings?.customFontName,
+    settings?.customFontWeight,
+    settings?.customFontStyle,
   ]);
+
+  if (!settings) return null;
+  if (!settings.subtitleEnabled && !settings.dateEnabled) return null;
+
+  const style = FILM_STYLES[settings.subtitleStyle];
+  const baseFontSize = settings.fontSize;
 
   const titleFontFamily =
     settings.customFontEnabled && settings.customFontName

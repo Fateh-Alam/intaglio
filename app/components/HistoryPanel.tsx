@@ -6,6 +6,8 @@ import {
   IconArrowForwardUp,
   IconClock,
   IconRestore,
+  IconGitBranch,
+  IconX,
 } from "@tabler/icons-react";
 
 export interface HistoryState {
@@ -16,6 +18,13 @@ export interface HistoryState {
   thumbnail?: string; // Data URL
 }
 
+interface Branch {
+  id: string;
+  name: string;
+  settings: any;
+  timestamp: number;
+}
+
 interface HistoryPanelProps {
   history: HistoryState[];
   currentIndex: number;
@@ -23,6 +32,10 @@ interface HistoryPanelProps {
   onRedo: () => void;
   onJumpToState: (index: number) => void;
   onClearHistory: () => void;
+  branches?: Branch[];
+  onCreateBranch?: () => void;
+  onRestoreBranch?: (id: string) => void;
+  onDeleteBranch?: (id: string) => void;
 }
 
 export default function HistoryPanel({
@@ -32,6 +45,10 @@ export default function HistoryPanel({
   onRedo,
   onJumpToState,
   onClearHistory,
+  branches,
+  onCreateBranch,
+  onRestoreBranch,
+  onDeleteBranch,
 }: HistoryPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -92,6 +109,58 @@ export default function HistoryPanel({
           <IconArrowForwardUp size={14} />
         </button>
       </div>
+
+      {/* Branch/Snapshot Section */}
+      {onCreateBranch && branches && branches.length > 0 && (
+        <div className="p-3 border-b border-white/5 bg-black/30">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
+              Branches
+            </span>
+            <button
+              onClick={onCreateBranch}
+              className="text-[10px] text-amber-500 hover:text-amber-400 transition font-mono uppercase"
+            >
+              + New
+            </button>
+          </div>
+          <div className="space-y-1 max-h-24 overflow-y-auto">
+            {branches.map((branch) => (
+              <div
+                key={branch.id}
+                className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition group"
+              >
+                <button
+                  onClick={() => onRestoreBranch && onRestoreBranch(branch.id)}
+                  className="flex items-center gap-2 text-[11px] text-gray-300 hover:text-white transition flex-1 text-left"
+                >
+                  <IconGitBranch size={12} className="text-cyan-500" />
+                  <span className="truncate">{branch.name}</span>
+                </button>
+                <button
+                  onClick={() => onDeleteBranch && onDeleteBranch(branch.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-400 transition"
+                >
+                  <IconX size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Create Branch Button (if no branches yet) */}
+      {onCreateBranch && (!branches || branches.length === 0) && (
+        <div className="p-3 border-b border-white/5">
+          <button
+            onClick={onCreateBranch}
+            className="w-full py-2 flex items-center justify-center gap-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-mono uppercase hover:bg-cyan-500/20 transition"
+          >
+            <IconGitBranch size={14} />
+            Create Branch
+          </button>
+        </div>
+      )}
 
       {/* List */}
       <div

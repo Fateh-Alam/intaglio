@@ -44,7 +44,16 @@ const fragmentShader = `
   uniform float uSkinProtectStrength;
   uniform float uGrainStrength;
   uniform float uVignette;
+  
+  // Advanced Effects
   uniform float uHalationStrength;
+  uniform float uHalationThreshold;
+  uniform float uHalationRadius;
+  
+  uniform float uBloomStrength;
+  uniform float uBloomThreshold;
+  uniform float uBloomRadius;
+  
   uniform float uSharpness;
   uniform float uDehaze;
   uniform float uTargetHue;
@@ -948,17 +957,71 @@ const fragmentShader = `
         color += highPass * uSharpness * 0.5;
     }
 
+    // ============================================
+    // PHYSICS-BASED HALATION & BLOOM (Single-Pass Approximation)
+    // ============================================
+
+    // 1. Halation (Film Light Bleed) - Red channel diffusion
     if (uHalationStrength > 0.0) {
-        vec4 glow = vec4(0.0);
-        float offset = 0.004; 
-        glow += texture2D(uTexture, vUv + vec2(offset, 0.0));
-        glow += texture2D(uTexture, vUv + vec2(-offset, 0.0));
-        glow += texture2D(uTexture, vUv + vec2(0.0, offset));
-        glow += texture2D(uTexture, vUv + vec2(0.0, -offset));
-        glow /= 4.0;
-        float brightness = dot(color, vec3(0.33));
-        if(brightness > 0.7) {
-            color += glow.rgb * uHalationStrength;
+        vec3 halationColor = vec3(0.0);
+        float totalWeight = 0.0;
+        
+        // Pseudo-Gaussian Blur Loop
+        float radius = uHalationRadius * 0.01; // Scale radius
+        
+        // Sample surrounding pixels
+        for(float x = -2.0; x <= 2.0; x += 1.0) {
+            for(float y = -2.0; y <= 2.0; y += 1.0) {
+                 vec2 offset = vec2(x, y) * radius;
+                 vec3 samp = texture2D(uTexture, vUv + offset).rgb;
+                 
+                 // Threshold - only bright areas cause halation
+                 float brightness = max(samp.r, max(samp.g, samp.b));
+                 if (brightness > uHalationThreshold) {
+                      // Distance weight
+                      float weight = 1.0 / (1.0 + length(vec2(x, y)));
+                      halationColor += samp * weight;
+                      totalWeight += weight;
+                 }
+            }
+        }
+        
+        if (totalWeight > 0.0) {
+            halationColor /= totalWeight;
+            
+            // Halation is characteristically RED/ORANGE
+            // We take the red channel of the blurred highlight and bleed it
+            vec3 halo = vec3(1.0, 0.4, 0.1) * halationColor.r; 
+            
+            // Additive blend with SCREEN for softer look
+            color = max(color, color + halo * uHalationStrength);
+        }
+    }
+
+    // 2. Optical Bloom - Soft glow
+    if (uBloomStrength > 0.0) {
+        vec3 bloomColor = vec3(0.0);
+        float totalWeight = 0.0;
+        float radius = uBloomRadius * 0.01;
+        
+        // Simplified loop for Bloom (could combine with Halation loop for perf, but keeping separate for control)
+        for(float x = -2.0; x <= 2.0; x += 1.0) {
+             for(float y = -2.0; y <= 2.0; y += 1.0) {
+                 vec2 offset = vec2(x, y) * radius * 1.5; // Bloom is usually wider
+                 vec3 samp = texture2D(uTexture, vUv + offset).rgb;
+                 
+                 float luma = dot(samp, vec3(0.2126, 0.7152, 0.0722));
+                 if (luma > uBloomThreshold) {
+                     float weight = 1.0 / (1.0 + length(vec2(x, y)));
+                     bloomColor += samp * weight;
+                     totalWeight += weight;
+                 }
+             }
+        }
+        
+        if (totalWeight > 0.0) {
+            bloomColor /= totalWeight;
+            color += bloomColor * uBloomStrength;
         }
     }
 
@@ -1019,6 +1082,7 @@ export default function ImagePlane({
   brushMaskClarity?: number;
 }) {
   const texture = useLoader(THREE.TextureLoader, imageUrl);
+
   const { size, viewport } = useThree();
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
@@ -1113,7 +1177,15 @@ export default function ImagePlane({
           uSkinProtectStrength: { value: settings.skinProtect },
           uGrainStrength: { value: settings.grain },
           uVignette: { value: settings.vignette },
-          uHalationStrength: { value: settings.halation },
+
+          uHalationStrength: { value: settings.halation || 0 },
+          uHalationThreshold: { value: settings.halationThreshold || 0.7 },
+          uHalationRadius: { value: settings.halationRadius || 1.0 },
+
+          uBloomStrength: { value: settings.bloom || 0 },
+          uBloomThreshold: { value: settings.bloomThreshold || 0.8 },
+          uBloomRadius: { value: settings.bloomRadius || 1.0 },
+
           uSharpness: { value: settings.sharpness },
           uDehaze: { value: settings.dehaze },
           uAberration: { value: settings.aberration },
@@ -1247,24 +1319,24 @@ export default function ImagePlane({
           // Color Grading
           uColorGradingShadows: {
             value: new THREE.Vector4(
-              settings.colorGrading?.shadows?.h !== undefined
+              (settings.colorGrading?.shadows?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.shadows.h,
-                    settings.colorGrading.shadows.s,
+                    settings.colorGrading?.shadows?.h || 0,
+                    settings.colorGrading?.shadows?.s || 0,
                     0.5
                   ).r
                 : 0,
-              settings.colorGrading?.shadows?.h !== undefined
+              (settings.colorGrading?.shadows?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.shadows.h,
-                    settings.colorGrading.shadows.s,
+                    settings.colorGrading?.shadows?.h || 0,
+                    settings.colorGrading?.shadows?.s || 0,
                     0.5
                   ).g
                 : 0,
-              settings.colorGrading?.shadows?.h !== undefined
+              (settings.colorGrading?.shadows?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.shadows.h,
-                    settings.colorGrading.shadows.s,
+                    settings.colorGrading?.shadows?.h || 0,
+                    settings.colorGrading?.shadows?.s || 0,
                     0.5
                   ).b
                 : 0,
@@ -1273,24 +1345,24 @@ export default function ImagePlane({
           },
           uColorGradingMidtones: {
             value: new THREE.Vector4(
-              settings.colorGrading?.midtones?.h !== undefined
+              (settings.colorGrading?.midtones?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.midtones.h,
-                    settings.colorGrading.midtones.s,
+                    settings.colorGrading?.midtones?.h || 0,
+                    settings.colorGrading?.midtones?.s || 0,
                     0.5
                   ).r
                 : 0,
-              settings.colorGrading?.midtones?.h !== undefined
+              (settings.colorGrading?.midtones?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.midtones.h,
-                    settings.colorGrading.midtones.s,
+                    settings.colorGrading?.midtones?.h || 0,
+                    settings.colorGrading?.midtones?.s || 0,
                     0.5
                   ).g
                 : 0,
-              settings.colorGrading?.midtones?.h !== undefined
+              (settings.colorGrading?.midtones?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.midtones.h,
-                    settings.colorGrading.midtones.s,
+                    settings.colorGrading?.midtones?.h || 0,
+                    settings.colorGrading?.midtones?.s || 0,
                     0.5
                   ).b
                 : 0,
@@ -1299,24 +1371,24 @@ export default function ImagePlane({
           },
           uColorGradingHighlights: {
             value: new THREE.Vector4(
-              settings.colorGrading?.highlights?.h !== undefined
+              (settings.colorGrading?.highlights?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.highlights.h,
-                    settings.colorGrading.highlights.s,
+                    settings.colorGrading?.highlights?.h || 0,
+                    settings.colorGrading?.highlights?.s || 0,
                     0.5
                   ).r
                 : 0,
-              settings.colorGrading?.highlights?.h !== undefined
+              (settings.colorGrading?.highlights?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.highlights.h,
-                    settings.colorGrading.highlights.s,
+                    settings.colorGrading?.highlights?.h || 0,
+                    settings.colorGrading?.highlights?.s || 0,
                     0.5
                   ).g
                 : 0,
-              settings.colorGrading?.highlights?.h !== undefined
+              (settings.colorGrading?.highlights?.s || 0) > 0.01
                 ? new THREE.Color().setHSL(
-                    settings.colorGrading.highlights.h,
-                    settings.colorGrading.highlights.s,
+                    settings.colorGrading?.highlights?.h || 0,
+                    settings.colorGrading?.highlights?.s || 0,
                     0.5
                   ).b
                 : 0,

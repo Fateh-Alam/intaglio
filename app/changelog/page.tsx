@@ -69,6 +69,132 @@ export default function Changelog() {
 
         {/* Timeline */}
         <div className="relative border-l border-white/10 ml-4 md:ml-12 pl-8 md:pl-16 space-y-24">
+          {/* v2.6 ENTRY */}
+          <div className="relative group animate-fade-in-up">
+            {/* Node */}
+            <div className="absolute -left-[37px] md:-left-[69px] top-2 h-4 w-4 md:h-5 md:w-5 rounded-full bg-[#050505] border-2 border-cyan-500 shadow-[0_0_30px_rgba(6,182,212,0.6)] group-hover:scale-125 transition-transform duration-500 z-10">
+              <div className="absolute inset-0 bg-cyan-500 animate-ping opacity-20 hover:opacity-0" />
+            </div>
+
+            {/* Date */}
+            <div className="flex items-center gap-4 mb-4">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] px-3 py-1 bg-cyan-900/20 text-cyan-400 border border-cyan-500/20 rounded">
+                2026-01-01
+              </span>
+              <span className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+            </div>
+
+            {/* Content */}
+            <div className="bg-white/5 border border-white/10 p-8 rounded-2xl md:p-10 backdrop-blur-md group-hover:border-cyan-500/30 transition-colors duration-500 relative overflow-hidden">
+              <div className="absolute -top-20 -right-20 w-64 h-64 bg-cyan-500/10 rounded-full blur-[80px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+
+              <div className="absolute top-0 right-0 p-3 opacity-20">
+                <Monitor
+                  size={120}
+                  strokeWidth={0.5}
+                  className="text-cyan-500 rotate-12 transition-transform duration-700 group-hover:rotate-[24deg]"
+                />
+              </div>
+
+              <h2 className="text-3xl md:text-4xl font-light text-white mb-2">
+                v2.6.0
+              </h2>
+              <h3 className="text-xl font-serif italic text-gray-400 mb-8">
+                The Lab Update
+              </h3>
+
+              <div className="space-y-6 relative z-10">
+                <ChangeItem
+                  icon={Monitor}
+                  title="Immersive Start Screen"
+                  desc="A cinematic entry point to the studio. Try rapid-fire sample images or extract high-fidelity frames from video clips instantly."
+                />
+                <ChangeItem
+                  icon={Aperture}
+                  title="Color Accuracy Engine"
+                  desc="Rebuilt rendering pipeline for mathematical purity. Zero-interference defaults ensure your images render exactly as shot, with no hidden gamma shifts."
+                />
+                <ChangeItem
+                  icon={Camera}
+                  title="Video Clip Grading"
+                  desc="Import .mp4/.mov files and extract raw still frames for precision grading. Perfect for matching film looks."
+                />
+                <ChangeItem
+                  icon={Sliders}
+                  title="Reference & False Color"
+                  desc="Professional analysis tools integrated directly into the workspace. Verify exposure values and compare against reference stills in real-time."
+                />
+                <ChangeItem
+                  icon={Wand2}
+                  title="Studio Sidebar"
+                  desc="A redesigned 'Pro' control bar. Minimalist, haptic-feeling controls for project management."
+                />
+                <ChangeItem
+                  icon={Layers}
+                  title="3D LUT Creator"
+                  desc="Generate industry-standard .cube LUTs with mathematical precision based on your current look."
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* v2.5 ENTRY */}
+          <div className="relative group animate-fade-in-up">
+            {/* Node */}
+            <div className="absolute -left-[37px] md:-left-[69px] top-2 h-4 w-4 md:h-5 md:w-5 rounded-full bg-[#050505] border-2 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.6)] group-hover:scale-125 transition-transform duration-500 z-10">
+              <div className="absolute inset-0 bg-red-500 animate-ping opacity-20 hover:opacity-0" />
+            </div>
+
+            {/* Date */}
+            <div className="flex items-center gap-4 mb-4">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] px-3 py-1 bg-red-900/20 text-red-400 border border-red-500/20 rounded">
+                2025-12-31
+              </span>
+              <span className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+            </div>
+
+            {/* Content */}
+            <div className="bg-white/5 border border-white/10 p-8 rounded-2xl md:p-10 backdrop-blur-sm group-hover:border-red-500/30 transition-colors duration-500 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-3 opacity-20">
+                <Zap
+                  size={120}
+                  strokeWidth={0.5}
+                  className="text-red-500 rotate-12"
+                />
+              </div>
+
+              <h2 className="text-3xl md:text-4xl font-light text-white mb-2">
+                v2.5.0
+              </h2>
+              <h3 className="text-xl font-serif italic text-gray-400 mb-8">
+                The Physics Update
+              </h3>
+
+              <div className="space-y-6 relative z-10">
+                <ChangeItem
+                  icon={Camera}
+                  title="Palette Heist v2"
+                  desc="Interactive color matching with Region of Interest (ROI) selection. Draw a box to match colors from a specific area of your image."
+                />
+                <ChangeItem
+                  icon={Zap}
+                  title="Halation & Bloom"
+                  desc="Physics-based film effects. Halation simulates red-orange light bleed around highlights. Bloom adds a soft, natural glow."
+                />
+                <ChangeItem
+                  icon={Layers}
+                  title="Advanced Export"
+                  desc="Multi-format export (JPG/PNG/WEBP) with quality slider (1-100%) and resolution scaling (0.5x to 4x)."
+                />
+                <ChangeItem
+                  icon={Sliders}
+                  title="Histogram Tutorial"
+                  desc="Interactive educational modal explaining how to read histograms, with 'Plain English' explanations for beginners."
+                />
+              </div>
+            </div>
+          </div>
+
           {/* v2.0 ENTRY */}
           <div className="relative group animate-fade-in-up">
             {/* Node */}

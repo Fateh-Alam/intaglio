@@ -1,7 +1,17 @@
 import * as THREE from "three";
 
-// Helper to get image data from a URL
-async function getImageData(url: string): Promise<Uint8ClampedArray> {
+// Helper to get image data from a URL with optional ROI (normalized 0-1)
+interface ROI {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+async function getImageData(
+  url: string,
+  roi?: ROI
+): Promise<Uint8ClampedArray> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "Anonymous";
@@ -12,7 +22,29 @@ async function getImageData(url: string): Promise<Uint8ClampedArray> {
       const ctx = canvas.getContext("2d");
       if (!ctx) return reject("No context");
       ctx.drawImage(img, 0, 0);
-      resolve(ctx.getImageData(0, 0, img.width, img.height).data);
+
+      let x = 0,
+        y = 0,
+        w = img.width,
+        h = img.height;
+
+      if (roi) {
+        x = class Clamp {
+          static val(v: number, min: number, max: number) {
+            return Math.min(Math.max(v, min), max);
+          }
+        }.val(Math.floor(roi.x * img.width), 0, img.width - 1);
+
+        y = Math.floor(roi.y * img.height);
+        w = Math.floor(roi.w * img.width);
+        h = Math.floor(roi.h * img.height);
+
+        // Safety clamps
+        if (x + w > img.width) w = img.width - x;
+        if (y + h > img.height) h = img.height - y;
+      }
+
+      resolve(ctx.getImageData(x, y, w, h).data);
     };
     img.onerror = reject;
     img.src = url;
@@ -35,6 +67,9 @@ function getCDF(data: Uint8ClampedArray, channelOffset: number): number[] {
 
   // Normalize
   const total = cdf[255];
+  // Avoid division by zero if roi is empty
+  if (total === 0) return cdf;
+
   for (let i = 0; i < 256; i++) {
     cdf[i] /= total;
   }
@@ -60,11 +95,13 @@ function createMapping(sourceCDF: number[], refCDF: number[]): number[] {
 // Generate a 2D LUT texture (WebGL 1 compatible)
 export async function generatePaletteHeist2DLUT(
   sourceUrl: string,
-  refUrl: string
+  refUrl: string,
+  sourceROI?: ROI,
+  refROI?: ROI
 ): Promise<THREE.DataTexture> {
   const [sourceData, refData] = await Promise.all([
-    getImageData(sourceUrl),
-    getImageData(refUrl),
+    getImageData(sourceUrl, sourceROI),
+    getImageData(refUrl, refROI),
   ]);
 
   const sourceR = getCDF(sourceData, 0);

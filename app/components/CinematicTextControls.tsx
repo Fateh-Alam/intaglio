@@ -126,6 +126,18 @@ export default function CinematicTextControls({
             </div>
             <input
               type="text"
+              placeholder="Date (e.g. MAY 2024)"
+              value={textOverlay.dateText}
+              onChange={(e) =>
+                setTextOverlay((prev) => ({
+                  ...prev,
+                  dateText: e.target.value,
+                }))
+              }
+              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition font-mono mb-2"
+            />
+            <input
+              type="text"
               placeholder="Location (e.g., LAHORE, PAKISTAN)"
               value={textOverlay.locationText}
               onChange={(e) =>

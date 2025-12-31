@@ -2,6 +2,42 @@
 
 All notable changes to the Nyvarra Studio project will be documented in this file.
 
+## [2.5.0] - 2025-12-31 "The Physics Update"
+
+### 🚀 New Features
+
+- **Palette Heist v2 (Interactive Color Match)**:
+  - Added **Region of Interest (ROI)** selection. Draw a box on your image to match colors from a specific area.
+  - Visual ROI overlay with draggable/resizable selection.
+- **Physics-Based Effects**:
+  - Added **Halation**: Film-like red-orange light bleed around bright areas.
+  - Added **Optical Bloom**: Soft, natural glow effect with adjustable threshold and radius.
+- **New Controls**:
+  - Added "Physics: Halation & Bloom" control group in the Effects tab.
+  - Strength, Threshold, and Radius sliders for fine-tuning.
+- **3D LUT Creator**:
+  - Build custom Look Up Tables with lift, gamma, gain, saturation, temperature controls.
+  - 6 quick presets (Neutral, Cinematic, Faded Film, High Contrast, Cool/Warm Tone).
+  - Export as industry-standard .cube files or apply directly to image.
+- **Video Color Grading**:
+  - Upload .mp4, .mov, .webm videos for live color grading preview.
+  - Real-time CSS filter application showing your grade on video.
+  - Extract frames to use as images with full grading controls.
+- **Reference View**:
+  - Floating, draggable comparison window for reference images.
+  - Pin position, zoom controls, and Original/Reference toggle.
+- **History Branching**:
+  - Create named branches to save different edit versions.
+  - Restore or delete branches from the History panel.
+
+### 🎨 UI/UX Improvements
+
+- **Advanced Export Modal**: Added quality slider (1-100%), scale selection (0.5x-4x), and format choice (JPG/PNG/WEBP).
+- **Histogram Tutorial**: Interactive modal explaining how to read histograms with "Plain English" explanations.
+- **Minimizable Panels**: Left/Right sidebars and Look Intensity overlay can now be collapsed.
+
+---
+
 ## [2.0.0] - 2025-12-31 "The Cinematic Update"
 
 ### 🚀 New Features

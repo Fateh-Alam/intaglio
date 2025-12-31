@@ -195,6 +195,24 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
     icon: <IconCamera size={28} />,
     accentColor: "#22c55e",
   },
+
+  falseColor: {
+    id: "falseColor",
+    title: "False Color",
+    subtitle: "Exposure Analysis",
+    description:
+      "A professional tool that maps brightness levels to colors, helping you identify underexposed, overexposed, and properly lit areas at a glance. Essential for correct exposure in video production.",
+    tips: [
+      "Purple/Blue = Underexposed (too dark)",
+      "Green/Olive = Correct skin tone exposure",
+      "Yellow/Orange = Getting hot (watch it)",
+      "Red/Pink = Overexposed (clipping!)",
+    ],
+    plainEnglish:
+      "Think of it like a heat map for light. The colors aren't real — they're a guide showing you where your image is properly exposed (green) and where you're losing detail in shadows (blue) or highlights (red).",
+    icon: <IconChartLine size={28} />,
+    accentColor: "#ef4444",
+  },
 };
 
 // LocalStorage helpers

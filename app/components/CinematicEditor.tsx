@@ -25,6 +25,7 @@ export default function CinematicEditor({
   brushMaskTemperature = 0,
   brushMaskClarity = 0,
   onBrushMaskUpdate,
+  onBoundsChange,
 }: {
   settings: any;
   imageUrl: string;
@@ -41,6 +42,12 @@ export default function CinematicEditor({
   brushMaskTemperature?: number;
   brushMaskClarity?: number;
   onBrushMaskUpdate?: (maskDataUrl: string) => void;
+  onBoundsChange?: (bounds: {
+    width: number;
+    height: number;
+    left: number;
+    top: number;
+  }) => void;
 }) {
   const [imageBounds, setImageBounds] = useState<{
     width: number;
@@ -73,15 +80,18 @@ export default function CinematicEditor({
         displayWidth = displayHeight * imgAspect;
       }
 
-      setImageBounds({
+      const bounds = {
         width: displayWidth,
         height: displayHeight,
         left: (containerWidth - displayWidth) / 2,
         top: (containerHeight - displayHeight) / 2,
-      });
+      };
+
+      setImageBounds(bounds);
+      onBoundsChange?.(bounds);
     };
     img.src = imageUrl;
-  }, [imageUrl]);
+  }, [imageUrl, onBoundsChange]);
 
   // Update bounds on resize
   useEffect(() => {
@@ -106,19 +116,22 @@ export default function CinematicEditor({
           displayWidth = displayHeight * imgAspect;
         }
 
-        setImageBounds({
+        const bounds = {
           width: displayWidth,
           height: displayHeight,
           left: (containerWidth - displayWidth) / 2,
           top: (containerHeight - displayHeight) / 2,
-        });
+        };
+
+        setImageBounds(bounds);
+        onBoundsChange?.(bounds);
       };
       img.src = imageUrl;
     };
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [imageUrl]);
+  }, [imageUrl, onBoundsChange]);
 
   const handleMaskUpdate = useCallback(
     (maskDataUrl: string) => {
@@ -149,11 +162,14 @@ export default function CinematicEditor({
 
   return (
     <div
+      id="cinematic-editor-container"
       ref={containerRef}
       className="w-full h-full relative bg-gray-900 overflow-hidden"
       onMouseMove={handleMouseMove}
     >
       <Canvas
+        id="main-editor-canvas"
+        flat
         gl={{ preserveDrawingBuffer: true }}
         camera={{ position: [0, 0, 5], fov: 50 }}
         style={{ cursor: settings.wiperActive ? "ew-resize" : "default" }}
@@ -178,6 +194,7 @@ export default function CinematicEditor({
       {/* Brush Mask Canvas - positioned within image bounds */}
       {imageBounds && (
         <div
+          data-export-ignore="true"
           className="absolute"
           style={{
             left: imageBounds.left,
@@ -201,7 +218,10 @@ export default function CinematicEditor({
 
       {/* Brush Mode Indicator */}
       {brushMaskActive && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-cyan-500/20 backdrop-blur-xl border border-cyan-500/50 rounded-lg">
+        <div
+          data-export-ignore="true"
+          className="absolute top-6 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-cyan-500/20 backdrop-blur-xl border border-cyan-500/50 rounded-lg"
+        >
           <span className="text-cyan-400 text-xs font-mono uppercase tracking-widest">
             {brushErasing ? "🧹 Eraser Mode" : "🖌️ Brush Mode"} — Paint on image
             to create mask
@@ -212,6 +232,7 @@ export default function CinematicEditor({
       {/* Cinematic Text Overlay - positioned within image bounds */}
       {imageBounds && textOverlay && (
         <div
+          id="text-overlay-container"
           className="absolute pointer-events-none"
           style={{
             left: imageBounds.left,

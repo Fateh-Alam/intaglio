@@ -14,6 +14,7 @@ export interface TutorialContent {
   subtitle: string;
   description: string;
   tips: string[];
+  plainEnglish?: string;
   icon: React.ReactNode;
   accentColor: string;
 }
@@ -56,7 +57,7 @@ export default function TutorialModal({
 
       {/* Modal */}
       <div
-        className={`relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl transform transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`relative w-full max-w-md max-h-[80vh] overflow-y-auto bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl transform transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           showContent
             ? "scale-100 translate-y-0 opacity-100"
             : "scale-90 translate-y-12 opacity-0"
@@ -145,6 +146,20 @@ export default function TutorialModal({
               </li>
             ))}
           </ul>
+
+          {/* Plain English Section */}
+          {content.plainEnglish && (
+            <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex items-center gap-2 mb-2 text-gray-400">
+                <span className="text-xs font-mono uppercase tracking-widest">
+                  In Plain English
+                </span>
+              </div>
+              <p className="text-sm text-gray-300 leading-relaxed italic">
+                "{content.plainEnglish}"
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -255,6 +270,54 @@ function OrganicDemo({
         <p className="text-[10px] text-gray-500 font-mono">
           Exposure {(brightness - 0.5).toFixed(2)}
         </p>
+      </div>
+    );
+  }
+
+  // HISTOGRAM - Animated channel bars
+  if (featureId === "histogram") {
+    const rChannel = [30, 50, 70, 85, 60, 40, 25];
+    const gChannel = [25, 45, 65, 80, 55, 35, 20];
+    const bChannel = [20, 40, 60, 75, 50, 30, 15];
+
+    return (
+      <div className="absolute inset-0 flex items-end justify-center gap-1 p-6 pb-8">
+        {rChannel.map((base, i) => {
+          const rHeight = base + Math.sin(time * 1.5 + i * 0.5) * 15;
+          const gHeight =
+            gChannel[i] + Math.sin(time * 1.5 + i * 0.5 + 0.3) * 15;
+          const bHeight =
+            bChannel[i] + Math.sin(time * 1.5 + i * 0.5 + 0.6) * 15;
+
+          return (
+            <div key={i} className="flex gap-0.5 items-end">
+              <div
+                className="w-2 rounded-t transition-all duration-300"
+                style={{
+                  height: `${rHeight}%`,
+                  backgroundColor: "#ef4444",
+                  opacity: 0.7,
+                }}
+              />
+              <div
+                className="w-2 rounded-t transition-all duration-300"
+                style={{
+                  height: `${gHeight}%`,
+                  backgroundColor: "#22c55e",
+                  opacity: 0.7,
+                }}
+              />
+              <div
+                className="w-2 rounded-t transition-all duration-300"
+                style={{
+                  height: `${bHeight}%`,
+                  backgroundColor: "#3b82f6",
+                  opacity: 0.7,
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -710,6 +773,62 @@ function OrganicDemo({
           <p className="text-[10px]" style={{ color }}>
             After
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // FALSE COLOR - Animated exposure heatmap
+  if (featureId === "falseColor") {
+    const colors = [
+      { label: "Under", color: "#3b82f6" }, // Blue
+      { label: "OK", color: "#22c55e" }, // Green
+      { label: "Hot", color: "#eab308" }, // Yellow
+      { label: "Clip", color: "#ef4444" }, // Red
+    ];
+
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-4">
+        {/* Animated gradient bar */}
+        <div className="w-48 h-8 rounded-lg overflow-hidden relative">
+          <div
+            className="absolute inset-0 transition-all duration-300"
+            style={{
+              background: `linear-gradient(90deg, 
+                #3b0764 0%, 
+                #3b82f6 25%, 
+                #22c55e 50%, 
+                #eab308 75%, 
+                #ef4444 100%)`,
+            }}
+          />
+          {/* Scanning line */}
+          <div
+            className="absolute top-0 bottom-0 w-1 bg-white/80"
+            style={{
+              left: `${(Math.sin(time * 0.8) * 0.5 + 0.5) * 100}%`,
+              boxShadow: "0 0 10px rgba(255,255,255,0.8)",
+            }}
+          />
+        </div>
+
+        {/* Legend */}
+        <div className="flex gap-4">
+          {colors.map((c, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-1.5 transition-all duration-300"
+              style={{
+                opacity: 0.6 + (Math.sin(time * 2 + i) * 0.5 + 0.5) * 0.4,
+              }}
+            >
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: c.color }}
+              />
+              <span className="text-[9px] text-gray-400">{c.label}</span>
+            </div>
+          ))}
         </div>
       </div>
     );
