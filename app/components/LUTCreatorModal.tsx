@@ -15,14 +15,22 @@ interface LUTCreatorModalProps {
   onApplyLUT: (lutData: number[]) => void;
 }
 
+interface LUTAdjustments {
+  lift: number;
+  gamma: number;
+  gain: number;
+  saturation: number;
+  tempShift?: number;
+}
+
 // Predefined LUT presets
-const LUT_PRESETS = [
+const LUT_PRESETS: { name: string; adjustments: LUTAdjustments }[] = [
   {
     name: "Neutral",
     adjustments: { lift: 0, gamma: 0, gain: 0, saturation: 1 },
   },
   {
-    name: "Cinematic",
+    name: "Low Evening",
     adjustments: { lift: -0.05, gamma: 0.1, gain: -0.1, saturation: 0.9 },
   },
   {
@@ -58,13 +66,7 @@ const LUT_PRESETS = [
 // Generate a simple 3D LUT based on adjustments
 function generateLUT(
   size: number,
-  adjustments: {
-    lift?: number;
-    gamma?: number;
-    gain?: number;
-    saturation?: number;
-    tempShift?: number;
-  }
+  adjustments: Partial<LUTAdjustments>
 ): number[] {
   const {
     lift = 0,
@@ -163,7 +165,7 @@ export default function LUTCreatorModal({
     setGamma(preset.adjustments.gamma ?? 0);
     setGain(preset.adjustments.gain ?? 0);
     setSaturation(preset.adjustments.saturation ?? 1);
-    setTempShift((preset.adjustments as any).tempShift ?? 0);
+    setTempShift(preset.adjustments.tempShift ?? 0);
     setActivePreset(preset.name);
   };
 

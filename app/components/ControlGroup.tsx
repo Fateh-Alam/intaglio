@@ -18,27 +18,27 @@ const ControlGroup = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const accentBorders: Record<string, string> = {
-    amber: "border-l-amber-500/50",
-    purple: "border-l-purple-500/50",
-    cyan: "border-l-cyan-500/50",
-    orange: "border-l-orange-500/50",
-    green: "border-l-green-500/50",
+    amber: "before:bg-[var(--ormond-brass)]",
+    purple: "before:bg-[var(--ormond-oxblood)]",
+    cyan: "before:bg-[var(--ormond-green)]",
+    orange: "before:bg-[var(--ormond-copper)]",
+    green: "before:bg-[var(--ormond-olive)]",
   };
 
   return (
     <div
-      className={`border-l-2 ${accentBorders[accentColor] || accentBorders.amber} pl-3 transition-all`}
+      className={`relative border border-[var(--ormond-line)] bg-[rgba(20,19,15,0.56)] p-4 transition-all before:absolute before:left-0 before:top-0 before:h-full before:w-[2px] ${accentBorders[accentColor] || accentBorders.amber}`}
     >
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-2 group"
+        className="group flex w-full items-center justify-between pb-3 text-left"
       >
-        <h3 className="font-mono text-[10px] uppercase tracking-[0.35em] text-amber-900/70 group-hover:text-amber-700/90 font-semibold transition flex items-center gap-2">
-          {icon && <span className="text-gray-500">{icon}</span>}
+        <h3 className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.24em] text-[rgba(231,223,208,0.58)] transition group-hover:text-[var(--ormond-paper)]">
+          {icon && <span className="text-[rgba(231,223,208,0.36)]">{icon}</span>}
           {title}
         </h3>
         <svg
-          className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          className={`h-4 w-4 text-[rgba(231,223,208,0.32)] transition-transform duration-300 group-hover:text-[rgba(231,223,208,0.62)] ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -56,7 +56,9 @@ const ControlGroup = ({
           isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="space-y-4 pb-2">{children}</div>
+        <div className="space-y-4 border-t border-[var(--ormond-line)] pt-4">
+          {children}
+        </div>
       </div>
     </div>
   );

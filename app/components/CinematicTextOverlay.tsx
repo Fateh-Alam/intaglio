@@ -353,10 +353,17 @@ export default function CinematicTextOverlay({
 }: {
   settings: TextOverlaySettings;
 }) {
+  const {
+    customFontEnabled,
+    customFontName,
+    customFontWeight,
+    customFontStyle,
+  } = settings;
+
   // Dynamically load Google Font
   useEffect(() => {
-    if (settings && settings.customFontEnabled && settings.customFontName) {
-      const fontName = settings.customFontName.trim();
+    if (customFontEnabled && customFontName) {
+      const fontName = customFontName.trim();
       if (!fontName) return;
 
       // Construct Google Fonts URL with specific weight and style
@@ -364,8 +371,8 @@ export default function CinematicTextOverlay({
       // For simplicity, we'll request the specific weight selected, plus italic if needed.
       // But standard Google Fonts API usually works best if we request a range or the specific combo.
 
-      const weight = settings.customFontWeight || "400";
-      const isItalic = settings.customFontStyle === "italic";
+      const weight = customFontWeight || "400";
+      const isItalic = customFontStyle === "italic";
 
       // Requesting the specific variant
       // axis tag: ital,wght
@@ -387,10 +394,10 @@ export default function CinematicTextOverlay({
       };
     }
   }, [
-    settings?.customFontEnabled,
-    settings?.customFontName,
-    settings?.customFontWeight,
-    settings?.customFontStyle,
+    customFontEnabled,
+    customFontName,
+    customFontWeight,
+    customFontStyle,
   ]);
 
   if (!settings) return null;

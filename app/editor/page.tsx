@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { FILM_EMULATIONS } from "../lib/filmEmulations";
 import {
   IconDownload,
   IconUpload,
@@ -19,7 +20,6 @@ import {
   IconAdjustmentsHorizontal,
   IconTypography,
   IconMapPin,
-  IconCalendar,
   IconSparkles,
   IconMovie,
   IconLayersIntersect,
@@ -31,29 +31,20 @@ import {
   IconChevronRight,
   IconDeviceFloppy,
   IconFileCode,
-  IconClock,
   IconHistory,
   IconChartLine,
   IconCircles,
   IconCamera,
   IconX,
   IconMenu2,
-  IconSpacingHorizontal,
   IconMoon,
-  IconItalic,
-  IconLetterCase,
-  IconLetterCaseUpper,
-  IconLetterCaseLower,
-  IconBold,
   IconCircleFilled,
   IconBrush,
   IconChevronLeft,
   IconMinus,
   IconMaximize,
-  IconHelp,
   IconInfoCircle,
-  IconZoomInArea,
-  IconHandStop,
+  IconCommand,
 } from "@tabler/icons-react";
 import { toPng } from "html-to-image";
 import {
@@ -77,23 +68,37 @@ import MobileLimitationModal from "../components/MobileLimitationModal";
 import LUTCreatorModal from "../components/LUTCreatorModal";
 import VideoGradingPanel from "../components/VideoGradingPanel";
 import StartScreen from "../components/StartScreen";
+import { CommandBar, ShortcutHelp, type AppCommand } from "../components/CommandBar";
+import { FORMAT, STORAGE_KEYS } from "../lib/brand";
 import {
   TUTORIAL_CONTENT,
   getSeenTutorials,
   markTutorialSeen,
 } from "../utils/tutorialContent";
+import type {
+  EditorSettings,
+  EditorSettingKey,
+  EditorSettingValue,
+  CompositionGuide,
+  HistogramData,
+  ImageBounds,
+  PerformanceMode,
+  SerializableEditorSettings,
+  WatermarkPosition,
+  WatermarkSettings,
+} from "../types/editor";
 
 // Dynamic import for the WebGL component to avoid SSR issues
 const CinematicEditor = dynamic(() => import("../components/CinematicEditor"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-full text-white/20 font-mono text-sm">
-      INITIALIZING NEURAL ENGINE...
+      INITIALIZING RENDER ENGINE...
     </div>
   ),
 });
 
-const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS: EditorSettings = {
   // Basic - Light
   contrast: 0.0,
   brightness: 0.0,
@@ -121,7 +126,7 @@ const DEFAULT_SETTINGS = {
   filmBorder: false,
 
   // Tone Curve
-  toneCurveTexture: null as any,
+  toneCurveTexture: null,
   curvePoints: {
     master: [
       { x: 0, y: 0 },
@@ -151,7 +156,7 @@ const DEFAULT_SETTINGS = {
 
   // A/B Comparison
   compareEnabled: false,
-  compareTexture: null as any,
+  compareTexture: null,
   compareSplit: 0.5,
 
   // Halation & Bloom
@@ -171,7 +176,7 @@ const DEFAULT_SETTINGS = {
   tiltShiftAngle: 0.0,
 
   // LUT
-  lutTexture: null as any,
+  lutTexture: null,
   lutStrength: 0.0,
 
   // Black Magic
@@ -179,7 +184,7 @@ const DEFAULT_SETTINGS = {
   anamorphicDistortion: 0.0,
   anamorphicStreaks: 0.0,
 
-  // Advanced God Lighting
+  // Directional light controls
   godLightStrength: 0.0,
   godLightX: 0.5,
   godLightY: 0.5,
@@ -251,20 +256,7 @@ const DEFAULT_SETTINGS = {
   hslMagentaLum: 0.0,
 
   // Film Emulation
-  filmEmulation: "none" as
-    | "none"
-    | "portra400"
-    | "ektar100"
-    | "velvia50"
-    | "pro400h"
-    | "cinestill800t"
-    | "vision3500t"
-    | "hp5"
-    | "vista400"
-    | "lomo800"
-    | "technicolor"
-    | "bleachbypass"
-    | "crossprocess",
+  filmEmulation: "none",
   filmEmulationStrength: 1.0,
 
   // UI State
@@ -273,19 +265,493 @@ const DEFAULT_SETTINGS = {
 
 type ExportFormat = "image/jpeg" | "image/png" | "image/webp";
 
+type ExportRecipeId =
+  | "portfolio"
+  | "web-hero"
+  | "client-proof"
+  | "social-webp"
+  | "archive-png";
+
+interface ExportRecipe {
+  id: ExportRecipeId;
+  name: string;
+  description: string;
+  format: ExportFormat;
+  quality: number;
+  scale: number;
+}
+
+interface ExportSettings {
+  format: ExportFormat;
+  quality: number;
+  scale: number;
+  recipeId: ExportRecipeId | null;
+}
+
+interface ProjectViewState {
+  performanceMode: PerformanceMode;
+  compositionGuide: CompositionGuide;
+  activeVirtualCopyId: string | null;
+}
+
+interface ImageFileInfo {
+  width: number;
+  height: number;
+  fileType?: string;
+  fileSize?: number;
+}
+
+type FlagStatus = "unflagged" | "picked" | "rejected";
+type ColorLabel = "none" | "red" | "yellow" | "green" | "blue" | "purple";
+
+interface AssetMetadataSettings {
+  title: string;
+  caption: string;
+  creator: string;
+  copyright: string;
+  keywords: string;
+  rating: number;
+  colorLabel: ColorLabel;
+  flagStatus: FlagStatus;
+}
+
+interface ExportSafetyWarning {
+  title: string;
+  detail: string;
+  tone: "warn" | "info";
+}
+
+interface VirtualCopy {
+  id: string;
+  name: string;
+  settings: EditorSettings;
+  timestamp: number;
+}
+
+interface SerializedVirtualCopy {
+  id: string;
+  name: string;
+  settings: SerializableEditorSettings;
+  timestamp: number;
+}
+
+interface SettingDiff {
+  key: string;
+  label: string;
+  current: string;
+  saved: string;
+}
+
+interface ProjectSessionFile {
+  app: string;
+  version: string;
+  createdAt?: string;
+  imageName?: string;
+  imageSrc: string | null;
+  imageInfo?: ImageFileInfo | null;
+  settings: SerializableEditorSettings;
+  textOverlay?: Partial<TextOverlaySettings>;
+  assetMetadata?: Partial<AssetMetadataSettings>;
+  watermark?: Partial<WatermarkSettings>;
+  exportSettings?: Partial<ExportSettings>;
+  viewState?: Partial<ProjectViewState>;
+  virtualCopies?: SerializedVirtualCopy[];
+  branches?: SerializedVirtualCopy[];
+}
+
+const ARCHIVE_FILE_EXTENSION = FORMAT.archiveExtension;
+const DEFAULT_ASSET_METADATA: AssetMetadataSettings = {
+  title: "",
+  caption: "",
+  creator: "",
+  copyright: "",
+  keywords: "",
+  rating: 0,
+  colorLabel: "none",
+  flagStatus: "unflagged",
+};
+
+const DEFAULT_WATERMARK: WatermarkSettings = {
+  enabled: false,
+  text: "",
+  position: "bottom-right",
+  opacity: 0.55,
+  size: 0.32,
+};
+
+const COLOR_LABELS: { id: ColorLabel; label: string; color: string }[] = [
+  { id: "none", label: "None", color: "transparent" },
+  { id: "red", label: "Red", color: "#ef4444" },
+  { id: "yellow", label: "Yellow", color: "#f59e0b" },
+  { id: "green", label: "Green", color: "#22c55e" },
+  { id: "blue", label: "Blue", color: "#3b82f6" },
+  { id: "purple", label: "Purple", color: "#a855f7" },
+];
+
+const WATERMARK_POSITIONS: { id: WatermarkPosition; label: string }[] = [
+  { id: "top-left", label: "Top Left" },
+  { id: "top-right", label: "Top Right" },
+  { id: "bottom-left", label: "Bottom Left" },
+  { id: "bottom-right", label: "Bottom Right" },
+  { id: "center", label: "Center" },
+];
+
+const EXPORT_RECIPES: ExportRecipe[] = [
+  {
+    id: "portfolio",
+    name: "Portfolio JPG",
+    description: "High quality delivery for portfolio and archive previews.",
+    format: "image/jpeg",
+    quality: 95,
+    scale: 2,
+  },
+  {
+    id: "web-hero",
+    name: "Website Hero",
+    description: "Clean WebP output for large web placements.",
+    format: "image/webp",
+    quality: 88,
+    scale: 1,
+  },
+  {
+    id: "client-proof",
+    name: "Client Proof",
+    description: "Balanced JPEG proof with modest file size.",
+    format: "image/jpeg",
+    quality: 82,
+    scale: 1,
+  },
+  {
+    id: "social-webp",
+    name: "Social WebP",
+    description: "Crisp social export with extra resolution headroom.",
+    format: "image/webp",
+    quality: 90,
+    scale: 2,
+  },
+  {
+    id: "archive-png",
+    name: "Archive PNG",
+    description: "Lossless PNG export for design handoff.",
+    format: "image/png",
+    quality: 100,
+    scale: 4,
+  },
+];
+
+const PROJECT_FILE_APP = FORMAT.appId;
+const PROJECT_FILE_VERSION = FORMAT.version;
+
+const createHistoryState = (
+  settings: EditorSettings,
+  action: string
+): HistoryState => ({
+  id: createLocalId(),
+  timestamp: Date.now(),
+  action,
+  settings,
+});
+
+const createLocalId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2, 11);
+
+const cloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+const serializeEditorSettings = (
+  settingsToSerialize: EditorSettings
+): SerializableEditorSettings => {
+  const serializableSettings: Partial<EditorSettings> = {
+    ...settingsToSerialize,
+  };
+  delete serializableSettings.lutTexture;
+  delete serializableSettings.toneCurveTexture;
+  delete serializableSettings.compareTexture;
+  return serializableSettings as SerializableEditorSettings;
+};
+
+const hydrateEditorSettings = (
+  partialSettings: Partial<EditorSettings> = {}
+): EditorSettings => ({
+  ...DEFAULT_SETTINGS,
+  ...partialSettings,
+  curvePoints: cloneJson(
+    partialSettings.curvePoints ?? DEFAULT_SETTINGS.curvePoints
+  ),
+  colorGrading: cloneJson(
+    partialSettings.colorGrading ?? DEFAULT_SETTINGS.colorGrading
+  ),
+  lutTexture: null,
+  toneCurveTexture: null,
+  compareTexture: null,
+});
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+const readFileAsText = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+
+const getImageFileInfo = (
+  src: string,
+  file?: File
+): Promise<ImageFileInfo> =>
+  new Promise((resolve, reject) => {
+    const image = new globalThis.Image();
+    image.onload = () =>
+      resolve({
+        width: image.naturalWidth || image.width,
+        height: image.naturalHeight || image.height,
+        fileType: file?.type,
+        fileSize: file?.size,
+      });
+    image.onerror = reject;
+    image.src = src;
+  });
+
+const isExportFormat = (value: unknown): value is ExportFormat =>
+  value === "image/jpeg" || value === "image/png" || value === "image/webp";
+
+const isExportRecipeId = (value: unknown): value is ExportRecipeId =>
+  EXPORT_RECIPES.some((recipe) => recipe.id === value);
+
+const isPerformanceMode = (value: unknown): value is PerformanceMode =>
+  value === "draft" || value === "balanced" || value === "quality";
+
+const isCompositionGuide = (value: unknown): value is CompositionGuide =>
+  value === "off" ||
+  value === "thirds" ||
+  value === "center" ||
+  value === "golden" ||
+  value === "safe";
+
+const isFlagStatus = (value: unknown): value is FlagStatus =>
+  value === "unflagged" || value === "picked" || value === "rejected";
+
+const isColorLabel = (value: unknown): value is ColorLabel =>
+  COLOR_LABELS.some((label) => label.id === value);
+
+const isWatermarkPosition = (value: unknown): value is WatermarkPosition =>
+  WATERMARK_POSITIONS.some((position) => position.id === value);
+
+const hydrateAssetMetadata = (
+  partialMetadata: Partial<AssetMetadataSettings> = {}
+): AssetMetadataSettings => ({
+  ...DEFAULT_ASSET_METADATA,
+  ...partialMetadata,
+  rating:
+    typeof partialMetadata.rating === "number"
+      ? Math.min(5, Math.max(0, Math.round(partialMetadata.rating)))
+      : DEFAULT_ASSET_METADATA.rating,
+  colorLabel: isColorLabel(partialMetadata.colorLabel)
+    ? partialMetadata.colorLabel
+    : DEFAULT_ASSET_METADATA.colorLabel,
+  flagStatus: isFlagStatus(partialMetadata.flagStatus)
+    ? partialMetadata.flagStatus
+    : DEFAULT_ASSET_METADATA.flagStatus,
+});
+
+const hydrateWatermark = (
+  partialWatermark: Partial<WatermarkSettings> = {}
+): WatermarkSettings => ({
+  ...DEFAULT_WATERMARK,
+  ...partialWatermark,
+  enabled:
+    typeof partialWatermark.enabled === "boolean"
+      ? partialWatermark.enabled
+      : DEFAULT_WATERMARK.enabled,
+  position: isWatermarkPosition(partialWatermark.position)
+    ? partialWatermark.position
+    : DEFAULT_WATERMARK.position,
+  opacity:
+    typeof partialWatermark.opacity === "number"
+      ? Math.min(1, Math.max(0, partialWatermark.opacity))
+      : DEFAULT_WATERMARK.opacity,
+  size:
+    typeof partialWatermark.size === "number"
+      ? Math.min(1, Math.max(0, partialWatermark.size))
+      : DEFAULT_WATERMARK.size,
+});
+
+const isProjectSessionFile = (value: unknown): value is ProjectSessionFile => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<ProjectSessionFile>;
+  return (
+    (candidate.app === PROJECT_FILE_APP ||
+      (FORMAT.legacyAppIds as readonly string[]).includes(
+        candidate.app ?? ""
+      )) &&
+    candidate.version === PROJECT_FILE_VERSION &&
+    !!candidate.settings &&
+    typeof candidate.settings === "object"
+  );
+};
+
+const toFileStem = (name: string) =>
+  name
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^a-z0-9_-]+/gi, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase() || "ormond-session";
+
+const createTimestampSlug = () =>
+  new Date().toISOString().replace(/[:.]/g, "-");
+
+const downloadTextFile = (filename: string, text: string) => {
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+const formatDiffLabel = (key: string) =>
+  key
+    .replace(/\./g, " / ")
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (value) => value.toUpperCase());
+
+const formatDiffValue = (value: unknown): string => {
+  if (typeof value === "number") return Number(value.toFixed(3)).toString();
+  if (typeof value === "boolean") return value ? "On" : "Off";
+  if (typeof value === "string") return value || "None";
+  if (value === null || value === undefined) return "None";
+  return JSON.stringify(value);
+};
+
+const collectSettingDiffs = (
+  current: SerializableEditorSettings,
+  saved: SerializableEditorSettings,
+  prefix = ""
+): SettingDiff[] => {
+  const currentRecord = current as unknown as Record<string, unknown>;
+  const savedRecord = saved as unknown as Record<string, unknown>;
+  const keys = new Set([
+    ...Object.keys(currentRecord),
+    ...Object.keys(savedRecord),
+  ]);
+  const diffs: SettingDiff[] = [];
+
+  keys.forEach((key) => {
+    const diffKey = prefix ? `${prefix}.${key}` : key;
+    const currentValue = currentRecord[key];
+    const savedValue = savedRecord[key];
+
+    if (
+      currentValue &&
+      savedValue &&
+      typeof currentValue === "object" &&
+      typeof savedValue === "object" &&
+      !Array.isArray(currentValue) &&
+      !Array.isArray(savedValue)
+    ) {
+      diffs.push(
+        ...collectSettingDiffs(
+          currentValue as SerializableEditorSettings,
+          savedValue as SerializableEditorSettings,
+          diffKey
+        )
+      );
+      return;
+    }
+
+    if (JSON.stringify(currentValue) !== JSON.stringify(savedValue)) {
+      diffs.push({
+        key: diffKey,
+        label: formatDiffLabel(diffKey),
+        current: formatDiffValue(currentValue),
+        saved: formatDiffValue(savedValue),
+      });
+    }
+  });
+
+  return diffs;
+};
+
+const PERFORMANCE_MODES: {
+  id: PerformanceMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "draft",
+    label: "Draft",
+    description: "Lower GPU load for weak devices.",
+  },
+  {
+    id: "balanced",
+    label: "Balanced",
+    description: "Default smooth editing quality.",
+  },
+  {
+    id: "quality",
+    label: "Quality",
+    description: "Higher preview fidelity.",
+  },
+];
+
+const COMPOSITION_GUIDES: {
+  id: CompositionGuide;
+  label: string;
+  description: string;
+}[] = [
+  { id: "off", label: "Off", description: "No guide overlay." },
+  { id: "thirds", label: "Thirds", description: "Rule-of-thirds grid." },
+  { id: "center", label: "Center", description: "Center crosshair." },
+  { id: "golden", label: "Golden", description: "Golden-ratio grid." },
+  { id: "safe", label: "Safe", description: "Title and delivery safe areas." },
+];
+
+const EDITOR_MODULES = [
+  { id: "basic", label: "Develop", shortLabel: "Dev", icon: IconCircle },
+  { id: "curves", label: "Tone Curve", shortLabel: "Curve", icon: IconChartLine },
+  { id: "hsl", label: "Color Mixer", shortLabel: "Mixer", icon: IconLayersIntersect },
+  { id: "color", label: "Profiles", shortLabel: "LUT", icon: IconMovie },
+  { id: "masking", label: "Masks", shortLabel: "Mask", icon: IconBrush },
+  { id: "films", label: "Film Room", shortLabel: "Film", icon: IconPhoto },
+  { id: "metadata", label: "Metadata", shortLabel: "Meta", icon: IconInfoCircle },
+  { id: "text", label: "Typography", shortLabel: "Type", icon: IconTypography },
+  { id: "transform", label: "Geometry", shortLabel: "Geom", icon: IconArrowsMaximize },
+  { id: "effects", label: "Effects", shortLabel: "FX", icon: IconSparkles },
+];
+
+const AUXILIARY_MODULES = [
+  { id: "history", label: "History", shortLabel: "Hist", icon: IconHistory },
+  { id: "snapshots", label: "Snapshots", shortLabel: "Shot", icon: IconCamera },
+];
+
+const getEditorModuleLabel = (id: string) =>
+  [...EDITOR_MODULES, ...AUXILIARY_MODULES].find((module) => module.id === id)
+    ?.label ?? id;
+
 export default function Home() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [textOverlay, setTextOverlay] =
     useState<TextOverlaySettings>(DEFAULT_TEXT_OVERLAY);
-  const [clipboard, setClipboard] = useState<typeof DEFAULT_SETTINGS | null>(
-    null
+  const [assetMetadata, setAssetMetadata] = useState<AssetMetadataSettings>(
+    DEFAULT_ASSET_METADATA
   );
+  const [watermark, setWatermark] =
+    useState<WatermarkSettings>(DEFAULT_WATERMARK);
+  const [clipboard, setClipboard] =
+    useState<SerializableEditorSettings | null>(null);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [histogram, setHistogram] = useState<{
-    r: number[];
-    g: number[];
-    b: number[];
-  } | null>(null);
+  const [imageName, setImageName] = useState("Untitled Image");
+  const [imageInfo, setImageInfo] = useState<ImageFileInfo | null>(null);
+  const [histogram, setHistogram] = useState<HistogramData | null>(null);
   const [activeTab, setActiveTab] = useState("basic");
 
   // Handle tab change with tutorial check
@@ -314,8 +780,15 @@ export default function Home() {
   };
 
   // History State
-  const [history, setHistory] = useState<HistoryState[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [history, setHistory] = useState<HistoryState[]>(() => [
+    {
+      id: "init",
+      timestamp: Date.now(),
+      action: "Initial State",
+      settings: DEFAULT_SETTINGS,
+    },
+  ]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const historyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Snapshots State (image)
@@ -323,14 +796,18 @@ export default function Home() {
     { id: string; url: string; date: number }[]
   >([]);
 
-  // Settings Snapshots (Branches) State
-  const [settingsSnapshots, setSettingsSnapshots] = useState<
-    { id: string; name: string; settings: any; timestamp: number }[]
-  >([]);
+  // Virtual copies keep alternate non-destructive recipes for the same source.
+  const [settingsSnapshots, setSettingsSnapshots] = useState<VirtualCopy[]>([]);
+  const [activeVirtualCopyId, setActiveVirtualCopyId] = useState<string | null>(
+    null
+  );
+  const [diffVirtualCopyId, setDiffVirtualCopyId] = useState<string | null>(
+    null
+  );
 
   // Tutorial State
   const [seenTutorials, setSeenTutorials] = useState<Record<string, boolean>>(
-    {}
+    () => (typeof window === "undefined" ? {} : getSeenTutorials())
   );
   const [activeTutorial, setActiveTutorial] = useState<string | null>(null);
 
@@ -341,20 +818,14 @@ export default function Home() {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [isLookIntensityOpen, setIsLookIntensityOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   // Advanced Features State
   const [isHistogramHelpOpen, setIsHistogramHelpOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [showMobileWarning, setShowMobileWarning] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isMobile = window.innerWidth < 768;
-      if (isMobile) {
-        setShowMobileWarning(true);
-      }
-    }
-  }, []);
+  const [showMobileWarning, setShowMobileWarning] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 768
+  );
 
   const [isMobileControlsExpanded, setIsMobileControlsExpanded] =
     useState(false);
@@ -362,19 +833,27 @@ export default function Home() {
   const [isReferenceOpen, setIsReferenceOpen] = useState(false);
   const [isLUTCreatorOpen, setIsLUTCreatorOpen] = useState(false);
   const [isVideoGradingOpen, setIsVideoGradingOpen] = useState(false);
+  const [isCommandBarOpen, setIsCommandBarOpen] = useState(false);
+  const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
 
   // Export Settings
   const [exportFormat, setExportFormat] = useState<ExportFormat>("image/jpeg");
   const [exportQuality, setExportQuality] = useState(90);
   const [exportScale, setExportScale] = useState(1);
+  const [activeExportRecipeId, setActiveExportRecipeId] =
+    useState<ExportRecipeId | null>(null);
+  const [performanceMode, setPerformanceMode] =
+    useState<PerformanceMode>("balanced");
+  const [compositionGuide, setCompositionGuide] =
+    useState<CompositionGuide>("off");
+  const activeExportRecipe = useMemo(
+    () =>
+      EXPORT_RECIPES.find((recipe) => recipe.id === activeExportRecipeId) ??
+      null,
+    [activeExportRecipeId]
+  );
 
-  // Zoom & Pan State
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-
-  // Palette Heist State
+  // Reference match state
   const [roiMode, setRoiMode] = useState<"none" | "source">("none");
   const [sourceROI, setSourceROI] = useState<{
     x: number;
@@ -382,31 +861,139 @@ export default function Home() {
     w: number;
     h: number;
   } | null>(null);
-  const [imageBounds, setImageBounds] = useState<{
-    width: number;
-    height: number;
-    left: number;
-    top: number;
-  } | null>(null);
+  const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null);
   const [referenceImageUrl, setReferenceImageUrl] = useState<string | null>(
     null
   );
+  const exportSafetyWarnings = useMemo<ExportSafetyWarning[]>(() => {
+    const warnings: ExportSafetyWarning[] = [];
+    const exportWidth = imageInfo
+      ? imageInfo.width * exportScale
+      : imageBounds
+        ? imageBounds.width * exportScale
+        : null;
+    const exportHeight = imageInfo
+      ? imageInfo.height * exportScale
+      : imageBounds
+        ? imageBounds.height * exportScale
+        : null;
 
-  // Initialize tutorials from localStorage
-  useEffect(() => {
-    setSeenTutorials(getSeenTutorials());
-  }, []);
+    if (
+      exportWidth &&
+      exportHeight &&
+      Math.min(exportWidth, exportHeight) < 1200
+    ) {
+      warnings.push({
+        title: "Small Export",
+        detail: `${Math.round(exportWidth)} x ${Math.round(exportHeight)} may be low for print or large screens.`,
+        tone: "warn",
+      });
+    }
+
+    if (exportFormat === "image/jpeg" && exportQuality < 80) {
+      warnings.push({
+        title: "Compression Risk",
+        detail: "JPEG quality below 80 can introduce visible artifacts.",
+        tone: "warn",
+      });
+    }
+
+    if (histogram && histogram.clipping.highlights > 0.02) {
+      warnings.push({
+        title: "Highlights Clipped",
+        detail: `${(histogram.clipping.highlights * 100).toFixed(1)}% of sampled pixels are at highlight limit.`,
+        tone: "warn",
+      });
+    }
+
+    if (histogram && histogram.clipping.shadows > 0.05) {
+      warnings.push({
+        title: "Shadows Crushed",
+        detail: `${(histogram.clipping.shadows * 100).toFixed(1)}% of sampled pixels are at shadow limit.`,
+        tone: "warn",
+      });
+    }
+
+    if (activeExportRecipeId === "client-proof" && !watermark.enabled) {
+      warnings.push({
+        title: "Proof Watermark Off",
+        detail:
+          "Client proof exports usually need a visible watermark or delivery mark.",
+        tone: "warn",
+      });
+    }
+
+    if (!assetMetadata.creator.trim() && !assetMetadata.copyright.trim()) {
+      warnings.push({
+        title: "Rights Metadata Missing",
+        detail:
+          "Creator and copyright fields are empty for this export session.",
+        tone: "warn",
+      });
+    }
+
+    if (assetMetadata.flagStatus === "rejected") {
+      warnings.push({
+        title: "Rejected Image",
+        detail:
+          "This asset is marked rejected. Clear the flag before final delivery if needed.",
+        tone: "info",
+      });
+    }
+
+    if (!activeExportRecipe) {
+      warnings.push({
+        title: "Custom Delivery",
+        detail:
+          "No export recipe is selected, so this output uses manual settings.",
+        tone: "info",
+      });
+    }
+
+    if (exportScale >= 4) {
+      warnings.push({
+        title: "Large Render",
+        detail: "4x export can take longer and create a much larger file.",
+        tone: "info",
+      });
+    }
+
+    return warnings;
+  }, [
+    activeExportRecipe,
+    activeExportRecipeId,
+    assetMetadata.copyright,
+    assetMetadata.creator,
+    assetMetadata.flagStatus,
+    exportFormat,
+    exportQuality,
+    exportScale,
+    histogram,
+    imageBounds,
+    imageInfo,
+    watermark.enabled,
+  ]);
+  const diffVirtualCopy = useMemo(
+    () =>
+      settingsSnapshots.find((copy) => copy.id === diffVirtualCopyId) ?? null,
+    [diffVirtualCopyId, settingsSnapshots]
+  );
+  const editDiffs = useMemo(() => {
+    if (!diffVirtualCopy) return [];
+    return collectSettingDiffs(
+      serializeEditorSettings(settings),
+      serializeEditorSettings(diffVirtualCopy.settings)
+    ).slice(0, 80);
+  }, [diffVirtualCopy, settings]);
 
   // Tone Curve State (Derived)
-  const [toneCurveTexture, setToneCurveTexture] =
-    useState<THREE.DataTexture | null>(null);
   const [activeCurveChannel, setActiveCurveChannel] = useState<
     "master" | "red" | "green" | "blue"
   >("master");
 
   // Generate Tone Curve Texture
-  useEffect(() => {
-    if (!settings.curvePoints) return;
+  const toneCurveTexture = useMemo(() => {
+    if (!settings.curvePoints) return null;
 
     // Check if curves are identity (default) to avoid unnecessary processing/texture lookups
     const isIdentity = (points: { x: number; y: number }[]) => {
@@ -426,8 +1013,7 @@ export default function Home() {
       isIdentity(ret.green) &&
       isIdentity(ret.blue)
     ) {
-      setToneCurveTexture(null);
-      return;
+      return null;
     }
 
     const size = 256;
@@ -447,30 +1033,29 @@ export default function Home() {
 
     const tex = new THREE.DataTexture(data, size, 1, THREE.RGBAFormat);
     tex.needsUpdate = true;
-    setToneCurveTexture(tex);
+    return tex;
   }, [settings.curvePoints]);
 
-  // Initialize history on mount
   useEffect(() => {
-    // Add initial state
-    const initialState: HistoryState = {
-      id: "init",
-      timestamp: Date.now(),
-      action: "Initial State",
-      settings: DEFAULT_SETTINGS,
+    return () => {
+      toneCurveTexture?.dispose();
     };
-    setHistory([initialState]);
-    setHistoryIndex(0);
-  }, []);
+  }, [toneCurveTexture]);
 
-  const addToHistory = (newSettings: any, actionName: string) => {
+  const cloneSettingsForHistory = (
+    settingsToClone: EditorSettings
+  ): EditorSettings => ({
+    ...settingsToClone,
+    curvePoints: cloneJson(settingsToClone.curvePoints),
+    colorGrading: cloneJson(settingsToClone.colorGrading),
+  });
+
+  const addToHistory = (newSettings: EditorSettings, actionName: string) => {
     const newHistory = history.slice(0, historyIndex + 1);
-    const newState: HistoryState = {
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: Date.now(),
-      action: actionName,
-      settings: JSON.parse(JSON.stringify(newSettings)),
-    };
+    const newState = createHistoryState(
+      cloneSettingsForHistory(newSettings),
+      actionName
+    );
     if (newHistory.length >= 50) newHistory.shift();
     setHistory([...newHistory, newState]);
     setHistoryIndex((prev) => (newHistory.length >= 50 ? prev : prev + 1));
@@ -509,17 +1094,30 @@ export default function Home() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "z") {
         e.preventDefault();
-        if (e.shiftKey) handleRedo();
-        else handleUndo();
+        if (e.shiftKey) {
+          if (historyIndex < history.length - 1) {
+            const newIndex = historyIndex + 1;
+            setHistoryIndex(newIndex);
+            setSettings(history[newIndex].settings);
+          }
+        } else if (historyIndex > 0) {
+          const newIndex = historyIndex - 1;
+          setHistoryIndex(newIndex);
+          setSettings(history[newIndex].settings);
+        }
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "y") {
         e.preventDefault();
-        handleRedo();
+        if (historyIndex < history.length - 1) {
+          const newIndex = historyIndex + 1;
+          setHistoryIndex(newIndex);
+          setSettings(history[newIndex].settings);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [historyIndex, history]);
+  }, [history, historyIndex]);
 
   // Brush Mask State
   const [brushMaskActive, setBrushMaskActive] = useState(false);
@@ -535,19 +1133,27 @@ export default function Home() {
 
   // Load preset from localStorage if coming from presets page
   React.useEffect(() => {
-    const presetData = localStorage.getItem("nyvarra_preset_preview");
+    const presetData =
+      localStorage.getItem(STORAGE_KEYS.presetPreview) ??
+      localStorage.getItem(STORAGE_KEYS.legacyPresetPreview);
     if (presetData) {
       try {
-        const presetSettings = JSON.parse(presetData);
-        setSettings((prev: any) => ({ ...prev, ...presetSettings }));
-        localStorage.removeItem("nyvarra_preset_preview");
+        const presetSettings = JSON.parse(
+          presetData
+        ) as Partial<EditorSettings>;
+        setSettings((prev) => ({ ...prev, ...presetSettings }));
+        localStorage.removeItem(STORAGE_KEYS.presetPreview);
+        localStorage.removeItem(STORAGE_KEYS.legacyPresetPreview);
       } catch (err) {
         console.error("Failed to load preset:", err);
       }
     }
   }, []);
 
-  const updateSetting = (key: string, value: any) => {
+  const updateSetting = (
+    key: EditorSettingKey,
+    value: EditorSettingValue | string
+  ) => {
     const newVal =
       typeof value === "string" &&
       !isNaN(parseFloat(value)) &&
@@ -555,8 +1161,8 @@ export default function Home() {
         ? parseFloat(value)
         : value;
 
-    setSettings((prev: any) => {
-      const newSettings = { ...prev, [key]: newVal };
+    setSettings((prev) => {
+      const newSettings = { ...prev, [key]: newVal } as EditorSettings;
 
       // Debounce history update
       if (historyTimeoutRef.current) {
@@ -576,13 +1182,44 @@ export default function Home() {
     });
   };
 
+  const loadImageFile = useCallback(async (file: File) => {
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const nextImageInfo = await getImageFileInfo(dataUrl, file);
+      setImageSrc(dataUrl);
+      setImageName(file.name);
+      setImageInfo(nextImageInfo);
+      setAssetMetadata({
+        ...DEFAULT_ASSET_METADATA,
+        title: toFileStem(file.name).replace(/_/g, " "),
+      });
+      setWatermark(DEFAULT_WATERMARK);
+    } catch (error) {
+      console.error("Failed to open image:", error);
+      alert("Could not open this image file.");
+    }
+  }, []);
+
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setImageSrc(url);
+      void loadImageFile(file);
     }
+    event.target.value = "";
   };
+
+  const openImagePicker = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        void loadImageFile(file);
+      }
+    };
+    input.click();
+  }, [loadImageFile]);
 
   const handleLutUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -593,7 +1230,7 @@ export default function Home() {
       const text = e.target?.result as string;
       const texture = parseCubeLUT(text);
       if (texture) {
-        setSettings((prev: any) => ({
+        setSettings((prev) => ({
           ...prev,
           lutTexture: texture,
           lutStrength: 1.0,
@@ -621,14 +1258,14 @@ export default function Home() {
           imageSrc as string,
           refUrl
         );
-        setSettings((prev: any) => ({
+        setSettings((prev) => ({
           ...prev,
           lutTexture: texture,
           lutStrength: 1.0,
         }));
       } catch (err) {
-        console.error("Palette Heist failed", err);
-        alert("Failed to steal palette!");
+        console.error("Reference match failed", err);
+        alert("Failed to match palette.");
       }
     };
     reader.readAsDataURL(file);
@@ -639,37 +1276,12 @@ export default function Home() {
   // ===========================================
 
   // Get serializable settings (exclude textures and non-JSON-safe values)
-  const getSerializableSettings = () => {
-    const {
-      lutTexture,
-      toneCurveTexture,
-      compareTexture,
-      ...serializableSettings
-    } = settings as any;
-    return serializableSettings;
-  };
+  const getSerializableSettings = useCallback(
+    () => serializeEditorSettings(settings),
+    [settings]
+  );
 
-  // Save preset as .nyv file
-  const handleSavePreset = () => {
-    const presetData = {
-      version: "2.5",
-      name: "Untitled Preset",
-      created: new Date().toISOString(),
-      settings: getSerializableSettings(),
-    };
-
-    const blob = new Blob([JSON.stringify(presetData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `nyvarra-preset-${Date.now()}.nyv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Load preset from .nyv file
+  // Load preset from Ormond or legacy recipe files.
   const handleLoadPreset = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -677,18 +1289,22 @@ export default function Home() {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const presetData = JSON.parse(e.target?.result as string);
+        const presetData = JSON.parse(e.target?.result as string) as {
+          name?: string;
+          settings?: Partial<EditorSettings>;
+        };
         if (presetData.settings) {
-          setSettings((prev: any) => ({
-            ...prev,
+          const mergedSettings: EditorSettings = {
+            ...settings,
             ...presetData.settings,
             // Preserve current textures
-            lutTexture: prev.lutTexture,
-            toneCurveTexture: prev.toneCurveTexture,
-            compareTexture: prev.compareTexture,
-          }));
+            lutTexture: settings.lutTexture,
+            toneCurveTexture: settings.toneCurveTexture,
+            compareTexture: settings.compareTexture,
+          };
+          setSettings(mergedSettings);
           addToHistory(
-            settings,
+            mergedSettings,
             `Load Preset: ${presetData.name || "Untitled"}`
           );
         }
@@ -711,10 +1327,10 @@ export default function Home() {
       };
       await navigator.clipboard.writeText(JSON.stringify(presetData));
       // Also store internally for fallback
-      setClipboard(settings);
-    } catch (err) {
+      setClipboard(getSerializableSettings());
+    } catch {
       // Fallback to internal clipboard
-      setClipboard(settings);
+      setClipboard(getSerializableSettings());
     }
   };
 
@@ -722,29 +1338,213 @@ export default function Home() {
   const handlePasteSettings = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      const presetData = JSON.parse(text);
+      const presetData = JSON.parse(text) as {
+        settings?: Partial<EditorSettings>;
+      };
       if (presetData.settings) {
-        setSettings((prev: any) => ({
-          ...prev,
+        const mergedSettings: EditorSettings = {
+          ...settings,
           ...presetData.settings,
           // Preserve current textures
-          lutTexture: prev.lutTexture,
-          toneCurveTexture: prev.toneCurveTexture,
-          compareTexture: prev.compareTexture,
-        }));
-        addToHistory(settings, "Paste Settings");
+          lutTexture: settings.lutTexture,
+          toneCurveTexture: settings.toneCurveTexture,
+          compareTexture: settings.compareTexture,
+        };
+        setSettings(mergedSettings);
+        addToHistory(mergedSettings, "Paste Settings");
         return;
       }
-    } catch (err) {
+    } catch {
       // Fallback to internal clipboard
       if (clipboard) {
-        setSettings((prev: { wiperActive: any; lutTexture: any }) => ({
-          ...clipboard,
-          wiperActive: prev.wiperActive,
-          lutTexture: clipboard.lutTexture || prev.lutTexture,
-        }));
+        const mergedSettings: EditorSettings = { ...settings, ...clipboard };
+        setSettings(mergedSettings);
+        addToHistory(mergedSettings, "Paste Settings");
       }
     }
+  };
+
+  const applyExportRecipe = useCallback((recipe: ExportRecipe) => {
+    setActiveExportRecipeId(recipe.id);
+    setExportFormat(recipe.format);
+    setExportQuality(recipe.quality);
+    setExportScale(recipe.scale);
+  }, []);
+
+  const handleSaveProjectSession = useCallback(() => {
+    const session: ProjectSessionFile = {
+      app: PROJECT_FILE_APP,
+      version: PROJECT_FILE_VERSION,
+      createdAt: new Date().toISOString(),
+      imageName,
+      imageSrc,
+      imageInfo,
+      settings: getSerializableSettings(),
+      textOverlay,
+      assetMetadata,
+      watermark,
+      exportSettings: {
+        format: exportFormat,
+        quality: exportQuality,
+        scale: exportScale,
+        recipeId: activeExportRecipeId,
+      },
+      viewState: {
+        performanceMode,
+        compositionGuide,
+        activeVirtualCopyId,
+      },
+      virtualCopies: settingsSnapshots.map((copy) => ({
+        id: copy.id,
+        name: copy.name,
+        timestamp: copy.timestamp,
+        settings: serializeEditorSettings(copy.settings),
+      })),
+      branches: settingsSnapshots.map((branch) => ({
+        id: branch.id,
+        name: branch.name,
+        timestamp: branch.timestamp,
+        settings: serializeEditorSettings(branch.settings),
+      })),
+    };
+
+    downloadTextFile(
+      `${toFileStem(imageName)}_${createTimestampSlug()}.${ARCHIVE_FILE_EXTENSION}`,
+      JSON.stringify(session, null, 2)
+    );
+  }, [
+    activeExportRecipeId,
+    exportFormat,
+    exportQuality,
+    exportScale,
+    getSerializableSettings,
+    activeVirtualCopyId,
+    assetMetadata,
+    imageName,
+    imageInfo,
+    imageSrc,
+    performanceMode,
+    compositionGuide,
+    settingsSnapshots,
+    textOverlay,
+    watermark,
+  ]);
+
+  const restoreProjectSession = useCallback((project: ProjectSessionFile) => {
+    const restoredSettings = hydrateEditorSettings(project.settings);
+    const restoredExport = project.exportSettings;
+    const restoredViewState = project.viewState;
+
+    setImageSrc(project.imageSrc);
+    setImageName(project.imageName || "Restored Archive");
+    setImageInfo(project.imageInfo ?? null);
+    setSettings(restoredSettings);
+    setTextOverlay({ ...DEFAULT_TEXT_OVERLAY, ...project.textOverlay });
+    setAssetMetadata(hydrateAssetMetadata(project.assetMetadata));
+    setWatermark(hydrateWatermark(project.watermark));
+    setExportFormat(
+      isExportFormat(restoredExport?.format)
+        ? restoredExport.format
+        : "image/jpeg"
+    );
+    setExportQuality(
+      typeof restoredExport?.quality === "number"
+        ? Math.min(100, Math.max(10, restoredExport.quality))
+        : 90
+    );
+    setExportScale(
+      typeof restoredExport?.scale === "number" ? restoredExport.scale : 1
+    );
+    setActiveExportRecipeId(
+      isExportRecipeId(restoredExport?.recipeId)
+        ? restoredExport.recipeId
+        : null
+    );
+    setPerformanceMode(
+      isPerformanceMode(restoredViewState?.performanceMode)
+        ? restoredViewState.performanceMode
+        : "balanced"
+    );
+    setCompositionGuide(
+      isCompositionGuide(restoredViewState?.compositionGuide)
+        ? restoredViewState.compositionGuide
+        : "off"
+    );
+    setActiveVirtualCopyId(restoredViewState?.activeVirtualCopyId ?? null);
+    setSettingsSnapshots(
+      (project.virtualCopies ?? project.branches ?? []).map((branch) => ({
+        id: branch.id,
+        name: branch.name,
+        timestamp: branch.timestamp,
+        settings: hydrateEditorSettings(branch.settings),
+      }))
+    );
+    setDiffVirtualCopyId(null);
+    setHistory([createHistoryState(restoredSettings, "Restore Ormond Archive")]);
+    setHistoryIndex(0);
+  }, []);
+
+  const openProjectPicker = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = `.${FORMAT.archiveExtension},.nyvlt,.nyvproj,application/json`;
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await readFileAsText(file);
+        const project = JSON.parse(text) as unknown;
+        if (!isProjectSessionFile(project)) {
+          throw new Error("Unsupported project file.");
+        }
+        restoreProjectSession(project);
+      } catch (error) {
+        console.error("Failed to restore Ormond Archive:", error);
+        alert("Invalid or unsupported Ormond Archive file.");
+      }
+    };
+    input.click();
+  }, [restoreProjectSession]);
+
+  const handleCreateVirtualCopy = () => {
+    const name = prompt(
+      "Name this virtual copy:",
+      `Look ${settingsSnapshots.length + 1}`
+    );
+    if (!name) return;
+
+    const nextCopy: VirtualCopy = {
+      id: createLocalId(),
+      name,
+      settings: cloneSettingsForHistory(settings),
+      timestamp: Date.now(),
+    };
+
+    setSettingsSnapshots((prev) => [...prev, nextCopy]);
+    setActiveVirtualCopyId(nextCopy.id);
+    addToHistory(settings, `Create Virtual Copy: ${name}`);
+  };
+
+  const handleRestoreVirtualCopy = (id: string) => {
+    const copy = settingsSnapshots.find((item) => item.id === id);
+    if (!copy) return;
+
+    setSettings((prev) => ({
+      ...prev,
+      ...copy.settings,
+      lutTexture: prev.lutTexture,
+      toneCurveTexture: prev.toneCurveTexture,
+      compareTexture: prev.compareTexture,
+    }));
+    setActiveVirtualCopyId(copy.id);
+    addToHistory(copy.settings, `Restore Virtual Copy: ${copy.name}`);
+  };
+
+  const handleDeleteVirtualCopy = (id: string) => {
+    setSettingsSnapshots((prev) => prev.filter((copy) => copy.id !== id));
+    setActiveVirtualCopyId((prev) => (prev === id ? null : prev));
+    setDiffVirtualCopyId((prev) => (prev === id ? null : prev));
   };
 
   const handleTakeSnapshot = () => {
@@ -759,7 +1559,7 @@ export default function Home() {
 
   const handleCompareSnapshot = (url: string) => {
     new THREE.TextureLoader().load(url, (tex) => {
-      setSettings((prev: any) => ({
+      setSettings((prev) => ({
         ...prev,
         compareTexture: tex,
         compareEnabled: true,
@@ -840,7 +1640,7 @@ export default function Home() {
         cacheBust: true,
         fontEmbedCSS: fontEmbedCSS || undefined,
         // Ensure white/transparent background doesn't mess up
-        backgroundColor: null as any,
+        backgroundColor: "transparent",
         filter: (node) => {
           // Filter out external GFonts link
           if (
@@ -891,7 +1691,8 @@ export default function Home() {
           const link = document.createElement("a");
           link.href = url;
           const ext = exportFormat.split("/")[1];
-          link.download = `nyvarra_${Date.now()}.${ext}`;
+          const recipeSlug = activeExportRecipeId ?? "custom";
+          link.download = `${toFileStem(imageName)}_${recipeSlug}_${createTimestampSlug()}.${ext}`;
           link.click();
           URL.revokeObjectURL(url);
         },
@@ -906,66 +1707,422 @@ export default function Home() {
     setIsExportModalOpen(false);
   };
 
-  const handleDownloadPreset = () => {
-    const presetData = {
-      name: "Nyvarra Custom Look",
-      version: "1.0",
-      settings: settings,
-    };
-    const jsonString = JSON.stringify(presetData, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `NYVARRA_PRESET_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+  const appCommands: AppCommand[] = [
+    {
+      id: "open-image",
+      title: "Open Photograph",
+      section: "Import",
+      shortcut: "Ctrl+O",
+      keywords: ["upload", "import", "photo"],
+      run: openImagePicker,
+    },
+    {
+      id: "load-project-session",
+      title: "Open Ormond Archive",
+      section: "Archive",
+      keywords: ["restore", "session", "archive", "ormond", "nyvlt", "nyvproj"],
+      run: openProjectPicker,
+    },
+    {
+      id: "save-project-session",
+      title: "Save Ormond Archive",
+      section: "Archive",
+      shortcut: "Ctrl+S",
+      disabled: !imageSrc,
+      keywords: ["project", "session", "archive", "ormond"],
+      run: handleSaveProjectSession,
+    },
+    {
+      id: "toggle-before-after",
+      title: "Toggle Before / After",
+      section: "Compare",
+      shortcut: "C",
+      disabled: !imageSrc,
+      keywords: ["before", "after", "compare"],
+      run: () => updateSetting("wiperActive", !settings.wiperActive),
+    },
+    {
+      id: "create-virtual-copy",
+      title: "Create Virtual Copy",
+      section: "Workflow",
+      disabled: !imageSrc,
+      keywords: ["version", "copy", "look"],
+      run: handleCreateVirtualCopy,
+    },
+    ...settingsSnapshots.map((copy) => ({
+      id: `diff-virtual-copy-${copy.id}`,
+      title: `Compare Diff: ${copy.name}`,
+      section: "Workflow",
+      disabled: !imageSrc,
+      keywords: ["diff", "compare", "virtual", copy.name],
+      run: () => setDiffVirtualCopyId(copy.id),
+    })),
+    {
+      id: "open-metadata",
+      title: "Open Metadata",
+      section: "Culling",
+      disabled: !imageSrc,
+      keywords: ["rating", "flag", "watermark", "rights"],
+      run: () => handleTabChange("metadata"),
+    },
+    {
+      id: "rate-five",
+      title: "Set Rating: 5 Stars",
+      section: "Culling",
+      shortcut: "5",
+      disabled: !imageSrc,
+      keywords: ["stars", "rating", "pick"],
+      run: () =>
+        setAssetMetadata((prev) => ({
+          ...prev,
+          rating: 5,
+        })),
+    },
+    {
+      id: "clear-rating",
+      title: "Clear Rating",
+      section: "Culling",
+      shortcut: "0",
+      disabled: !imageSrc,
+      keywords: ["stars", "rating"],
+      run: () =>
+        setAssetMetadata((prev) => ({
+          ...prev,
+          rating: 0,
+        })),
+    },
+    {
+      id: "mark-picked",
+      title: "Mark Pick",
+      section: "Culling",
+      shortcut: "P",
+      disabled: !imageSrc,
+      keywords: ["flag", "pick", "select"],
+      run: () =>
+        setAssetMetadata((prev) => ({
+          ...prev,
+          flagStatus: "picked",
+        })),
+    },
+    {
+      id: "mark-rejected",
+      title: "Mark Reject",
+      section: "Culling",
+      shortcut: "X",
+      disabled: !imageSrc,
+      keywords: ["flag", "reject"],
+      run: () =>
+        setAssetMetadata((prev) => ({
+          ...prev,
+          flagStatus: "rejected",
+        })),
+    },
+    {
+      id: "clear-flag",
+      title: "Clear Flag",
+      section: "Culling",
+      shortcut: "U",
+      disabled: !imageSrc,
+      keywords: ["flag", "unflag"],
+      run: () =>
+        setAssetMetadata((prev) => ({
+          ...prev,
+          flagStatus: "unflagged",
+        })),
+    },
+    {
+      id: "export-image",
+      title: "Export Image",
+      section: "Delivery",
+      shortcut: "Ctrl+E",
+      disabled: !imageSrc,
+      keywords: ["download", "save", "render"],
+      run: () => setIsExportModalOpen(true),
+    },
+    ...EXPORT_RECIPES.map((recipe) => ({
+      id: `export-recipe-${recipe.id}`,
+      title: `Use Export Recipe: ${recipe.name}`,
+      section: "Delivery",
+      disabled: !imageSrc,
+      keywords: ["export", "recipe", recipe.name],
+      run: () => {
+        applyExportRecipe(recipe);
+        setIsExportModalOpen(true);
+      },
+    })),
+    ...PERFORMANCE_MODES.map((mode) => ({
+      id: `performance-${mode.id}`,
+      title: `Set Performance Mode: ${mode.label}`,
+      section: "Workspace",
+      keywords: ["gpu", "quality", "performance", mode.label],
+      run: () => setPerformanceMode(mode.id),
+    })),
+    ...COMPOSITION_GUIDES.map((guide) => ({
+      id: `composition-guide-${guide.id}`,
+      title: `Composition Guide: ${guide.label}`,
+      section: "Workspace",
+      disabled: !imageSrc && guide.id !== "off",
+      keywords: ["crop", "guide", "composition", guide.label],
+      run: () => setCompositionGuide(guide.id),
+    })),
+    {
+      id: "toggle-focus-mode",
+      title: isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode",
+      section: "Workspace",
+      shortcut: "F",
+      disabled: !imageSrc,
+      keywords: ["focus", "fullscreen", "minimal", "workspace"],
+      run: () => setIsFocusMode((prev) => !prev),
+    },
+    {
+      id: "create-preset",
+      title: `Create .${FORMAT.recipeExtension} Print Recipe`,
+      section: "Recipes",
+      disabled: !imageSrc,
+      keywords: ["look", "recipe", "save"],
+      run: () => setIsPresetModalOpen(true),
+    },
+    {
+      id: "copy-settings",
+      title: "Copy Edit Settings",
+      section: "Recipes",
+      shortcut: "Ctrl+Shift+C",
+      disabled: !imageSrc,
+      keywords: ["recipe", "copy"],
+      run: handleCopySettings,
+    },
+    {
+      id: "paste-settings",
+      title: "Paste Edit Settings",
+      section: "Recipes",
+      shortcut: "Ctrl+Shift+V",
+      disabled: !imageSrc && !clipboard,
+      keywords: ["recipe", "paste"],
+      run: handlePasteSettings,
+    },
+    {
+      id: "open-history",
+      title: "Open History",
+      section: "Workflow",
+      shortcut: "H",
+      disabled: !imageSrc,
+      run: () => handleTabChange("history"),
+    },
+    {
+      id: "open-curves",
+      title: "Open Tone Curve Lab",
+      section: "Develop",
+      shortcut: "T",
+      disabled: !imageSrc,
+      keywords: ["curve", "tone"],
+      run: () => handleTabChange("curves"),
+    },
+    {
+      id: "open-hsl",
+      title: "Open HSL Mixer",
+      section: "Develop",
+      disabled: !imageSrc,
+      keywords: ["color", "mixer"],
+      run: () => handleTabChange("hsl"),
+    },
+    {
+      id: "open-mask",
+      title: "Open Masking",
+      section: "Local Adjustments",
+      shortcut: "M",
+      disabled: !imageSrc,
+      keywords: ["brush", "gradient", "range"],
+      run: () => handleTabChange("masking"),
+    },
+    {
+      id: "open-film",
+      title: "Open Film Lab",
+      section: "Looks",
+      disabled: !imageSrc,
+      keywords: ["grain", "halation", "bloom"],
+      run: () => handleTabChange("films"),
+    },
+    {
+      id: "open-reference",
+      title: "Open Reference Viewer",
+      section: "Workflow",
+      disabled: !imageSrc,
+      keywords: ["reference", "palette"],
+      run: () => setIsReferenceOpen(true),
+    },
+    {
+      id: "open-lut-creator",
+      title: "Open 3D LUT Creator",
+      section: "Color",
+      disabled: !imageSrc,
+      keywords: ["lut", "cube", "profile"],
+      run: () => setIsLUTCreatorOpen(true),
+    },
+    {
+      id: "extract-frame",
+      title: "Lift Frame From Video",
+      section: "Import",
+      keywords: ["video", "clip"],
+      run: () => setIsVideoGradingOpen(true),
+    },
+    {
+      id: "show-shortcuts",
+      title: "Show Shortcuts",
+      section: "Help",
+      shortcut: "/",
+      keywords: ["keyboard", "hotkeys"],
+      run: () => setIsShortcutHelpOpen(true),
+    },
+  ];
 
-  const handleImportPreset = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (!e.target) return;
-      try {
-        const json = JSON.parse(e.target.result as string);
-        if (json.settings) {
-          setSettings((prev: any) => ({ ...prev, ...json.settings }));
+  useEffect(() => {
+    const handleGlobalShortcuts = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTyping =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+
+      const key = event.key.toLowerCase();
+
+      if ((event.metaKey || event.ctrlKey) && key === "k") {
+        event.preventDefault();
+        setIsCommandBarOpen(true);
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && key === "o") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          openProjectPicker();
+        } else {
+          openImagePicker();
         }
-      } catch (err) {
-        console.error("Invalid preset file", err);
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && key === "s" && imageSrc) {
+        event.preventDefault();
+        handleSaveProjectSession();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && key === "e" && imageSrc) {
+        event.preventDefault();
+        setIsExportModalOpen(true);
+        return;
+      }
+
+      if (!isTyping && event.key === "/") {
+        event.preventDefault();
+        setIsShortcutHelpOpen(true);
+        return;
+      }
+
+      if (isTyping || isCommandBarOpen || isShortcutHelpOpen || !imageSrc) {
+        return;
+      }
+
+      if (/^[0-5]$/.test(event.key)) {
+        event.preventDefault();
+        setAssetMetadata((prev) => ({
+          ...prev,
+          rating: Number(event.key),
+        }));
+        return;
+      }
+
+      if (key === "p") {
+        event.preventDefault();
+        setAssetMetadata((prev) => ({
+          ...prev,
+          flagStatus: "picked",
+        }));
+        return;
+      }
+
+      if (key === "x") {
+        event.preventDefault();
+        setAssetMetadata((prev) => ({
+          ...prev,
+          flagStatus: "rejected",
+        }));
+        return;
+      }
+
+      if (key === "u") {
+        event.preventDefault();
+        setAssetMetadata((prev) => ({
+          ...prev,
+          flagStatus: "unflagged",
+        }));
+        return;
+      }
+
+      if (key === "c") {
+        event.preventDefault();
+        setSettings((prev) => ({ ...prev, wiperActive: !prev.wiperActive }));
+        return;
+      }
+
+      if (key === "f") {
+        event.preventDefault();
+        setIsFocusMode((prev) => !prev);
+        return;
+      }
+
+      if (key === "h") {
+        event.preventDefault();
+        setActiveTab("history");
+        setIsMobileMenuOpen(false);
+      }
+
+      if (key === "t") {
+        event.preventDefault();
+        setActiveTab("curves");
+        setIsMobileMenuOpen(false);
+      }
+
+      if (key === "m") {
+        event.preventDefault();
+        setActiveTab("masking");
+        setIsMobileMenuOpen(false);
       }
     };
-    reader.readAsText(file);
-  };
+
+    window.addEventListener("keydown", handleGlobalShortcuts);
+    return () => window.removeEventListener("keydown", handleGlobalShortcuts);
+  }, [
+    imageSrc,
+    handleSaveProjectSession,
+    isCommandBarOpen,
+    isShortcutHelpOpen,
+    openImagePicker,
+    openProjectPicker,
+  ]);
 
   // Full-page Start Screen when no image is loaded
   if (!imageSrc) {
     return (
       <main className="flex h-screen w-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-amber-500 selection:text-white relative">
         <StartScreen
-          onOpenImage={() => {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = "image/*";
-            input.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) =>
-                  setImageSrc(ev.target?.result as string);
-                reader.readAsDataURL(file);
-              }
-            };
-            input.click();
-          }}
+          onOpenImage={openImagePicker}
+          onOpenArchive={openProjectPicker}
           onOpenVideo={() => setIsVideoGradingOpen(true)}
           onTrySample={() => {
             setSettings(DEFAULT_SETTINGS);
             setImageSrc("/demo.jpg");
+            setImageName("Demo Sample");
+            setImageInfo({
+              width: 2000,
+              height: 2500,
+              fileType: "image/jpeg",
+            });
+            setAssetMetadata({
+              ...DEFAULT_ASSET_METADATA,
+              title: "Demo Sample",
+            });
+            setWatermark(DEFAULT_WATERMARK);
           }}
         />
         {/* Video Grading Panel - Available from start screen */}
@@ -975,22 +2132,39 @@ export default function Home() {
           settings={settings}
           onExtractFrame={(dataUrl) => {
             setImageSrc(dataUrl);
+            setImageName("Video Frame");
+            setAssetMetadata({
+              ...DEFAULT_ASSET_METADATA,
+              title: "Video Frame",
+            });
+            setWatermark(DEFAULT_WATERMARK);
+            void getImageFileInfo(dataUrl).then(setImageInfo).catch(() => {
+              setImageInfo(null);
+            });
           }}
+        />
+        <CommandBar
+          isOpen={isCommandBarOpen}
+          commands={appCommands}
+          onClose={() => setIsCommandBarOpen(false)}
+        />
+        <ShortcutHelp
+          isOpen={isShortcutHelpOpen}
+          commands={appCommands}
+          onClose={() => setIsShortcutHelpOpen(false)}
         />
       </main>
     );
   }
 
   return (
-    <main className="flex flex-col md:flex-row h-screen w-screen bg-[#050505] text-white overflow-hidden font-sans selection:bg-amber-500 selection:text-white relative">
-      {/* Film grain overlay */}
-      <div
-        className="pointer-events-none fixed inset-0 z-50 opacity-[0.05] mix-blend-overlay"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        }}
-      />
-
+    <main
+      className={`grid h-screen w-screen grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-[var(--ormond-charcoal)] font-sans text-[var(--ormond-paper)] selection:bg-[var(--ormond-brass)] selection:text-black md:grid-rows-1 ${
+        isFocusMode
+          ? "md:grid-cols-[minmax(0,1fr)]"
+          : "md:grid-cols-[76px_minmax(0,1fr)_360px]"
+      }`}
+    >
       <MobileLimitationModal
         isOpen={showMobileWarning}
         onClose={() => setShowMobileWarning(false)}
@@ -998,16 +2172,12 @@ export default function Home() {
 
       {/* LEFT SIDEBAR - MODULES & ANALYZER */}
       <div
-        className={`${
-          isLeftSidebarOpen
-            ? "w-80 md:w-[25%] min-w-[300px] max-w-[400px]"
-            : "w-[60px]"
-        } bg-[#050505] border-r border-white/5 flex flex-col z-30 transition-all duration-300 relative flex-shrink-0 hidden md:flex`}
+        className={`${isFocusMode ? "hidden" : ""} relative z-30 hidden min-h-0 w-[76px] flex-col border-r border-[var(--ormond-line)] bg-[var(--ormond-panel)] md:flex`}
       >
         {/* Toggle Button */}
         <button
           onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
-          className="absolute -right-3 top-6 z-40 bg-black/80 border border-white/20 rounded-full p-1 text-white/60 hover:text-white hover:scale-110 transition-all backdrop-blur-md hidden md:block"
+          className="hidden"
         >
           {isLeftSidebarOpen ? (
             <IconChevronLeft size={14} />
@@ -1017,17 +2187,70 @@ export default function Home() {
         </button>
 
         {isLeftSidebarOpen ? (
-          <div className="h-full overflow-y-auto custom-scrollbar">
-            <div className="w-80 min-w-[320px] p-6">
+          <div className="flex h-full">
+            <div className="flex w-[76px] shrink-0 flex-col border-r border-[var(--ormond-line)] bg-[var(--ormond-charcoal-2)]">
+              <div className="flex h-16 items-center justify-center border-b border-[var(--ormond-line)]">
+                <div className="relative h-8 w-8 opacity-85">
+                  <Image
+                    src="/logo.svg"
+                    alt="Ormond"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+              <div className="custom-scrollbar flex-1 overflow-y-auto px-2 py-3">
+                <div className="space-y-1">
+                  {EDITOR_MODULES.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleTabChange(item.id)}
+                      title={item.label}
+                      className={`flex h-[58px] w-full flex-col items-center justify-center gap-1 border text-[9px] transition ${
+                        activeTab === item.id
+                          ? "border-[var(--ormond-brass)] bg-[rgba(176,138,82,0.16)] text-[var(--ormond-paper)]"
+                          : "border-transparent text-[rgba(231,223,208,0.42)] hover:border-[var(--ormond-line)] hover:bg-white/[0.04] hover:text-[rgba(231,223,208,0.78)]"
+                      }`}
+                    >
+                      <item.icon size={17} strokeWidth={1.5} />
+                      <span className="font-mono uppercase tracking-[0.12em]">
+                        {item.shortLabel}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4 border-t border-white/10 pt-3">
+                  {AUXILIARY_MODULES.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleTabChange(item.id)}
+                      title={item.label}
+                      className={`mb-1 flex h-[52px] w-full flex-col items-center justify-center gap-1 border text-[9px] transition ${
+                        activeTab === item.id
+                          ? "border-[var(--ormond-green)] bg-[rgba(63,85,69,0.24)] text-[var(--ormond-paper)]"
+                          : "border-transparent text-[rgba(231,223,208,0.38)] hover:border-[var(--ormond-line)] hover:bg-white/[0.04] hover:text-[rgba(231,223,208,0.78)]"
+                      }`}
+                    >
+                      <item.icon size={16} strokeWidth={1.5} />
+                      <span className="font-mono uppercase tracking-[0.12em]">
+                        {item.shortLabel}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="custom-scrollbar hidden h-full flex-1 overflow-y-auto">
+              <div className="p-4">
               <div className="mb-4 flex items-center justify-between px-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.45em] text-white/20">
                   Project
                 </span>
               </div>
 
-              <div className="flex gap-2 mb-8">
+              <div className="mb-3 grid grid-cols-4 gap-2">
                 {/* OPEN */}
-                <label className="flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.08] active:bg-white/[0.12] border border-white/5 hover:border-white/10 rounded-2xl transition-all duration-300 cursor-pointer group">
+                <label className="group flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 border border-white/10 bg-black/35 transition-all duration-200 hover:border-amber-400/35 hover:bg-amber-400/5 active:bg-white/[0.12]">
                   <IconUpload
                     size={18}
                     stroke={1.5}
@@ -1047,7 +2270,7 @@ export default function Home() {
                 {/* EXTRACT */}
                 <button
                   onClick={() => setIsVideoGradingOpen(true)}
-                  className="flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.08] active:bg-white/[0.12] border border-white/5 hover:border-white/10 rounded-2xl transition-all duration-300 group relative overflow-hidden"
+                  className="group relative flex aspect-square flex-col items-center justify-center gap-1.5 overflow-hidden border border-white/10 bg-black/35 transition-all duration-200 hover:border-rose-400/35 hover:bg-rose-400/5 active:bg-white/[0.12]"
                 >
                   <div className="absolute inset-0 bg-gradient-to-tr from-rose-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <IconMovie
@@ -1063,7 +2286,7 @@ export default function Home() {
                 {/* REF */}
                 <button
                   onClick={() => setIsReferenceOpen(!isReferenceOpen)}
-                  className={`flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 border rounded-2xl transition-all duration-300 group relative overflow-hidden ${isReferenceOpen ? "bg-cyan-900/10 border-cyan-500/20" : "bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-white/10"}`}
+                  className={`group relative flex aspect-square flex-col items-center justify-center gap-1.5 overflow-hidden border transition-all duration-200 ${isReferenceOpen ? "border-cyan-400/35 bg-cyan-400/10" : "border-white/10 bg-black/35 hover:border-cyan-400/35 hover:bg-cyan-400/5"}`}
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-tr from-cyan-500/10 to-transparent transition-opacity ${isReferenceOpen ? "opacity-100" : "opacity-0"}`}
@@ -1085,7 +2308,7 @@ export default function Home() {
                   onClick={() =>
                     updateSetting("falseColor", !settings.falseColor)
                   }
-                  className={`flex-1 aspect-square flex flex-col items-center justify-center gap-1.5 border rounded-2xl transition-all duration-300 group relative overflow-hidden ${settings.falseColor ? "bg-purple-900/10 border-purple-500/20" : "bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-white/10"}`}
+                  className={`group relative flex aspect-square flex-col items-center justify-center gap-1.5 overflow-hidden border transition-all duration-200 ${settings.falseColor ? "border-purple-400/35 bg-purple-400/10" : "border-white/10 bg-black/35 hover:border-purple-400/35 hover:bg-purple-400/5"}`}
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-tr from-purple-500/10 to-transparent transition-opacity ${settings.falseColor ? "opacity-100" : "opacity-0"}`}
@@ -1103,60 +2326,119 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="mb-5 font-mono text-[10px] uppercase tracking-[0.45em] text-white/40">
-                Modules
+              <div className="mb-6 grid grid-cols-2 gap-2">
+                <button
+                  onClick={handleSaveProjectSession}
+                  className="flex items-center justify-center gap-2 border border-white/10 bg-black/40 px-3 py-2.5 font-mono text-[10px] uppercase tracking-[0.22em] text-white/50 transition hover:border-amber-400/40 hover:text-amber-100"
+                >
+                  <IconDeviceFloppy size={14} stroke={1.5} />
+                  Save Archive
+                </button>
+                <button
+                  onClick={openProjectPicker}
+                  className="flex items-center justify-center gap-2 border border-white/10 bg-black/40 px-3 py-2.5 font-mono text-[10px] uppercase tracking-[0.22em] text-white/50 transition hover:border-white/25 hover:text-white"
+                >
+                  <IconFileCode size={14} stroke={1.5} />
+                  Open Archive
+                </button>
               </div>
 
-              <div className="space-y-2">
-                {[
-                  { id: "basic", label: "Wheels", icon: IconCircle },
-                  { id: "curves", label: "Curves", icon: IconChartLine },
-                  { id: "hsl", label: "HSL", icon: IconLayersIntersect },
-                  { id: "color", label: "LUT", icon: IconMovie },
-                  {
-                    id: "masking",
-                    label: "Masking",
-                    icon: IconBrush || IconCircleFilled,
-                  }, // Fallback if IconBrush not imported
-                  { id: "films", label: "Film Lab", icon: IconPhoto },
-                  { id: "text", label: "Text", icon: IconTypography },
-                  {
-                    id: "transform",
-                    label: "Transform",
-                    icon: IconArrowsMaximize,
-                  },
-                  { id: "effects", label: "Effects", icon: IconSparkles },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleTabChange(item.id)}
-                    className={`w-full flex items-center justify-between border px-4 py-3 transition-colors ${
-                      activeTab === item.id
-                        ? "border-amber-500/50 bg-amber-500/10 text-amber-100"
-                        : "border-white/10 bg-black/30 text-white/70 hover:border-white/25 hover:text-white"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon
-                        size={16}
-                        strokeWidth={1.5}
-                        className={
-                          activeTab === item.id
-                            ? "text-amber-500"
-                            : "text-white/55"
-                        }
-                      />
-                      <span className="text-sm font-light tracking-wide">
-                        {item.label}
+              <div className="mb-8 border border-cyan-500/15 bg-cyan-500/[0.035] p-4">
+                <div className="mb-3 flex justify-center">
+                  <Image
+                    src="/archive-file.svg"
+                    alt=""
+                    width={54}
+                    height={54}
+                    className="opacity-90"
+                  />
+                </div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-cyan-300/80">
+                  Ormond Archive .ormond
+                </div>
+                <p className="mt-2 text-xs leading-5 text-white/45">
+                  An Archive restores the whole session: image source, edit recipe,
+                  text overlay, metadata, watermark, export recipe, and virtual
+                  copies. Legacy .nyvlt and .nyvproj files still open.
+                </p>
+                <div className="mt-3 border-t border-white/10 pt-3 font-mono text-[9px] uppercase tracking-[0.24em] text-amber-300/70">
+                  .orm = reusable print recipe
+                </div>
+              </div>
+
+              <div className="mb-8 border border-white/10 bg-black/30 p-4">
+                <div className="mb-4 font-mono text-[10px] uppercase tracking-[0.35em] text-white/35">
+                  Workspace
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.28em] text-white/30">
+                        GPU Mode
+                      </span>
+                      <span className="font-mono text-[9px] uppercase tracking-[0.28em] text-amber-400/70">
+                        {performanceMode}
                       </span>
                     </div>
-                    {activeTab === item.id && (
-                      <span className="font-mono text-[9px] uppercase tracking-[0.35em] text-amber-500/50">
-                        Open
+                    <div className="grid grid-cols-3 gap-1">
+                      {PERFORMANCE_MODES.map((mode) => (
+                        <button
+                          key={mode.id}
+                          onClick={() => setPerformanceMode(mode.id)}
+                          title={mode.description}
+                          className={`border px-2 py-2 text-[9px] font-mono uppercase tracking-[0.18em] transition ${
+                            performanceMode === mode.id
+                              ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
+                              : "border-white/10 bg-white/[0.03] text-white/35 hover:border-white/25 hover:text-white/70"
+                          }`}
+                        >
+                          {mode.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.28em] text-white/30">
+                        Guide
                       </span>
-                    )}
-                  </button>
-                ))}
+                      <span className="font-mono text-[9px] uppercase tracking-[0.28em] text-cyan-300/70">
+                        {compositionGuide}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {COMPOSITION_GUIDES.map((guide) => (
+                        <button
+                          key={guide.id}
+                          onClick={() => setCompositionGuide(guide.id)}
+                          title={guide.description}
+                          className={`border px-2 py-2 text-[9px] font-mono uppercase tracking-[0.18em] transition ${
+                            compositionGuide === guide.id
+                              ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-100"
+                              : "border-white/10 bg-white/[0.03] text-white/35 hover:border-white/25 hover:text-white/70"
+                          }`}
+                        >
+                          {guide.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-8 border border-white/10 bg-black/30 p-4">
+                <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.35em] text-white/35">
+                  Active Module
+                </div>
+                <div className="text-lg font-light text-white/85">
+                  {getEditorModuleLabel(activeTab)}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-white/45">
+                  Use the rail on the far left to move between Develop, color,
+                  masks, metadata, and delivery tools.
+                </p>
               </div>
 
               <div className="mt-8 border-t border-white/10 pt-6">
@@ -1184,7 +2466,71 @@ export default function Home() {
                     <span>Shadows</span>
                     <span>Highlights</span>
                   </div>
+                  {histogram && (
+                    <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+                      <ScopeMetric
+                        label="Shadow Clip"
+                        value={`${(histogram.clipping.shadows * 100).toFixed(1)}%`}
+                        tone={histogram.clipping.shadows > 0.02 ? "warn" : "ok"}
+                      />
+                      <ScopeMetric
+                        label="Highlight Clip"
+                        value={`${(histogram.clipping.highlights * 100).toFixed(1)}%`}
+                        tone={
+                          histogram.clipping.highlights > 0.02 ? "warn" : "ok"
+                        }
+                      />
+                      <ScopeMetric
+                        label="RGB Avg"
+                        value={`${Math.round(histogram.average.r)}/${Math.round(
+                          histogram.average.g
+                        )}/${Math.round(histogram.average.b)}`}
+                      />
+                      <ScopeMetric
+                        label="Cast"
+                        value={getColorCastLabel(histogram)}
+                      />
+                    </div>
+                  )}
+                  {imageInfo && (
+                    <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+                      <ScopeMetric
+                        label="Source"
+                        value={`${imageInfo.width}x${imageInfo.height}`}
+                      />
+                      <ScopeMetric
+                        label="Type"
+                        value={
+                          imageInfo.fileType
+                            ? imageInfo.fileType.split("/")[1].toUpperCase()
+                            : "Image"
+                        }
+                      />
+                    </div>
+                  )}
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+                    <ScopeMetric
+                      label="Rating"
+                      value={
+                        assetMetadata.rating > 0
+                          ? `${assetMetadata.rating}/5`
+                          : "Clear"
+                      }
+                    />
+                    <ScopeMetric
+                      label="Flag"
+                      value={assetMetadata.flagStatus}
+                      tone={
+                        assetMetadata.flagStatus === "rejected"
+                          ? "warn"
+                          : assetMetadata.flagStatus === "picked"
+                            ? "ok"
+                            : "neutral"
+                      }
+                    />
+                  </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -1192,24 +2538,14 @@ export default function Home() {
           <div className="flex flex-col items-center py-6 gap-4 h-full">
             <div className="h-7 w-7 relative mb-4 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
               <Image
-                src="/logo.png"
-                alt="Nyvarra"
+                src="/logo.svg"
+                alt="Ormond"
                 fill
                 className="object-contain"
               />
             </div>
             {/* Collapsed Icons */}
-            {[
-              { id: "basic", icon: IconCircle },
-              { id: "curves", icon: IconChartLine },
-              { id: "hsl", icon: IconLayersIntersect },
-              { id: "color", icon: IconMovie },
-              { id: "masking", icon: IconBrush || IconCircleFilled },
-              { id: "films", icon: IconPhoto },
-              { id: "text", icon: IconTypography },
-              { id: "transform", icon: IconArrowsMaximize },
-              { id: "effects", icon: IconSparkles },
-            ].map((item) => (
+            {EDITOR_MODULES.map((item) => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -1229,45 +2565,151 @@ export default function Home() {
       {/* CENTER - EDITOR CANVAS */}
       <div
         onClick={() => setIsMobileControlsExpanded(false)}
-        className="fixed inset-0 z-0 bg-[#020202] flex flex-col overflow-hidden md:relative md:flex-1 md:border-r border-white/5"
+        className="relative z-0 flex min-h-0 min-w-0 flex-col overflow-hidden bg-[#11100d] md:border-r md:border-[var(--ormond-line)]"
       >
         {/* Top Header - Transparent Overlay on Mobile */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between border-b border-white/5 px-6 py-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none md:relative md:bg-[#050505] md:pointer-events-auto">
-          <div className="flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-white/30" />
-            <div className="h-2 w-2 rounded-full bg-white/20" />
-            <div className="h-2 w-2 rounded-full bg-white/10" />
-          </div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-white/50">
-            Studio Preview
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden md:block font-mono text-[10px] uppercase tracking-[0.35em] text-amber-500/70">
-              Live
+        <div className="relative z-10 border-b border-[var(--ormond-line)] bg-[rgba(32,29,23,0.96)] px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <div className="relative h-7 w-7 shrink-0 opacity-80">
+                  <Image
+                    src="/logo.svg"
+                    alt="Ormond"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium tracking-wide text-white/90">
+                    {imageName}
+                  </div>
+                  <div className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.24em] text-white/35">
+                    {activeVirtualCopyId
+                      ? "Virtual Copy Active"
+                      : "Master Edit"}{" "}
+                    / {getEditorModuleLabel(activeTab)}
+                  </div>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExportModalOpen(true);
-              }}
-              className="md:hidden pointer-events-auto flex items-center justify-center p-2 rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/20 transition-all backdrop-blur-md active:scale-95"
-            >
-              <IconDownload size={16} />
-            </button>
+
+            <div className="hidden">
+              <StatusChip label="Mode" value={performanceMode} />
+              <StatusChip label="Guide" value={compositionGuide} />
+              {imageInfo && (
+                <StatusChip
+                  label="Source"
+                  value={`${imageInfo.width}x${imageInfo.height}`}
+                />
+              )}
+              {histogram && (
+                <StatusChip
+                  label="Clip"
+                  value={`${(histogram.clipping.shadows * 100).toFixed(1)} / ${(histogram.clipping.highlights * 100).toFixed(1)}%`}
+                />
+              )}
+              <StatusChip
+                label="Rating"
+                value={
+                  assetMetadata.rating > 0
+                    ? `${assetMetadata.rating}/5`
+                    : "Clear"
+                }
+              />
+              <StatusChip label="Flag" value={assetMetadata.flagStatus} />
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <label className="hidden cursor-pointer items-center gap-2 border border-white/10 bg-black/40 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-white/50 transition hover:border-white/25 hover:text-white xl:flex">
+                <IconUpload size={14} />
+                Open
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUpload}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={() => setIsVideoGradingOpen(true)}
+                className="hidden"
+              >
+                <IconMovie size={14} />
+                Clip
+              </button>
+              <button
+                onClick={() => setIsReferenceOpen((prev) => !prev)}
+                className={`hidden ${
+                  isReferenceOpen
+                    ? "border-cyan-300/45 bg-cyan-300/10 text-cyan-100"
+                    : "border-white/10 bg-black/40 text-white/50 hover:border-cyan-300/35 hover:text-cyan-100"
+                }`}
+              >
+                <IconPhoto size={14} />
+                Ref
+              </button>
+              <button
+                onClick={() => updateSetting("falseColor", !settings.falseColor)}
+                className={`hidden ${
+                  settings.falseColor
+                    ? "border-purple-300/45 bg-purple-300/10 text-purple-100"
+                    : "border-white/10 bg-black/40 text-white/50 hover:border-purple-300/35 hover:text-purple-100"
+                }`}
+              >
+                <IconEye size={14} />
+                False
+              </button>
+              <button
+                onClick={() => setIsCommandBarOpen(true)}
+                className="hidden items-center gap-2 border border-white/10 bg-black/40 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-white/50 transition hover:border-white/25 hover:text-white md:flex"
+              >
+                <IconCommand size={14} />
+                Command
+              </button>
+              <button
+                onClick={() => setIsFocusMode((prev) => !prev)}
+                className={`hidden ${
+                  isFocusMode
+                    ? "border-cyan-400/45 bg-cyan-400/10 text-cyan-100"
+                    : "border-white/10 bg-black/40 text-white/50 hover:border-white/25 hover:text-white"
+                }`}
+              >
+                <IconMaximize size={14} />
+                Focus
+              </button>
+              <button
+                onClick={handleSaveProjectSession}
+                className="hidden items-center gap-2 border border-white/10 bg-black/40 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-white/50 transition hover:border-amber-400/35 hover:text-amber-100 md:flex"
+              >
+                <IconDeviceFloppy size={14} />
+                Archive
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExportModalOpen(true);
+                }}
+                className="flex items-center gap-2 border border-amber-400/45 bg-amber-400 px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-black transition hover:bg-amber-300"
+              >
+                <IconDownload size={14} />
+                Export
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Canvas Area */}
-        <div className="flex-1 relative bg-[#020202] flex items-center justify-center overflow-hidden">
+        <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-[#0f0f0f]">
           {/* Toolbar Overlay */}
 
           {/* Look Intensity Overlay - Only show when image is loaded */}
-          {imageSrc && (
+          {imageSrc && !isFocusMode && isLookIntensityOpen && (
             <div
-              className={`absolute bottom-6 right-6 z-10 border border-white/10 bg-black/35 backdrop-blur-md hidden md:block transition-all duration-300 ease-out overflow-hidden ${
+              className={`absolute bottom-6 right-6 z-10 hidden overflow-hidden border border-white/10 bg-[#151515]/90 backdrop-blur-md transition-all duration-300 ease-out md:block ${
                 isLookIntensityOpen
                   ? "w-[calc(100%-48px)] p-5"
-                  : "w-[240px] p-3 rounded-lg bg-black/60 border-white/20"
+                  : "w-[240px] border-white/20 bg-[#151515]/95 p-3"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -1293,9 +2735,9 @@ export default function Home() {
 
               {isLookIntensityOpen && (
                 <div className="mt-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="h-2 w-full rounded-full bg-white/10 relative">
+                  <div className="relative h-2 w-full bg-white/10">
                     <div
-                      className="absolute inset-0 rounded-full bg-gradient-to-r from-amber-700/40 via-amber-500/35 to-blue-500/30"
+                      className="absolute inset-0 bg-gradient-to-r from-amber-700/40 via-amber-500/35 to-blue-500/30"
                       style={{ width: `${(settings.lutStrength || 0) * 100}%` }}
                     />
                     <input
@@ -1350,6 +2792,7 @@ export default function Home() {
                 imageUrl={imageSrc}
                 onStatsUpdate={setHistogram}
                 textOverlay={textOverlay}
+                watermark={watermark}
                 brushMaskActive={brushMaskActive}
                 brushSize={brushSize}
                 brushFeather={brushFeather}
@@ -1360,6 +2803,8 @@ export default function Home() {
                 brushMaskSaturation={brushMaskSaturation}
                 brushMaskTemperature={brushMaskTemperature}
                 brushMaskClarity={brushMaskClarity}
+                performanceMode={performanceMode}
+                compositionGuide={compositionGuide}
                 onBrushMaskUpdate={setBrushMaskData}
                 onBoundsChange={setImageBounds}
               />
@@ -1431,69 +2876,82 @@ export default function Home() {
         {/* Mobile Menu Toggle */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-amber-500 text-black shadow-2xl shadow-amber-500/30 flex items-center justify-center"
+          className="hidden"
         >
           {isMobileMenuOpen ? <IconX size={24} /> : <IconMenu2 size={24} />}
         </button>
 
         {/* Bottom Actions Panel - Hidden on Mobile */}
-        <div className="hidden md:grid h-[180px] border-t border-white/10 bg-[#050505] p-6 grid-cols-3 gap-4">
+        <div className={`${isFocusMode ? "hidden" : "hidden md:grid"} h-[112px] grid-cols-5 gap-px border-t border-white/10 bg-white/10`}>
           <button
             onClick={() => updateSetting("wiperActive", !settings.wiperActive)}
-            className={`border text-left p-4 transition-all group ${settings.wiperActive ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 bg-black/30 hover:border-white/25"}`}
+            className={`group bg-[#0d0c0a] p-4 text-left transition-all ${settings.wiperActive ? "text-amber-100" : "text-white/65 hover:bg-[#15130f]"}`}
           >
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.35em] text-white/40 group-hover:text-white/60">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/45 group-hover:text-white/70">
               <IconAdjustmentsHorizontal size={14} /> Before / After
             </div>
-            <div className="mt-2 text-xs font-light leading-5 text-gray-400">
-              Compare with original.
+            <div className="mt-3 text-xs font-light leading-5 text-white/45">
+              {settings.wiperActive ? "Split compare active" : "Original compare off"}
             </div>
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`border text-left p-4 transition-all group ${activeTab === "history" ? "border-amber-500/50 bg-amber-500/10" : "border-white/10 bg-black/30 hover:border-white/25"}`}
+            className={`group bg-[#0d0c0a] p-4 text-left transition-all ${activeTab === "history" ? "text-amber-100" : "text-white/65 hover:bg-[#15130f]"}`}
           >
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.35em] text-white/40 group-hover:text-white/60">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/45 group-hover:text-white/70">
               <IconHistory size={14} /> History
             </div>
-            <div className="mt-2 text-xs font-light leading-5 text-gray-400">
+            <div className="mt-3 text-xs font-light leading-5 text-white/45">
               {history.length} states recorded.
             </div>
           </button>
-          <div
-            onClick={() => setIsExportModalOpen(true)}
-            className="border border-white/10 bg-black/30 text-left p-4 transition-all hover:border-white/25 group flex flex-col justify-between cursor-pointer"
+          <button
+            onClick={handleCreateVirtualCopy}
+            className="group bg-[#0d0c0a] p-4 text-left text-white/65 transition-all hover:bg-[#15130f]"
           >
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.35em] text-white/40 group-hover:text-white/60">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/45 group-hover:text-white/70">
+              <IconLayersIntersect size={14} /> Versions
+            </div>
+            <div className="mt-3 text-xs font-light leading-5 text-white/45">
+              {settingsSnapshots.length} virtual copies
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("metadata")}
+            className="group bg-[#0d0c0a] p-4 text-left text-white/65 transition-all hover:bg-[#15130f]"
+          >
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/45 group-hover:text-white/70">
+              <IconInfoCircle size={14} /> Culling
+            </div>
+            <div className="mt-3 text-xs font-light leading-5 text-white/45">
+              {assetMetadata.rating > 0 ? `${assetMetadata.rating}/5` : "No rating"} /{" "}
+              {assetMetadata.flagStatus}
+            </div>
+          </button>
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="group bg-[#0d0c0a] p-4 text-left text-white/65 transition-all hover:bg-[#15130f]"
+          >
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/45 group-hover:text-white/70">
               <IconDownload size={14} /> Export
             </div>
-            <div className="mt-2 text-xs font-light leading-5 text-gray-400">
-              {exportFormat.split("/")[1].toUpperCase()} • {exportQuality}%
+            <div className="mt-3 text-xs font-light leading-5 text-white/45">
+              {activeExportRecipe?.name ??
+                exportFormat.split("/")[1].toUpperCase()}{" "}
+              • {exportQuality}%
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
-      {/* RIGHT SIDEBAR - CONTROLS (Mobile Bottom Sheet) */}
+      {/* RIGHT SIDEBAR - CONTROLS */}
       <div
-        className={`${
-          isRightSidebarOpen
-            ? "md:w-80 md:w-[25%] md:min-w-[300px] md:max-w-[400px]"
-            : "md:w-[60px]"
-        } fixed bottom-0 left-0 right-0 h-auto max-h-[60vh] flex flex-col-reverse z-40 transition-transform duration-300 ease-out bg-black/95 backdrop-blur-xl border-t border-white/10 md:relative md:h-full md:bg-[#050505] md:flex-col md:max-h-none md:transform-none md:border-t-0 md:border-l md:border-white/5`}
-        style={{
-          transform:
-            typeof window !== "undefined" &&
-            window.innerWidth < 768 &&
-            !isMobileControlsExpanded
-              ? "translateY(calc(100% - 68px))"
-              : "translateY(0)",
-        }}
+        className={`${isFocusMode ? "hidden" : ""} relative z-20 flex h-[42vh] min-h-[360px] flex-col border-t border-[var(--ormond-line)] bg-[var(--ormond-panel)] md:h-full md:min-h-0 md:w-[360px] md:border-l md:border-t-0`}
       >
         {/* Toggle Button */}
         <button
           onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-          className="absolute -left-3 top-6 z-40 bg-black/80 border border-white/20 rounded-full p-1 text-white/60 hover:text-white hover:scale-110 transition-all backdrop-blur-md hidden md:block"
+          className="hidden"
         >
           {isRightSidebarOpen ? (
             <IconChevronRight size={14} />
@@ -1503,17 +2961,17 @@ export default function Home() {
         </button>
         {/* Mobile backdrop */}
         <div
-          className={`md:hidden absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity ${isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+          className="hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
 
         {/* Control Panel */}
-        <div className="w-full flex flex-col-reverse md:flex-col z-20 h-full overflow-hidden">
-          <div className={`h-full w-full ${!isRightSidebarOpen && "hidden"}`}>
-            <div className="w-full min-w-[320px] h-full flex flex-col">
+        <div className="z-20 flex h-full w-full flex-col overflow-hidden">
+          <div className="h-full w-full">
+            <div className="flex h-full w-full min-w-0 flex-col">
               {/* Premium Mobile Tab Bar */}
               <div
-                className="md:hidden flex overflow-x-auto snap-x snap-mandatory custom-scrollbar border-b border-white/10 py-3 px-3 gap-2 bg-black/40"
+                className="custom-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto border-b border-white/10 bg-black/40 px-3 py-3 md:hidden"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
                 {[
@@ -1553,6 +3011,11 @@ export default function Home() {
                     id: "text",
                     icon: <IconTypography size={16} />,
                     color: "green",
+                  },
+                  {
+                    id: "metadata",
+                    icon: <IconInfoCircle size={16} />,
+                    color: "blue",
                   },
                   {
                     id: "transform",
@@ -1634,7 +3097,7 @@ export default function Home() {
                           handleTabChange(tab.id);
                         }
                       }}
-                      className={`snap-start flex flex-col items-center gap-1.5 px-4 py-2.5 rounded-xl text-[9px] font-mono uppercase whitespace-nowrap transition-all duration-200 border shrink-0 ${
+                      className={`flex shrink-0 snap-start flex-col items-center gap-1.5 border px-4 py-2.5 font-mono text-[9px] uppercase whitespace-nowrap transition-all duration-200 ${
                         isActive
                           ? `${colorClasses[tab.color].active} border shadow-lg`
                           : `${colorClasses[tab.color].inactive} border-transparent hover:bg-white/5 active:scale-95`
@@ -1645,24 +3108,26 @@ export default function Home() {
                       >
                         {tab.icon}
                       </span>
-                      <span className="font-semibold">{tab.id}</span>
+                      <span className="font-semibold">
+                        {getEditorModuleLabel(tab.id)}
+                      </span>
                     </button>
                   );
                 })}
               </div>
 
               {/* Panel Header */}
-              <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center">
+              <div className="flex items-center justify-between border-b border-[var(--ormond-line)] bg-black/10 px-5 py-4">
                 <div className="flex items-center gap-2">
-                  <IconChevronRight size={14} className="text-amber-500/60" />
-                  <h2 className="font-mono text-sm uppercase tracking-[0.25em] text-white/90 font-medium">
-                    {activeTab}
+                  <IconChevronRight size={14} className="text-amber-300/60" />
+                  <h2 className="font-mono text-sm font-medium uppercase tracking-[0.25em] text-white/90">
+                    {getEditorModuleLabel(activeTab)}
                   </h2>
                 </div>
                 <div className="flex items-center gap-3">
                   <TutorialTrigger onClick={() => showTutorial(activeTab)} />
-                  <div className="text-[9px] text-gray-600 font-mono uppercase tracking-widest">
-                    v1.0
+                  <div className="border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[8px] uppercase tracking-[0.2em] text-white/35">
+                    Inspector
                   </div>
                 </div>
               </div>
@@ -1680,45 +3145,11 @@ export default function Home() {
                     onJumpToState={handleJumpToHistory}
                     onClearHistory={handleClearHistory}
                     branches={settingsSnapshots}
-                    onCreateBranch={() => {
-                      const name = prompt(
-                        "Name this branch:",
-                        `Branch ${settingsSnapshots.length + 1}`
-                      );
-                      if (name) {
-                        setSettingsSnapshots((prev) => [
-                          ...prev,
-                          {
-                            id: Math.random().toString(36).substr(2, 9),
-                            name,
-                            settings: JSON.parse(JSON.stringify(settings)),
-                            timestamp: Date.now(),
-                          },
-                        ]);
-                      }
-                    }}
-                    onRestoreBranch={(id) => {
-                      const branch = settingsSnapshots.find((b) => b.id === id);
-                      if (branch) {
-                        setSettings((prev: any) => ({
-                          ...prev,
-                          ...branch.settings,
-                          // Preserve textures
-                          lutTexture: prev.lutTexture,
-                          toneCurveTexture: prev.toneCurveTexture,
-                          compareTexture: prev.compareTexture,
-                        }));
-                        addToHistory(
-                          branch.settings,
-                          `Restore: ${branch.name}`
-                        );
-                      }
-                    }}
-                    onDeleteBranch={(id) => {
-                      setSettingsSnapshots((prev) =>
-                        prev.filter((b) => b.id !== id)
-                      );
-                    }}
+                    activeBranchId={activeVirtualCopyId}
+                    onCreateBranch={handleCreateVirtualCopy}
+                    onRestoreBranch={handleRestoreVirtualCopy}
+                    onDeleteBranch={handleDeleteVirtualCopy}
+                    onDiffBranch={setDiffVirtualCopyId}
                   />
                 )}
 
@@ -1903,7 +3334,7 @@ export default function Home() {
                         min={-5}
                         max={5}
                         step={0.05}
-                        onChange={(v: any) => updateSetting("brightness", v)}
+                        onChange={(v) => updateSetting("brightness", v)}
                         icon={<IconSun size={14} />}
                         bipolar
                       />
@@ -1912,7 +3343,7 @@ export default function Home() {
                         value={settings.contrast}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("contrast", v)}
+                        onChange={(v) => updateSetting("contrast", v)}
                         icon={<IconContrast size={14} />}
                         bipolar
                       />
@@ -1921,7 +3352,7 @@ export default function Home() {
                         value={settings.highlights || 0}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("highlights", v)}
+                        onChange={(v) => updateSetting("highlights", v)}
                         icon={<IconSun size={14} />}
                         bipolar
                       />
@@ -1930,7 +3361,7 @@ export default function Home() {
                         value={settings.shadows || 0}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("shadows", v)}
+                        onChange={(v) => updateSetting("shadows", v)}
                         icon={<IconMoon size={14} />}
                         bipolar
                       />
@@ -1939,7 +3370,7 @@ export default function Home() {
                         value={settings.whites || 0}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("whites", v)}
+                        onChange={(v) => updateSetting("whites", v)}
                         icon={<IconSun size={14} />}
                         bipolar
                       />
@@ -1948,7 +3379,7 @@ export default function Home() {
                         value={settings.blacks || 0}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("blacks", v)}
+                        onChange={(v) => updateSetting("blacks", v)}
                         icon={<IconMoon size={14} />}
                         bipolar
                       />
@@ -1957,7 +3388,7 @@ export default function Home() {
                         value={settings.vibrance || 0}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("vibrance", v)}
+                        onChange={(v) => updateSetting("vibrance", v)}
                         icon={<IconPalette size={14} />}
                         bipolar
                       />
@@ -1966,7 +3397,7 @@ export default function Home() {
                         value={settings.dehaze}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("dehaze", v)}
+                        onChange={(v) => updateSetting("dehaze", v)}
                         icon={<IconAperture size={14} />}
                       />
                     </ControlGroup>
@@ -1977,7 +3408,7 @@ export default function Home() {
                         value={settings.structure}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("structure", v)}
+                        onChange={(v) => updateSetting("structure", v)}
                         icon={<IconBolt size={14} />}
                       />
                       <Slider
@@ -1985,18 +3416,18 @@ export default function Home() {
                         value={settings.sharpness}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("sharpness", v)}
+                        onChange={(v) => updateSetting("sharpness", v)}
                         icon={<IconBolt size={14} />}
                       />
                     </ControlGroup>
 
-                    <ControlGroup title="God Light (Advanced Relighting)">
+                    <ControlGroup title="Directional Light">
                       <Slider
                         label="Strength"
                         value={settings.godLightStrength}
                         min={0}
                         max={1}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("godLightStrength", v)
                         }
                         icon={<IconSun size={14} />}
@@ -2006,7 +3437,7 @@ export default function Home() {
                         value={settings.godLightX}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("godLightX", v)}
+                        onChange={(v) => updateSetting("godLightX", v)}
                         icon={<IconSun size={14} />}
                       />
                       <Slider
@@ -2014,7 +3445,7 @@ export default function Home() {
                         value={settings.godLightY}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("godLightY", v)}
+                        onChange={(v) => updateSetting("godLightY", v)}
                         icon={<IconSun size={14} />}
                       />
                       <div className="pt-2 border-t border-white/5 mt-2">
@@ -2059,7 +3490,7 @@ export default function Home() {
                         value={settings.godLightSpecular}
                         min={0}
                         max={1}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("godLightSpecular", v)
                         }
                         icon={<IconBolt size={14} />}
@@ -2069,7 +3500,7 @@ export default function Home() {
                         value={settings.godLightRim}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("godLightRim", v)}
+                        onChange={(v) => updateSetting("godLightRim", v)}
                         icon={<IconSun size={14} />}
                       />
                       <Slider
@@ -2077,7 +3508,7 @@ export default function Home() {
                         value={settings.godLightFalloff}
                         min={0}
                         max={3}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("godLightFalloff", v)
                         }
                         icon={<IconAperture size={14} />}
@@ -2088,7 +3519,7 @@ export default function Home() {
 
                 {activeTab === "color" && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <ControlGroup title="Palette Heist (Neural Match)">
+                    <ControlGroup title="Reference Match">
                       <div className="flex gap-2 mb-4">
                         {/* ROI Toggle */}
                         <button
@@ -2108,7 +3539,7 @@ export default function Home() {
                           className={`flex-[2] flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-purple-900 to-blue-900 hover:from-purple-800 hover:to-blue-800 text-xs uppercase tracking-widest font-medium rounded-lg transition border border-white/20 cursor-pointer shadow-lg`}
                         >
                           <IconBolt size={14} className="text-yellow-400" />{" "}
-                          Steal Look
+                          Match Reference
                           <input
                             type="file"
                             accept="image/*"
@@ -2134,11 +3565,11 @@ export default function Home() {
 
                       <p className="text-[10px] text-gray-500 italic text-center">
                         Select a region of your image (optional) and upload a
-                        reference to steal its colors.
+                        reference to borrow its color balance.
                       </p>
                     </ControlGroup>
 
-                    <ControlGroup title="Cinema Lab (3D LUTs)">
+                    <ControlGroup title="LUT Cabinet">
                       <div className="grid grid-cols-2 gap-2 mb-4">
                         <label className="flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-xs uppercase tracking-widest font-medium rounded-lg transition border border-white/5 cursor-pointer">
                           <IconUpload size={14} /> Upload
@@ -2161,7 +3592,7 @@ export default function Home() {
                         value={settings.lutStrength || 0}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("lutStrength", v)}
+                        onChange={(v) => updateSetting("lutStrength", v)}
                         icon={<IconPalette size={14} />}
                       />
                     </ControlGroup>
@@ -2172,7 +3603,7 @@ export default function Home() {
                         value={settings.temperature}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("temperature", v)}
+                        onChange={(v) => updateSetting("temperature", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2180,18 +3611,18 @@ export default function Home() {
                         value={settings.tint}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("tint", v)}
+                        onChange={(v) => updateSetting("tint", v)}
                         icon={<IconPalette size={14} />}
                       />
                     </ControlGroup>
 
-                    <ControlGroup title="Cinematic Grading">
+                    <ControlGroup title="Color Separation">
                       <Slider
                         label="Teal & Orange"
                         value={settings.tealOrange}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("tealOrange", v)}
+                        onChange={(v) => updateSetting("tealOrange", v)}
                         accentColor="accent-orange-500"
                         icon={<IconPalette size={14} />}
                       />
@@ -2200,7 +3631,7 @@ export default function Home() {
                         value={settings.skinProtect}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("skinProtect", v)}
+                        onChange={(v) => updateSetting("skinProtect", v)}
                         icon={<IconPalette size={14} />}
                       />
                     </ControlGroup>
@@ -2237,7 +3668,7 @@ export default function Home() {
                         value={settings.hueShift}
                         min={-0.5}
                         max={0.5}
-                        onChange={(v: any) => updateSetting("hueShift", v)}
+                        onChange={(v) => updateSetting("hueShift", v)}
                         icon={<IconPalette size={14} />}
                       />
                     </ControlGroup>
@@ -2263,7 +3694,7 @@ export default function Home() {
                         value={settings.hslRedHue}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslRedHue", v)}
+                        onChange={(v) => updateSetting("hslRedHue", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2271,7 +3702,7 @@ export default function Home() {
                         value={settings.hslRedSat}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslRedSat", v)}
+                        onChange={(v) => updateSetting("hslRedSat", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2279,7 +3710,7 @@ export default function Home() {
                         value={settings.hslRedLum}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslRedLum", v)}
+                        onChange={(v) => updateSetting("hslRedLum", v)}
                         icon={<IconSun size={14} />}
                       />
                     </ControlGroup>
@@ -2299,7 +3730,7 @@ export default function Home() {
                         value={settings.hslOrangeHue}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslOrangeHue", v)}
+                        onChange={(v) => updateSetting("hslOrangeHue", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2307,7 +3738,7 @@ export default function Home() {
                         value={settings.hslOrangeSat}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslOrangeSat", v)}
+                        onChange={(v) => updateSetting("hslOrangeSat", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2315,7 +3746,7 @@ export default function Home() {
                         value={settings.hslOrangeLum}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslOrangeLum", v)}
+                        onChange={(v) => updateSetting("hslOrangeLum", v)}
                         icon={<IconSun size={14} />}
                       />
                     </ControlGroup>
@@ -2335,7 +3766,7 @@ export default function Home() {
                         value={settings.hslYellowHue}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslYellowHue", v)}
+                        onChange={(v) => updateSetting("hslYellowHue", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2343,7 +3774,7 @@ export default function Home() {
                         value={settings.hslYellowSat}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslYellowSat", v)}
+                        onChange={(v) => updateSetting("hslYellowSat", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2351,7 +3782,7 @@ export default function Home() {
                         value={settings.hslYellowLum}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslYellowLum", v)}
+                        onChange={(v) => updateSetting("hslYellowLum", v)}
                         icon={<IconSun size={14} />}
                       />
                     </ControlGroup>
@@ -2371,7 +3802,7 @@ export default function Home() {
                         value={settings.hslGreenHue}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslGreenHue", v)}
+                        onChange={(v) => updateSetting("hslGreenHue", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2379,7 +3810,7 @@ export default function Home() {
                         value={settings.hslGreenSat}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslGreenSat", v)}
+                        onChange={(v) => updateSetting("hslGreenSat", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2387,7 +3818,7 @@ export default function Home() {
                         value={settings.hslGreenLum}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslGreenLum", v)}
+                        onChange={(v) => updateSetting("hslGreenLum", v)}
                         icon={<IconSun size={14} />}
                       />
                     </ControlGroup>
@@ -2404,7 +3835,7 @@ export default function Home() {
                         value={settings.hslAquaHue}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslAquaHue", v)}
+                        onChange={(v) => updateSetting("hslAquaHue", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2412,7 +3843,7 @@ export default function Home() {
                         value={settings.hslAquaSat}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslAquaSat", v)}
+                        onChange={(v) => updateSetting("hslAquaSat", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2420,7 +3851,7 @@ export default function Home() {
                         value={settings.hslAquaLum}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslAquaLum", v)}
+                        onChange={(v) => updateSetting("hslAquaLum", v)}
                         icon={<IconSun size={14} />}
                       />
                     </ControlGroup>
@@ -2437,7 +3868,7 @@ export default function Home() {
                         value={settings.hslBlueHue}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslBlueHue", v)}
+                        onChange={(v) => updateSetting("hslBlueHue", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2445,7 +3876,7 @@ export default function Home() {
                         value={settings.hslBlueSat}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslBlueSat", v)}
+                        onChange={(v) => updateSetting("hslBlueSat", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2453,7 +3884,7 @@ export default function Home() {
                         value={settings.hslBlueLum}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslBlueLum", v)}
+                        onChange={(v) => updateSetting("hslBlueLum", v)}
                         icon={<IconSun size={14} />}
                       />
                     </ControlGroup>
@@ -2473,7 +3904,7 @@ export default function Home() {
                         value={settings.hslPurpleHue}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslPurpleHue", v)}
+                        onChange={(v) => updateSetting("hslPurpleHue", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2481,7 +3912,7 @@ export default function Home() {
                         value={settings.hslPurpleSat}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslPurpleSat", v)}
+                        onChange={(v) => updateSetting("hslPurpleSat", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2489,7 +3920,7 @@ export default function Home() {
                         value={settings.hslPurpleLum}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslPurpleLum", v)}
+                        onChange={(v) => updateSetting("hslPurpleLum", v)}
                         icon={<IconSun size={14} />}
                       />
                     </ControlGroup>
@@ -2506,7 +3937,7 @@ export default function Home() {
                         value={settings.hslMagentaHue}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslMagentaHue", v)}
+                        onChange={(v) => updateSetting("hslMagentaHue", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2514,7 +3945,7 @@ export default function Home() {
                         value={settings.hslMagentaSat}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslMagentaSat", v)}
+                        onChange={(v) => updateSetting("hslMagentaSat", v)}
                         icon={<IconPalette size={14} />}
                       />
                       <Slider
@@ -2522,7 +3953,7 @@ export default function Home() {
                         value={settings.hslMagentaLum}
                         min={-1}
                         max={1}
-                        onChange={(v: any) => updateSetting("hslMagentaLum", v)}
+                        onChange={(v) => updateSetting("hslMagentaLum", v)}
                         icon={<IconSun size={14} />}
                       />
                     </ControlGroup>
@@ -2537,249 +3968,38 @@ export default function Home() {
                         Authentic analog film simulation
                       </p>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* None */}
-                        <button
-                          onClick={() => updateSetting("filmEmulation", "none")}
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "none"
-                              ? "bg-white/10 border-amber-500/50 ring-1 ring-amber-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-gray-300">
-                            None
+                      <div className="flex flex-col space-y-6 max-h-[60vh] overflow-y-auto pr-2 pb-4 custom-scrollbar">
+                        {Object.entries(
+                          FILM_EMULATIONS.reduce((acc, film) => {
+                            if (!acc[film.category]) acc[film.category] = [];
+                            acc[film.category].push(film);
+                            return acc;
+                          }, {} as Record<string, typeof FILM_EMULATIONS>)
+                        ).map(([category, films]) => (
+                          <div key={category} className="space-y-3">
+                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider sticky top-0 bg-[#0a0a0a] py-1 z-10 border-b border-white/5">
+                              {category}
+                            </h4>
+                            <div className="grid grid-cols-2 gap-3">
+                              {films.map((film) => (
+                                <button
+                                  key={film.id}
+                                  onClick={() => updateSetting("filmEmulation", film.id)}
+                                  title={film.name}
+                                  className={`p-3 rounded-lg border transition-all text-left truncate flex flex-col justify-center items-start ${
+                                    settings.filmEmulation === film.id
+                                      ? "bg-amber-900/20 border-amber-500/50 ring-1 ring-amber-500/30"
+                                      : "bg-white/5 border-white/10 hover:border-white/20"
+                                  }`}
+                                >
+                                  <div className="text-xs font-medium text-gray-200 truncate w-full">
+                                    {film.name}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Original
-                          </div>
-                        </button>
-
-                        {/* Kodak Portra 400 */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "portra400")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "portra400"
-                              ? "bg-amber-900/20 border-amber-500/50 ring-1 ring-amber-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-amber-200">
-                            Portra 400
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Warm skin tones
-                          </div>
-                        </button>
-
-                        {/* Kodak Ektar 100 */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "ektar100")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "ektar100"
-                              ? "bg-orange-900/20 border-orange-500/50 ring-1 ring-orange-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-orange-200">
-                            Ektar 100
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Vivid & punchy
-                          </div>
-                        </button>
-
-                        {/* Fuji Velvia 50 */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "velvia50")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "velvia50"
-                              ? "bg-green-900/20 border-green-500/50 ring-1 ring-green-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-green-200">
-                            Velvia 50
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Hyper-saturated
-                          </div>
-                        </button>
-
-                        {/* Fuji Pro 400H */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "pro400h")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "pro400h"
-                              ? "bg-sky-900/20 border-sky-500/50 ring-1 ring-sky-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-sky-200">
-                            Pro 400H
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Soft pastels
-                          </div>
-                        </button>
-
-                        {/* Cinestill 800T */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "cinestill800t")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "cinestill800t"
-                              ? "bg-teal-900/20 border-teal-500/50 ring-1 ring-teal-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-teal-200">
-                            Cinestill 800T
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Tungsten halation
-                          </div>
-                        </button>
-
-                        {/* Kodak Vision3 500T */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "vision3500t")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "vision3500t"
-                              ? "bg-indigo-900/20 border-indigo-500/50 ring-1 ring-indigo-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-indigo-200">
-                            Vision3 500T
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Cinema tungsten
-                          </div>
-                        </button>
-
-                        {/* Ilford HP5 Plus - B&W */}
-                        <button
-                          onClick={() => updateSetting("filmEmulation", "hp5")}
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "hp5"
-                              ? "bg-gray-700/50 border-gray-400/50 ring-1 ring-gray-400/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-gray-200">
-                            Ilford HP5
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Classic B&W
-                          </div>
-                        </button>
-
-                        {/* Agfa Vista 400 */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "vista400")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "vista400"
-                              ? "bg-yellow-900/20 border-yellow-500/50 ring-1 ring-yellow-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-yellow-200">
-                            Agfa Vista
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Vintage warm
-                          </div>
-                        </button>
-
-                        {/* Lomography 800 */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "lomo800")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "lomo800"
-                              ? "bg-cyan-900/20 border-cyan-500/50 ring-1 ring-cyan-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-cyan-200">
-                            Lomo 800
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Vivid & punchy
-                          </div>
-                        </button>
-
-                        {/* Technicolor 3-Strip */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "technicolor")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "technicolor"
-                              ? "bg-rose-900/20 border-rose-500/50 ring-1 ring-rose-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-rose-200">
-                            Technicolor
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            Vintage cinema
-                          </div>
-                        </button>
-
-                        {/* Bleach Bypass */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "bleachbypass")
-                          }
-                          className={`p-3 rounded-lg border transition-all ${
-                            settings.filmEmulation === "bleachbypass"
-                              ? "bg-slate-700/50 border-slate-400/50 ring-1 ring-slate-400/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-slate-200">
-                            Bleach Bypass
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            High contrast
-                          </div>
-                        </button>
-
-                        {/* Cross Process */}
-                        <button
-                          onClick={() =>
-                            updateSetting("filmEmulation", "crossprocess")
-                          }
-                          className={`p-3 rounded-lg border transition-all col-span-2 ${
-                            settings.filmEmulation === "crossprocess"
-                              ? "bg-fuchsia-900/20 border-fuchsia-500/50 ring-1 ring-fuchsia-500/30"
-                              : "bg-white/5 border-white/10 hover:border-white/20"
-                          }`}
-                        >
-                          <div className="text-xs font-medium text-fuchsia-200">
-                            Cross Process
-                          </div>
-                          <div className="text-[9px] text-gray-500 mt-1">
-                            E-6 to C-41 wild colors
-                          </div>
-                        </button>
+                        ))}
                       </div>
 
                       {settings.filmEmulation !== "none" && (
@@ -2789,7 +4009,7 @@ export default function Home() {
                             value={settings.filmEmulationStrength}
                             min={0}
                             max={1}
-                            onChange={(v: any) =>
+                            onChange={(v) =>
                               updateSetting("filmEmulationStrength", v)
                             }
                             icon={<IconAperture size={14} />}
@@ -2808,7 +4028,7 @@ export default function Home() {
                         value={settings.vignette}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("vignette", v)}
+                        onChange={(v) => updateSetting("vignette", v)}
                         icon={<IconEye size={14} />}
                       />
                       <Slider
@@ -2817,7 +4037,7 @@ export default function Home() {
                         min={0}
                         max={0.02}
                         step={0.001}
-                        onChange={(v: any) => updateSetting("aberration", v)}
+                        onChange={(v) => updateSetting("aberration", v)}
                         icon={<IconAperture size={14} />}
                       />
                       <Slider
@@ -2825,7 +4045,7 @@ export default function Home() {
                         value={settings.anamorphicDistortion}
                         min={0}
                         max={1}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("anamorphicDistortion", v)
                         }
                         icon={<IconEye size={14} />}
@@ -2835,7 +4055,7 @@ export default function Home() {
                         value={settings.anamorphicStreaks}
                         min={0}
                         max={1}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("anamorphicStreaks", v)
                         }
                         icon={<IconBolt size={14} />}
@@ -2851,7 +4071,7 @@ export default function Home() {
                         value={settings.halation || 0}
                         min={0}
                         max={2}
-                        onChange={(v: any) => updateSetting("halation", v)}
+                        onChange={(v) => updateSetting("halation", v)}
                         icon={<IconBolt size={14} />}
                         accentColor="accent-red-500"
                       />
@@ -2889,7 +4109,7 @@ export default function Home() {
                         value={settings.bloom || 0}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("bloom", v)}
+                        onChange={(v) => updateSetting("bloom", v)}
                         icon={<IconBulb size={14} />}
                         accentColor="accent-blue-500"
                       />
@@ -2924,7 +4144,7 @@ export default function Home() {
                         value={settings.grain}
                         min={0}
                         max={0.5}
-                        onChange={(v: any) => updateSetting("grain", v)}
+                        onChange={(v) => updateSetting("grain", v)}
                         icon={<IconPhoto size={14} />}
                       />
                       <div className="flex items-center justify-between pt-2">
@@ -2990,7 +4210,7 @@ export default function Home() {
                         value={brushSize}
                         min={0.1}
                         max={1}
-                        onChange={(v: any) => setBrushSize(parseFloat(v))}
+                        onChange={(v) => setBrushSize(v)}
                         icon={<IconAperture size={14} />}
                       />
                       <Slider
@@ -2998,15 +4218,13 @@ export default function Home() {
                         value={brushFeather}
                         min={0}
                         max={1}
-                        onChange={(v: any) => setBrushFeather(parseFloat(v))}
+                        onChange={(v) => setBrushFeather(v)}
                         icon={<IconAperture size={14} />}
                       />
 
                       <button
                         onClick={() => {
-                          if ((window as any).__brushMaskClear) {
-                            (window as any).__brushMaskClear();
-                          }
+                          window.__brushMaskClear?.();
                           setBrushMaskData("");
                         }}
                         className="w-full py-2 text-[10px] uppercase tracking-widest bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/20 transition mt-2"
@@ -3024,8 +4242,8 @@ export default function Home() {
                             value={brushMaskExposure}
                             min={-1}
                             max={1}
-                            onChange={(v: any) =>
-                              setBrushMaskExposure(parseFloat(v))
+                            onChange={(v) =>
+                              setBrushMaskExposure(v)
                             }
                             icon={<IconSun size={14} />}
                           />
@@ -3034,8 +4252,8 @@ export default function Home() {
                             value={brushMaskContrast}
                             min={-1}
                             max={1}
-                            onChange={(v: any) =>
-                              setBrushMaskContrast(parseFloat(v))
+                            onChange={(v) =>
+                              setBrushMaskContrast(v)
                             }
                             icon={<IconContrast size={14} />}
                           />
@@ -3044,8 +4262,8 @@ export default function Home() {
                             value={brushMaskSaturation}
                             min={-1}
                             max={1}
-                            onChange={(v: any) =>
-                              setBrushMaskSaturation(parseFloat(v))
+                            onChange={(v) =>
+                              setBrushMaskSaturation(v)
                             }
                             icon={<IconPalette size={14} />}
                           />
@@ -3054,8 +4272,8 @@ export default function Home() {
                             value={brushMaskTemperature}
                             min={-1}
                             max={1}
-                            onChange={(v: any) =>
-                              setBrushMaskTemperature(parseFloat(v))
+                            onChange={(v) =>
+                              setBrushMaskTemperature(v)
                             }
                             icon={<IconSun size={14} />}
                           />
@@ -3064,8 +4282,8 @@ export default function Home() {
                             value={brushMaskClarity}
                             min={0}
                             max={1}
-                            onChange={(v: any) =>
-                              setBrushMaskClarity(parseFloat(v))
+                            onChange={(v) =>
+                              setBrushMaskClarity(v)
                             }
                             icon={<IconBolt size={14} />}
                           />
@@ -3103,7 +4321,7 @@ export default function Home() {
                         value={settings.radialMaskX}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("radialMaskX", v)}
+                        onChange={(v) => updateSetting("radialMaskX", v)}
                         icon={<IconAperture size={14} />}
                       />
                       <Slider
@@ -3111,7 +4329,7 @@ export default function Home() {
                         value={settings.radialMaskY}
                         min={0}
                         max={1}
-                        onChange={(v: any) => updateSetting("radialMaskY", v)}
+                        onChange={(v) => updateSetting("radialMaskY", v)}
                         icon={<IconAperture size={14} />}
                       />
                       <Slider
@@ -3119,7 +4337,7 @@ export default function Home() {
                         value={settings.radialMaskRadius}
                         min={0.1}
                         max={1}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("radialMaskRadius", v)
                         }
                         icon={<IconAperture size={14} />}
@@ -3129,7 +4347,7 @@ export default function Home() {
                         value={settings.radialMaskFeather}
                         min={0}
                         max={0.5}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("radialMaskFeather", v)
                         }
                         icon={<IconAperture size={14} />}
@@ -3161,7 +4379,7 @@ export default function Home() {
                           value={settings.radialMaskExposure}
                           min={-1}
                           max={1}
-                          onChange={(v: any) =>
+                          onChange={(v) =>
                             updateSetting("radialMaskExposure", v)
                           }
                           icon={<IconSun size={14} />}
@@ -3171,7 +4389,7 @@ export default function Home() {
                           value={settings.radialMaskContrast}
                           min={-1}
                           max={1}
-                          onChange={(v: any) =>
+                          onChange={(v) =>
                             updateSetting("radialMaskContrast", v)
                           }
                           icon={<IconContrast size={14} />}
@@ -3181,7 +4399,7 @@ export default function Home() {
                           value={settings.radialMaskSaturation}
                           min={-1}
                           max={1}
-                          onChange={(v: any) =>
+                          onChange={(v) =>
                             updateSetting("radialMaskSaturation", v)
                           }
                           icon={<IconPalette size={14} />}
@@ -3213,7 +4431,7 @@ export default function Home() {
                         value={settings.linearMaskAngle}
                         min={0}
                         max={1}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("linearMaskAngle", v)
                         }
                         icon={<IconRotateClockwise size={14} />}
@@ -3223,7 +4441,7 @@ export default function Home() {
                         value={settings.linearMaskPosition}
                         min={0}
                         max={1}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("linearMaskPosition", v)
                         }
                         icon={<IconAdjustmentsHorizontal size={14} />}
@@ -3233,7 +4451,7 @@ export default function Home() {
                         value={settings.linearMaskFeather}
                         min={0}
                         max={0.5}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("linearMaskFeather", v)
                         }
                         icon={<IconAperture size={14} />}
@@ -3247,7 +4465,7 @@ export default function Home() {
                           value={settings.linearMaskExposure}
                           min={-1}
                           max={1}
-                          onChange={(v: any) =>
+                          onChange={(v) =>
                             updateSetting("linearMaskExposure", v)
                           }
                           icon={<IconSun size={14} />}
@@ -3257,7 +4475,7 @@ export default function Home() {
                           value={settings.linearMaskContrast}
                           min={-1}
                           max={1}
-                          onChange={(v: any) =>
+                          onChange={(v) =>
                             updateSetting("linearMaskContrast", v)
                           }
                           icon={<IconContrast size={14} />}
@@ -3315,7 +4533,7 @@ export default function Home() {
                         value={settings.luminosityMaskRange}
                         min={0.1}
                         max={0.5}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("luminosityMaskRange", v)
                         }
                         icon={<IconAdjustmentsHorizontal size={14} />}
@@ -3329,7 +4547,7 @@ export default function Home() {
                           value={settings.luminosityMaskExposure}
                           min={-1}
                           max={1}
-                          onChange={(v: any) =>
+                          onChange={(v) =>
                             updateSetting("luminosityMaskExposure", v)
                           }
                           icon={<IconSun size={14} />}
@@ -3339,10 +4557,309 @@ export default function Home() {
                           value={settings.luminosityMaskSaturation}
                           min={-1}
                           max={1}
-                          onChange={(v: any) =>
+                          onChange={(v) =>
                             updateSetting("luminosityMaskSaturation", v)
                           }
                           icon={<IconPalette size={14} />}
+                        />
+                      </div>
+                    </ControlGroup>
+                  </div>
+                )}
+
+                {activeTab === "metadata" && (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <ControlGroup title="Culling">
+                      <div>
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                            Rating
+                          </span>
+                          <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-amber-300/70">
+                            {assetMetadata.rating > 0
+                              ? `${assetMetadata.rating}/5`
+                              : "Clear"}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-6 gap-1">
+                          {[0, 1, 2, 3, 4, 5].map((rating) => (
+                            <button
+                              key={rating}
+                              onClick={() =>
+                                setAssetMetadata((prev) => ({
+                                  ...prev,
+                                  rating,
+                                }))
+                              }
+                              className={`h-10 border font-mono text-[11px] uppercase tracking-[0.16em] transition ${
+                                assetMetadata.rating === rating
+                                  ? "border-amber-500/60 bg-amber-500/15 text-amber-200"
+                                  : "border-white/10 bg-white/[0.03] text-white/40 hover:border-white/25 hover:text-white/75"
+                              }`}
+                            >
+                              {rating === 0 ? "0" : rating}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-4">
+                        <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                          Flag
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(
+                            [
+                              ["picked", "Pick"],
+                              ["rejected", "Reject"],
+                              ["unflagged", "Clear"],
+                            ] as const
+                          ).map(([flag, label]) => (
+                            <button
+                              key={flag}
+                              onClick={() =>
+                                setAssetMetadata((prev) => ({
+                                  ...prev,
+                                  flagStatus: flag,
+                                }))
+                              }
+                              className={`border px-2 py-2.5 font-mono text-[10px] uppercase tracking-[0.2em] transition ${
+                                assetMetadata.flagStatus === flag
+                                  ? flag === "picked"
+                                    ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-200"
+                                    : flag === "rejected"
+                                      ? "border-red-400/50 bg-red-400/10 text-red-200"
+                                      : "border-white/30 bg-white/10 text-white"
+                                  : "border-white/10 bg-white/[0.03] text-white/35 hover:border-white/25 hover:text-white/70"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="pt-4">
+                        <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                          Color Label
+                        </div>
+                        <div className="grid grid-cols-6 gap-2">
+                          {COLOR_LABELS.map((label) => (
+                            <button
+                              key={label.id}
+                              onClick={() =>
+                                setAssetMetadata((prev) => ({
+                                  ...prev,
+                                  colorLabel: label.id,
+                                }))
+                              }
+                              title={label.label}
+                              className={`flex h-9 items-center justify-center border transition ${
+                                assetMetadata.colorLabel === label.id
+                                  ? "border-white/70 bg-white/10"
+                                  : "border-white/10 bg-white/[0.03] hover:border-white/30"
+                              }`}
+                            >
+                              <span
+                                className={`h-4 w-4 rounded-full border ${
+                                  label.id === "none"
+                                    ? "border-white/25"
+                                    : "border-transparent"
+                                }`}
+                                style={{
+                                  backgroundColor: label.color,
+                                }}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </ControlGroup>
+
+                    <ControlGroup title="Metadata">
+                      <div className="space-y-4">
+                        <label className="block">
+                          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                            Title
+                          </span>
+                          <input
+                            value={assetMetadata.title}
+                            onChange={(event) =>
+                              setAssetMetadata((prev) => ({
+                                ...prev,
+                                title: event.target.value,
+                              }))
+                            }
+                            className="w-full border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white/80 outline-none transition placeholder:text-white/20 focus:border-amber-500/50"
+                            placeholder="Untitled"
+                          />
+                        </label>
+
+                        <label className="block">
+                          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                            Caption
+                          </span>
+                          <textarea
+                            value={assetMetadata.caption}
+                            onChange={(event) =>
+                              setAssetMetadata((prev) => ({
+                                ...prev,
+                                caption: event.target.value,
+                              }))
+                            }
+                            rows={3}
+                            className="w-full resize-none border border-white/10 bg-black/40 px-3 py-2.5 text-sm leading-5 text-white/80 outline-none transition placeholder:text-white/20 focus:border-amber-500/50"
+                            placeholder="Delivery note or image caption"
+                          />
+                        </label>
+
+                        <div className="grid grid-cols-1 gap-3">
+                          <label className="block">
+                            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                              Creator
+                            </span>
+                            <input
+                              value={assetMetadata.creator}
+                              onChange={(event) =>
+                                setAssetMetadata((prev) => ({
+                                  ...prev,
+                                  creator: event.target.value,
+                                }))
+                              }
+                              className="w-full border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white/80 outline-none transition placeholder:text-white/20 focus:border-amber-500/50"
+                              placeholder="Creator or studio"
+                            />
+                          </label>
+
+                          <label className="block">
+                            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                              Copyright
+                            </span>
+                            <input
+                              value={assetMetadata.copyright}
+                              onChange={(event) =>
+                                setAssetMetadata((prev) => ({
+                                  ...prev,
+                                  copyright: event.target.value,
+                                }))
+                              }
+                              className="w-full border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white/80 outline-none transition placeholder:text-white/20 focus:border-amber-500/50"
+                              placeholder="All rights reserved"
+                            />
+                          </label>
+                        </div>
+
+                        <label className="block">
+                          <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                            Keywords
+                          </span>
+                          <input
+                            value={assetMetadata.keywords}
+                            onChange={(event) =>
+                              setAssetMetadata((prev) => ({
+                                ...prev,
+                                keywords: event.target.value,
+                              }))
+                            }
+                            className="w-full border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white/80 outline-none transition placeholder:text-white/20 focus:border-amber-500/50"
+                            placeholder="portrait, editorial, delivery"
+                          />
+                        </label>
+                      </div>
+                    </ControlGroup>
+
+                    <ControlGroup title="Watermark">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-400">
+                          Enable delivery mark
+                        </span>
+                        <button
+                          onClick={() =>
+                            setWatermark((prev) => ({
+                              ...prev,
+                              enabled: !prev.enabled,
+                              text: prev.text || "PROOF",
+                            }))
+                          }
+                          className={`w-10 h-5 rounded-full relative transition ${watermark.enabled ? "bg-amber-500" : "bg-gray-700"}`}
+                        >
+                          <div
+                            className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${watermark.enabled ? "left-6" : "left-1"}`}
+                          />
+                        </button>
+                      </div>
+
+                      <label className="block pt-2">
+                        <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                          Text
+                        </span>
+                        <input
+                          value={watermark.text}
+                          onChange={(event) =>
+                            setWatermark((prev) => ({
+                              ...prev,
+                              text: event.target.value,
+                            }))
+                          }
+                          className="w-full border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white/80 outline-none transition placeholder:text-white/20 focus:border-amber-500/50"
+                          placeholder="PROOF"
+                        />
+                      </label>
+
+                      <div className="pt-2">
+                        <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
+                          Position
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {WATERMARK_POSITIONS.map((position) => (
+                            <button
+                              key={position.id}
+                              onClick={() =>
+                                setWatermark((prev) => ({
+                                  ...prev,
+                                  position: position.id,
+                                }))
+                              }
+                              className={`border px-2 py-2.5 text-left font-mono text-[10px] uppercase tracking-[0.18em] transition ${
+                                watermark.position === position.id
+                                  ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
+                                  : "border-white/10 bg-white/[0.03] text-white/35 hover:border-white/25 hover:text-white/70"
+                              }`}
+                            >
+                              {position.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-2">
+                        <Slider
+                          label="Opacity"
+                          value={watermark.opacity}
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          onChange={(value) =>
+                            setWatermark((prev) => ({
+                              ...prev,
+                              opacity: value,
+                            }))
+                          }
+                          icon={<IconEye size={14} />}
+                        />
+                        <Slider
+                          label="Size"
+                          value={watermark.size}
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          onChange={(value) =>
+                            setWatermark((prev) => ({
+                              ...prev,
+                              size: value,
+                            }))
+                          }
+                          icon={<IconTypography size={14} />}
                         />
                       </div>
                     </ControlGroup>
@@ -3365,7 +4882,7 @@ export default function Home() {
                         min={-0.5}
                         max={0.5}
                         step={0.01}
-                        onChange={(v: any) => updateSetting("rotate", v)}
+                        onChange={(v) => updateSetting("rotate", v)}
                         icon={<IconRotateClockwise size={14} />}
                       />
                       <Slider
@@ -3373,7 +4890,7 @@ export default function Home() {
                         value={settings.zoom}
                         min={1}
                         max={3}
-                        onChange={(v: any) => updateSetting("zoom", v)}
+                        onChange={(v) => updateSetting("zoom", v)}
                         icon={<IconZoomIn size={14} />}
                       />
                     </ControlGroup>
@@ -3384,7 +4901,7 @@ export default function Home() {
                         value={settings.lensDistortion}
                         min={-0.5}
                         max={0.5}
-                        onChange={(v: any) =>
+                        onChange={(v) =>
                           updateSetting("lensDistortion", v)
                         }
                         icon={<IconDeviceDesktop size={14} />}
@@ -3396,7 +4913,7 @@ export default function Home() {
                           value={settings.keystoneH}
                           min={-0.5}
                           max={0.5}
-                          onChange={(v: any) => updateSetting("keystoneH", v)}
+                          onChange={(v) => updateSetting("keystoneH", v)}
                           icon={<IconPerspective size={14} />}
                           bipolar
                         />
@@ -3405,7 +4922,7 @@ export default function Home() {
                           value={settings.keystoneV}
                           min={-0.5}
                           max={0.5}
-                          onChange={(v: any) => updateSetting("keystoneV", v)}
+                          onChange={(v) => updateSetting("keystoneV", v)}
                           icon={<IconPerspective size={14} />}
                           bipolar
                         />
@@ -3420,7 +4937,7 @@ export default function Home() {
                           value={settings.tiltShiftAmount}
                           min={0}
                           max={1}
-                          onChange={(v: any) =>
+                          onChange={(v) =>
                             updateSetting("tiltShiftAmount", v)
                           }
                           icon={<IconDroplet size={14} />}
@@ -3432,7 +4949,7 @@ export default function Home() {
                               value={settings.tiltShiftPosition}
                               min={0}
                               max={1}
-                              onChange={(v: any) =>
+                              onChange={(v) =>
                                 updateSetting("tiltShiftPosition", v)
                               }
                               icon={<IconArrowsMaximize size={14} />}
@@ -3443,7 +4960,7 @@ export default function Home() {
                               min={-3.14}
                               max={3.14}
                               step={0.1}
-                              onChange={(v: any) =>
+                              onChange={(v) =>
                                 updateSetting("tiltShiftAngle", v)
                               }
                               icon={<IconRotateClockwise size={14} />}
@@ -3457,19 +4974,19 @@ export default function Home() {
               </div>
 
               {/* Footer Actions */}
-              <div className="p-4 border-t border-white/5 bg-black/40 space-y-3">
+              <div className="hidden border-t border-white/5 bg-black/40 p-4 md:block md:space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setIsPresetModalOpen(true)}
                     className="flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-amber-900/50 to-orange-900/50 hover:from-amber-800/50 hover:to-orange-800/50 text-[10px] uppercase tracking-widest font-medium rounded-lg transition border border-amber-500/30"
                   >
-                    <IconDeviceFloppy size={12} /> Create .nyv
+                    <IconDeviceFloppy size={12} /> Create .{FORMAT.recipeExtension}
                   </button>
                   <label className="flex items-center justify-center gap-2 py-2.5 bg-white/5 hover:bg-white/10 text-[10px] uppercase tracking-widest font-medium rounded-lg transition border border-white/5 cursor-pointer">
-                    <IconFileCode size={12} /> Load .nyv
+                    <IconFileCode size={12} /> Load .{FORMAT.recipeExtension}
                     <input
                       type="file"
-                      accept=".nyv,.json"
+                      accept={`.${FORMAT.recipeExtension},.nyv,.json`}
                       onChange={handleLoadPreset}
                       className="hidden"
                     />
@@ -3518,7 +5035,7 @@ export default function Home() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `${presetData.name.replace(/\s+/g, "-").toLowerCase() || "preset"}-${Date.now()}.nyv`;
+          a.download = `${presetData.name.replace(/\s+/g, "-").toLowerCase() || "recipe"}-${Date.now()}.${FORMAT.recipeExtension}`;
           a.click();
           URL.revokeObjectURL(url);
         }}
@@ -3573,6 +5090,15 @@ export default function Home() {
         settings={settings}
         onExtractFrame={(dataUrl) => {
           setImageSrc(dataUrl);
+          setImageName("Video Frame");
+          setAssetMetadata({
+            ...DEFAULT_ASSET_METADATA,
+            title: "Video Frame",
+          });
+          setWatermark(DEFAULT_WATERMARK);
+          void getImageFileInfo(dataUrl).then(setImageInfo).catch(() => {
+            setImageInfo(null);
+          });
           addToHistory(settings, "Extract Video Frame");
         }}
       />
@@ -3623,8 +5149,8 @@ export default function Home() {
                   In Plain English
                 </h4>
                 <p className="text-sm font-light text-gray-400">
-                  Think of it as a mountain range. Use the "mountains" to tell
-                  if your photo is too dark or too bright. You generally want
+                  Think of it as a mountain range. Use the &quot;mountains&quot;
+                  to tell if your photo is too dark or too bright. You generally want
                   the mountains to be in the middle, not squashed against the
                   sides.
                 </p>
@@ -3637,20 +5163,54 @@ export default function Home() {
       {/* Export Modal */}
       {isExportModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="bg-[#0A0A0A] border border-white/10 rounded-2xl w-full max-w-lg relative shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center">
-              <h3 className="font-mono text-lg uppercase tracking-widest text-white flex items-center gap-3">
-                <IconDownload /> Export Image
-              </h3>
+          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-[#151515] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 p-6">
+              <div>
+                <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-amber-300/70">
+                  <IconDownload size={15} /> Delivery
+                </div>
+                <h3 className="mt-2 text-xl font-light text-white">
+                  Export Image
+                </h3>
+              </div>
               <button
                 onClick={() => setIsExportModalOpen(false)}
-                className="text-white/30 hover:text-white"
+                className="border border-white/10 bg-black/30 p-2 text-white/35 transition hover:border-white/25 hover:text-white"
               >
                 <IconX size={18} />
               </button>
             </div>
 
-            <div className="p-8 space-y-8">
+            <div className="custom-scrollbar space-y-6 overflow-y-auto p-6">
+              {/* Recipes */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-mono uppercase tracking-widest text-white/40">
+                  Export Recipes
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {EXPORT_RECIPES.map((recipe) => (
+                    <button
+                      key={recipe.id}
+                      onClick={() => applyExportRecipe(recipe)}
+                      className={`border p-3 text-left transition-all ${activeExportRecipeId === recipe.id ? "border-amber-500/60 bg-amber-500/10" : "border-white/10 bg-black/30 hover:border-white/25"}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-mono uppercase tracking-[0.22em] text-white/80">
+                          {recipe.name}
+                        </span>
+                        <span className="shrink-0 text-[10px] font-mono text-amber-400/80">
+                          {recipe.format.split("/")[1].toUpperCase()} •{" "}
+                          {recipe.scale}x
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-white/45">
+                        {recipe.description}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Format */}
               <div className="space-y-3">
                 <label className="text-[10px] font-mono uppercase tracking-widest text-white/40">
@@ -3661,8 +5221,11 @@ export default function Home() {
                     (fmt) => (
                       <button
                         key={fmt}
-                        onClick={() => setExportFormat(fmt)}
-                        className={`p-3 rounded-xl border text-center transition-all ${exportFormat === fmt ? "bg-white text-black border-white" : "bg-white/5 border-white/5 text-white/60 hover:border-white/20"}`}
+                        onClick={() => {
+                          setActiveExportRecipeId(null);
+                          setExportFormat(fmt);
+                        }}
+                        className={`border p-3 text-center transition-all ${exportFormat === fmt ? "border-white bg-white text-black" : "border-white/10 bg-black/30 text-white/60 hover:border-white/25"}`}
                       >
                         <div className="font-bold text-sm">
                           {fmt
@@ -3691,7 +5254,10 @@ export default function Home() {
                   min="10"
                   max="100"
                   value={exportQuality}
-                  onChange={(e) => setExportQuality(Number(e.target.value))}
+                  onChange={(e) => {
+                    setActiveExportRecipeId(null);
+                    setExportQuality(Number(e.target.value));
+                  }}
                   className="w-full"
                 />
               </div>
@@ -3705,26 +5271,62 @@ export default function Home() {
                   {[0.5, 1, 2, 4].map((scale) => (
                     <button
                       key={scale}
-                      onClick={() => setExportScale(scale)}
-                      className={`flex-1 p-2 rounded-lg border text-xs font-mono transition-all ${exportScale === scale ? "bg-amber-500/20 border-amber-500 text-amber-500" : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10"}`}
+                      onClick={() => {
+                        setActiveExportRecipeId(null);
+                        setExportScale(scale);
+                      }}
+                      className={`flex-1 border p-2 font-mono text-xs transition-all ${exportScale === scale ? "border-amber-400/60 bg-amber-400/15 text-amber-200" : "border-white/10 bg-black/30 text-white/50 hover:border-white/25"}`}
                     >
                       {scale}x
                     </button>
                   ))}
                 </div>
               </div>
+
+              {exportSafetyWarnings.length > 0 && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-mono uppercase tracking-widest text-white/40">
+                    Export Safety
+                  </label>
+                  <div className="space-y-2">
+                    {exportSafetyWarnings.map((warning) => (
+                      <div
+                        key={`${warning.title}-${warning.detail}`}
+                        className={`border p-3 ${
+                          warning.tone === "warn"
+                            ? "border-amber-500/25 bg-amber-500/[0.06]"
+                            : "border-cyan-500/20 bg-cyan-500/[0.04]"
+                        }`}
+                      >
+                        <div
+                          className={`font-mono text-[10px] uppercase tracking-[0.24em] ${
+                            warning.tone === "warn"
+                              ? "text-amber-300"
+                              : "text-cyan-300"
+                          }`}
+                        >
+                          {warning.title}
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-white/45">
+                          {warning.detail}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="p-6 bg-black/40 border-t border-white/5 flex gap-3">
+            <div className="flex gap-3 border-t border-white/10 bg-black/30 p-6">
               <button
                 onClick={() => setIsExportModalOpen(false)}
-                className="flex-1 py-3 rounded-xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition font-mono text-xs uppercase tracking-widest"
+                className="flex-1 border border-white/10 bg-black/40 py-3 font-mono text-xs uppercase tracking-widest text-white/60 transition hover:border-white/25 hover:text-white"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExport}
-                className="flex-[2] py-3 rounded-xl bg-amber-500 text-black font-bold hover:bg-amber-400 transition font-mono text-xs uppercase tracking-widest shadow-lg shadow-amber-500/20"
+                className="flex-[2] border border-amber-400/40 bg-amber-400 py-3 font-mono text-xs font-bold uppercase tracking-widest text-black transition hover:bg-amber-300"
               >
                 Export Image
               </button>
@@ -3732,11 +5334,161 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Edit Diff Modal */}
+      {diffVirtualCopy && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="relative flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden border border-white/10 bg-[#151515] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 p-6">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-cyan-300/70">
+                  Edit Diff
+                </div>
+                <h3 className="mt-2 text-xl font-light text-white">
+                  Current Edit vs {diffVirtualCopy.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setDiffVirtualCopyId(null)}
+                className="border border-white/10 bg-black/30 p-2 text-white/35 transition hover:border-white/25 hover:text-white"
+              >
+                <IconX size={18} />
+              </button>
+            </div>
+
+            <div className="custom-scrollbar overflow-y-auto p-6">
+              {editDiffs.length > 0 ? (
+                <div className="space-y-2">
+                  {editDiffs.map((diff) => (
+                    <div
+                      key={diff.key}
+                      className="grid grid-cols-1 gap-3 border border-white/10 bg-black/30 p-4 md:grid-cols-3"
+                    >
+                      <div>
+                        <div className="font-mono text-[9px] uppercase tracking-[0.28em] text-white/30">
+                          Setting
+                        </div>
+                        <div className="mt-1 text-sm text-white/75">
+                          {diff.label}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-mono text-[9px] uppercase tracking-[0.28em] text-amber-300/70">
+                          Current
+                        </div>
+                        <div className="mt-1 break-words text-sm text-white/70">
+                          {diff.current}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-mono text-[9px] uppercase tracking-[0.28em] text-cyan-300/70">
+                          Saved Copy
+                        </div>
+                        <div className="mt-1 break-words text-sm text-white/70">
+                          {diff.saved}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-white/10 bg-black/30 p-8 text-center">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/35">
+                    No Differences
+                  </div>
+                  <p className="mt-3 text-sm text-white/45">
+                    The current recipe matches this virtual copy.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 border-t border-white/10 bg-black/30 p-6">
+              <button
+                onClick={() => setDiffVirtualCopyId(null)}
+                className="flex-1 border border-white/10 bg-black/40 py-3 font-mono text-xs uppercase tracking-widest text-white/60 transition hover:border-white/25 hover:text-white"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  handleRestoreVirtualCopy(diffVirtualCopy.id);
+                  setDiffVirtualCopyId(null);
+                }}
+                className="flex-[2] border border-cyan-300/40 bg-cyan-300 py-3 font-mono text-xs font-bold uppercase tracking-widest text-black transition hover:bg-cyan-200"
+              >
+                Restore This Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <CommandBar
+        isOpen={isCommandBarOpen}
+        commands={appCommands}
+        onClose={() => setIsCommandBarOpen(false)}
+      />
+      <ShortcutHelp
+        isOpen={isShortcutHelpOpen}
+        commands={appCommands}
+        onClose={() => setIsShortcutHelpOpen(false)}
+      />
     </main>
   );
 }
 
 // --- UI COMPONENTS ---
+
+const getColorCastLabel = (data: HistogramData) => {
+  const { r, g, b } = data.average;
+  const warmCool = r - b;
+  const greenMagenta = g - (r + b) / 2;
+
+  if (Math.abs(warmCool) < 8 && Math.abs(greenMagenta) < 8) return "Neutral";
+  if (warmCool > 12) return "Warm";
+  if (warmCool < -12) return "Cool";
+  if (greenMagenta > 10) return "Green";
+  if (greenMagenta < -10) return "Magenta";
+  return "Subtle";
+};
+
+const ScopeMetric = ({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "ok" | "warn";
+}) => {
+  const toneClass =
+    tone === "warn"
+      ? "text-red-300"
+      : tone === "ok"
+        ? "text-emerald-300"
+        : "text-white/55";
+
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/[0.03] px-2 py-2">
+      <div className="font-mono text-[8px] uppercase tracking-[0.26em] text-white/25">
+        {label}
+      </div>
+      <div className={`mt-1 font-mono text-[10px] ${toneClass}`}>{value}</div>
+    </div>
+  );
+};
+
+const StatusChip = ({ label, value }: { label: string; value: string }) => (
+  <div className="min-w-[96px] border border-white/10 bg-black/35 px-3 py-1.5">
+    <div className="font-mono text-[8px] uppercase tracking-[0.22em] text-white/25">
+      {label}
+    </div>
+    <div className="mt-0.5 truncate font-mono text-[9px] uppercase tracking-[0.18em] text-white/60">
+      {value}
+    </div>
+  </div>
+);
 
 const HistogramGraph = ({
   data,

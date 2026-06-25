@@ -12,11 +12,12 @@ import {
   IconX,
   IconAdjustments,
 } from "@tabler/icons-react";
+import type { EditorSettings } from "../types/editor";
 
 interface VideoGradingPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  settings: Record<string, any>;
+  settings: EditorSettings;
   onExtractFrame: (imageDataUrl: string) => void;
 }
 
@@ -153,21 +154,21 @@ export default function VideoGradingPanel({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-4xl overflow-hidden border border-[var(--ormond-line)] bg-[var(--ormond-panel)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-rose-500/15 text-rose-400">
+            <div className="border border-[var(--ormond-line)] bg-black/20 p-2 text-[var(--ormond-brass)]">
               <IconMovie size={20} />
             </div>
             <div>
               <h2 className="text-lg font-light text-white">
-                Video Color Grading
+                Video Frame Desk
               </h2>
               <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                Preview & Extract Frames
+                Preview & Lift Frames
               </p>
             </div>
           </div>
@@ -276,7 +277,7 @@ export default function VideoGradingPanel({
                     onClick={handleExtractFrame}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 transition font-mono text-xs uppercase"
                   >
-                    <IconCamera size={16} /> Extract Frame
+                    <IconCamera size={16} /> Lift Frame
                   </button>
                   <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition font-mono text-xs uppercase cursor-pointer">
                     <IconUpload size={16} /> New Video
@@ -295,7 +296,7 @@ export default function VideoGradingPanel({
                 <p className="text-xs text-gray-500 leading-relaxed">
                   <strong className="text-gray-400">Live Preview:</strong> Your
                   current color grade is applied in real-time using CSS filters.
-                  Use <strong className="text-amber-400">Extract Frame</strong>{" "}
+                  Use <strong className="text-amber-400">Lift Frame</strong>{" "}
                   to grab the current frame and edit it with full grading
                   controls.
                 </p>

@@ -1,0 +1,50 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e3a5f"/>
+      <stop offset="0.42" stop-color="#cb6f41"/>
+      <stop offset="0.72" stop-color="#1f2937"/>
+      <stop offset="1" stop-color="#050505"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.78" cy="0.24" r="0.28">
+      <stop stop-color="#ffe6a7"/>
+      <stop offset="0.28" stop-color="#f59e0b" stop-opacity="0.76"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="road" x1="0.5" y1="0.42" x2="0.5" y2="1">
+      <stop stop-color="#2f343b"/>
+      <stop offset="1" stop-color="#09090b"/>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.18"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <rect width="1600" height="1000" fill="url(#sun)"/>
+  <path d="M0 580C207 509 342 530 518 494C704 456 907 392 1100 422C1302 453 1408 524 1600 486V1000H0V580Z" fill="#0f172a" opacity="0.78"/>
+  <path d="M0 642C245 588 401 614 602 572C852 520 1051 519 1600 616V1000H0V642Z" fill="#020617" opacity="0.86"/>
+  <path d="M640 1000L771 554H829L960 1000H640Z" fill="url(#road)"/>
+  <path d="M797 603L803 603L820 1000H780L797 603Z" fill="#f8fafc" opacity="0.72"/>
+  <g fill="#111827" opacity="0.9">
+    <rect x="162" y="478" width="130" height="328"/>
+    <rect x="318" y="411" width="104" height="395"/>
+    <rect x="455" y="520" width="84" height="286"/>
+    <rect x="1068" y="468" width="98" height="338"/>
+    <rect x="1207" y="388" width="128" height="418"/>
+    <rect x="1368" y="528" width="86" height="278"/>
+  </g>
+  <g fill="#fbbf24" opacity="0.58">
+    <rect x="190" y="526" width="16" height="40"/>
+    <rect x="244" y="586" width="16" height="40"/>
+    <rect x="347" y="465" width="14" height="38"/>
+    <rect x="384" y="546" width="14" height="38"/>
+    <rect x="1237" y="448" width="15" height="39"/>
+    <rect x="1288" y="533" width="15" height="39"/>
+    <rect x="1397" y="584" width="14" height="36"/>
+  </g>
+  <rect width="1600" height="1000" filter="url(#grain)" opacity="0.34"/>
+</svg>

@@ -9,19 +9,20 @@ import {
   IconGitBranch,
   IconX,
 } from "@tabler/icons-react";
+import type { EditorSettings } from "../types/editor";
 
 export interface HistoryState {
   id: string;
   timestamp: number;
   action: string;
-  settings: any; // Snapshot of settings
+  settings: EditorSettings;
   thumbnail?: string; // Data URL
 }
 
 interface Branch {
   id: string;
   name: string;
-  settings: any;
+  settings: EditorSettings;
   timestamp: number;
 }
 
@@ -33,9 +34,11 @@ interface HistoryPanelProps {
   onJumpToState: (index: number) => void;
   onClearHistory: () => void;
   branches?: Branch[];
+  activeBranchId?: string | null;
   onCreateBranch?: () => void;
   onRestoreBranch?: (id: string) => void;
   onDeleteBranch?: (id: string) => void;
+  onDiffBranch?: (id: string) => void;
 }
 
 export default function HistoryPanel({
@@ -46,9 +49,11 @@ export default function HistoryPanel({
   onJumpToState,
   onClearHistory,
   branches,
+  activeBranchId,
   onCreateBranch,
   onRestoreBranch,
   onDeleteBranch,
+  onDiffBranch,
 }: HistoryPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -110,12 +115,12 @@ export default function HistoryPanel({
         </button>
       </div>
 
-      {/* Branch/Snapshot Section */}
+      {/* Virtual copy section */}
       {onCreateBranch && branches && branches.length > 0 && (
         <div className="p-3 border-b border-white/5 bg-black/30">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-              Branches
+              Virtual Copies
             </span>
             <button
               onClick={onCreateBranch}
@@ -128,7 +133,11 @@ export default function HistoryPanel({
             {branches.map((branch) => (
               <div
                 key={branch.id}
-                className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition group"
+                className={`flex items-center justify-between gap-1 px-2 py-1.5 rounded-lg transition group ${
+                  activeBranchId === branch.id
+                    ? "bg-cyan-500/10 border border-cyan-500/25"
+                    : "bg-white/5 hover:bg-white/10 border border-transparent"
+                }`}
               >
                 <button
                   onClick={() => onRestoreBranch && onRestoreBranch(branch.id)}
@@ -136,6 +145,12 @@ export default function HistoryPanel({
                 >
                   <IconGitBranch size={12} className="text-cyan-500" />
                   <span className="truncate">{branch.name}</span>
+                </button>
+                <button
+                  onClick={() => onDiffBranch && onDiffBranch(branch.id)}
+                  className="px-1.5 py-1 text-[9px] font-mono uppercase text-cyan-400/70 hover:text-cyan-200 transition"
+                >
+                  Diff
                 </button>
                 <button
                   onClick={() => onDeleteBranch && onDeleteBranch(branch.id)}
@@ -149,7 +164,7 @@ export default function HistoryPanel({
         </div>
       )}
 
-      {/* Create Branch Button (if no branches yet) */}
+      {/* Create virtual copy button */}
       {onCreateBranch && (!branches || branches.length === 0) && (
         <div className="p-3 border-b border-white/5">
           <button
@@ -157,7 +172,7 @@ export default function HistoryPanel({
             className="w-full py-2 flex items-center justify-center gap-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-mono uppercase hover:bg-cyan-500/20 transition"
           >
             <IconGitBranch size={14} />
-            Create Branch
+            Create Virtual Copy
           </button>
         </div>
       )}

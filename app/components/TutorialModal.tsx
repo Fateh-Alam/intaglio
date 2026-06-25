@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   IconX,
   IconInfoCircle,
@@ -34,13 +34,25 @@ export default function TutorialModal({
   const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
+    let mountTimer: number | undefined;
+    let contentTimer: number | undefined;
+    let hideTimer: number | undefined;
+    let unmountTimer: number | undefined;
+
     if (isOpen) {
-      setIsAnimating(true);
-      setTimeout(() => setShowContent(true), 100);
+      mountTimer = window.setTimeout(() => setIsAnimating(true), 0);
+      contentTimer = window.setTimeout(() => setShowContent(true), 100);
     } else {
-      setShowContent(false);
-      setTimeout(() => setIsAnimating(false), 300);
+      hideTimer = window.setTimeout(() => setShowContent(false), 0);
+      unmountTimer = window.setTimeout(() => setIsAnimating(false), 300);
     }
+
+    return () => {
+      window.clearTimeout(mountTimer);
+      window.clearTimeout(contentTimer);
+      window.clearTimeout(hideTimer);
+      window.clearTimeout(unmountTimer);
+    };
   }, [isOpen]);
 
   if (!isAnimating && !isOpen) return null;
@@ -156,7 +168,7 @@ export default function TutorialModal({
                 </span>
               </div>
               <p className="text-sm text-gray-300 leading-relaxed italic">
-                "{content.plainEnglish}"
+                &ldquo;{content.plainEnglish}&rdquo;
               </p>
             </div>
           )}
@@ -225,7 +237,6 @@ function OrganicDemo({
   }, []);
 
   // Smooth easing functions for organic feel
-  const ease = (t: number) => 1 - Math.pow(1 - t, 3); // easeOutCubic
   const wave = (t: number, speed = 1, offset = 0) =>
     Math.sin((t * speed + offset) * Math.PI * 2) * 0.5 + 0.5;
   const breathe = (t: number, speed = 0.5) =>

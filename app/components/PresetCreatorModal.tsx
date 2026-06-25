@@ -8,11 +8,13 @@ import {
   IconCheck,
   IconChevronRight,
 } from "@tabler/icons-react";
+import type { EditorSettings, SerializableEditorSettings } from "../types/editor";
+import { FORMAT } from "../lib/brand";
 
 interface PresetCreatorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  settings: Record<string, any>;
+  settings: EditorSettings;
   onSave: (presetData: PresetData) => void;
 }
 
@@ -22,11 +24,18 @@ interface PresetData {
   description: string;
   created: string;
   categories: string[];
-  settings: Record<string, any>;
+  settings: Partial<SerializableEditorSettings>;
+}
+
+interface SettingCategory {
+  id: string;
+  label: string;
+  description: string;
+  keys: (keyof SerializableEditorSettings)[];
 }
 
 // Setting categories for the preset - ALL settings except LUT textures
-const SETTING_CATEGORIES = [
+const SETTING_CATEGORIES: SettingCategory[] = [
   {
     id: "exposure",
     label: "Exposure & Tone",
@@ -146,8 +155,8 @@ const SETTING_CATEGORIES = [
   },
   {
     id: "godlight",
-    label: "God Light",
-    description: "Volumetric lighting effects",
+    label: "Directional Light",
+    description: "Guided light position, color, falloff, and edge glow",
     keys: [
       "godLightStrength",
       "godLightX",
@@ -224,13 +233,21 @@ export default function PresetCreatorModal({
     setSelectedCategories([]);
   };
 
+  const copySetting = <K extends keyof SerializableEditorSettings>(
+    target: Partial<SerializableEditorSettings>,
+    source: EditorSettings,
+    key: K
+  ) => {
+    target[key] = source[key];
+  };
+
   const getSelectedSettings = () => {
-    const selected: Record<string, any> = {};
+    const selected: Partial<SerializableEditorSettings> = {};
     SETTING_CATEGORIES.forEach((category) => {
       if (selectedCategories.includes(category.id)) {
         category.keys.forEach((key) => {
           if (settings[key] !== undefined) {
-            selected[key] = settings[key];
+            copySetting(selected, settings, key);
           }
         });
       }
@@ -288,11 +305,11 @@ export default function PresetCreatorModal({
             <IconDeviceFloppy size={28} />
           </div>
           <h2 className="text-2xl font-light text-white mb-2">
-            Create Nyvarra Preset
+            Create Ormond Print Recipe
           </h2>
           <p className="text-sm font-mono uppercase tracking-[0.2em] text-amber-500 mb-4">
             {step === 1
-              ? "Step 1: Name Your Look"
+              ? "Step 1: Name Your Recipe"
               : step === 2
                 ? "Step 2: Select Settings"
                 : "Step 3: Review & Save"}
@@ -311,10 +328,17 @@ export default function PresetCreatorModal({
                 />
                 <div>
                   <p className="text-sm text-gray-300 leading-relaxed">
-                    A <strong className="text-amber-400">.nyv</strong> file is
-                    Nyvarra's native preset format. It stores your color grading
-                    settings so you can apply them to other images or share them
-                    with others.
+                    A{" "}
+                    <strong className="text-amber-400">
+                      .{FORMAT.recipeExtension}
+                    </strong>{" "}
+                    file is an Ormond Print Recipe. It stores selected edit
+                    settings so you can carry the same treatment to other
+                    photographs. Use an Ormond Archive{" "}
+                    <strong className="text-cyan-300">
+                      .{FORMAT.archiveExtension}
+                    </strong>{" "}
+                    when you want to preserve the entire editing session.
                   </p>
                 </div>
               </div>
@@ -323,13 +347,13 @@ export default function PresetCreatorModal({
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">
-                  Preset Name
+                  Recipe Name
                 </label>
                 <input
                   type="text"
                   value={presetName}
                   onChange={(e) => setPresetName(e.target.value)}
-                  placeholder="e.g., Cinematic Sunset"
+                  placeholder="e.g., Late Autumn"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
                 />
               </div>
@@ -449,9 +473,9 @@ export default function PresetCreatorModal({
             <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
               <div>
                 <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                  Preset Name
+                  Recipe Name
                 </p>
-                <p className="text-white">{presetName || "Untitled Preset"}</p>
+                <p className="text-white">{presetName || "Untitled Recipe"}</p>
               </div>
               {presetDescription && (
                 <div>
@@ -483,10 +507,17 @@ export default function PresetCreatorModal({
 
             <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
               <p className="text-sm text-blue-300 leading-relaxed">
-                <strong>How to use:</strong> Your preset will be saved as a{" "}
-                <code className="bg-blue-500/20 px-1 rounded">.nyv</code> file.
-                To apply it later, click "Load .nyv" in the sidebar or drag the
-                file onto the editor.
+                <strong>How to use:</strong> Your recipe will be saved as a{" "}
+                <code className="bg-blue-500/20 px-1 rounded">
+                  .{FORMAT.recipeExtension}
+                </code>{" "}
+                file. To apply it later, choose Load .{FORMAT.recipeExtension}{" "}
+                in the sidebar or drag the file onto the editor. Full sessions
+                are saved as Ormond Archive{" "}
+                <code className="bg-blue-500/20 px-1 rounded">
+                  .{FORMAT.archiveExtension}
+                </code>{" "}
+                files.
               </p>
             </div>
 
@@ -501,7 +532,7 @@ export default function PresetCreatorModal({
                 onClick={handleSave}
                 className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 transition flex items-center justify-center gap-2"
               >
-                <IconDeviceFloppy size={16} /> Save Preset
+                <IconDeviceFloppy size={16} /> Save Recipe
               </button>
             </div>
           </div>

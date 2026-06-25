@@ -197,7 +197,7 @@ export default function CurveEditor({
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
   };
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
+  const handleDoubleClick = () => {
     // Remove point
     if (hoverIndex !== null) {
       // Don't remove first or last

@@ -20,7 +20,6 @@ export default function ColorWheel({
   label,
 }: ColorWheelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const [isDraggingWheel, setIsDraggingWheel] = useState(false);
   const [isDraggingSlider, setIsDraggingSlider] = useState(false);
@@ -91,7 +90,7 @@ export default function ColorWheel({
       ctx.strokeStyle = "rgba(255,255,255,0.1)";
       ctx.lineWidth = 1;
       ctx.stroke();
-    } catch (e) {
+    } catch {
       // Fallback or just simple circle
       ctx.fillStyle = "#333";
       ctx.fill();

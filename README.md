@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ormond
+
+A timeless digital darkroom for photographs that deserve patience.
+
+Ormond is a browser-based, local-first photography workspace built with Next.js,
+React, Three.js, and WebGL. The visible product direction is quiet, archival,
+and photo-led; the editing capabilities remain client-side.
+
+## Features
+
+- WebGL image development with exposure, contrast, HSL, color wheels, tone
+  curves, film emulation, halation, bloom, grain, lens effects, and masking.
+- 3D `.cube` LUT import plus an in-app LUT creator.
+- Reference matching, history, virtual copies, edit diff viewer, snapshots, and
+  A/B comparison.
+- `.orm` Print Recipes for reusable edit settings.
+- Ormond Collections with search, tags, favorites, local imports, and native
+  `.orm` downloads.
+- `.ormond` Ormond Archives for complete portable sessions.
+- Legacy `.nyv`, `.nyvlt`, and `.nyvproj` imports remain supported.
+- Manual culling with ratings, pick/reject flags, color labels, and shortcuts.
+- Editable title, caption, creator, copyright, and keyword metadata saved inside
+  Archives.
+- Exportable proof watermark and export recipes for delivery workflows.
+- Command palette, PWA install support, and offline editor fallback.
+- Local export to JPEG, PNG, and WebP.
+
+## Native File Formats
+
+- `.orm` - Print Recipe. Stores selected edit settings as a reusable recipe.
+- `.ormond` - Ormond Archive. Stores a full local session: image source, edit
+  recipe, text overlay, metadata, watermark settings, export recipe, virtual
+  copies, and restore state.
+- `.nyv` - Legacy recipe import.
+- `.nyvlt` - Legacy session import.
+- `.nyvproj` - Legacy project session import.
+- `.cube` - Industry LUT format for import and creator output.
+
+The PWA manifest advertises `.ormond` archive handling and still accepts legacy
+session formats where supported by the installed browser.
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run the development server:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm lint
+pnpm build
+pnpm start
+pnpm test:e2e
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/page.tsx` - Ormond editorial home.
+- `app/editor/page.tsx` - main darkroom workspace.
+- `app/presets/page.tsx` - Ormond Collections.
+- `app/components` - editor controls, modals, WebGL canvas components, and panels.
+- `app/lib/brand.ts` - product naming, format, and storage-key constants.
+- `app/utils` - LUT parsing, reference matching, spline, and tutorial helpers.
+- `docs/NON_AI_PRODUCT_ROADMAP.md` - product roadmap.
+- `public` - public app assets.

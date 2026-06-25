@@ -6,6 +6,8 @@ import {
   Playfair_Display,
   Inter,
 } from "next/font/google";
+import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
+import { BRAND } from "./lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,7 +20,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Cinematic fonts for text overlays
+// Kept for existing text-overlay presets.
 const bebasNeue = Bebas_Neue({
   weight: "400",
   variable: "--font-bebas",
@@ -36,47 +38,43 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Nyvarra Studio - Cinematic Image Grading in Your Browser",
-  description:
-    "Professional-grade color grading engine built on WebGL. 32-bit precision, 3D LUTs, Palette Heist, and God Light relighting. All processing happens locally on your device.",
+  metadataBase: new URL(BRAND.domain),
+  title: "Ormond - A Timeless Digital Darkroom",
+  description: BRAND.shortDescription,
   keywords: [
-    "color grading",
-    "image editor",
-    "cinematic grading",
-    "WebGL",
-    "3D LUT",
-    "film emulation",
+    "digital darkroom",
     "photo editing",
-    "RAW processing",
-    "browser-based editor",
-    "local processing",
-    "privacy-first editor",
+    "photography workflow",
+    "local-first editor",
+    "print recipes",
+    "photo archive",
+    "film emulation",
+    "browser photo editor",
+    "privacy-first photography",
   ],
-  authors: [{ name: "Nyvarra Studio" }],
-  creator: "Nyvarra Studio",
-  publisher: "Nyvarra Studio",
+  authors: [{ name: BRAND.author }],
+  creator: BRAND.author,
+  publisher: BRAND.author,
   openGraph: {
-    title: "Nyvarra Studio - Cinematic Image Grading",
-    description:
-      "Professional color grading powered by WebGL. God Light relighting, Palette Heist, and cinema-grade optics—running entirely in your browser.",
-    url: "https://nyvarra.studio",
-    siteName: "Nyvarra Studio",
+    title: "Ormond - A Timeless Digital Darkroom",
+    description: BRAND.shortDescription,
+    url: BRAND.domain,
+    siteName: BRAND.name,
     type: "website",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.svg",
         width: 1200,
         height: 630,
-        alt: "Nyvarra Studio - Cinematic Image Grading",
+        alt: "Ormond - A Timeless Digital Darkroom",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nyvarra Studio - Cinematic Image Grading",
-    description:
-      "Professional color grading powered by WebGL. All processing happens locally on your device.",
-    images: ["/og-image.png"],
+    title: "Ormond - A Timeless Digital Darkroom",
+    description: BRAND.shortDescription,
+    images: ["/og-image.svg"],
   },
   robots: {
     index: true,
@@ -101,6 +99,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${playfair.variable} ${inter.variable} antialiased`}
       >
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

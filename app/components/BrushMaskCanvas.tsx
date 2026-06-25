@@ -2,6 +2,12 @@
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
 
+declare global {
+  interface Window {
+    __brushMaskClear?: () => void;
+  }
+}
+
 interface BrushMaskCanvasProps {
   width: number;
   height: number;
@@ -35,13 +41,14 @@ export default function BrushMaskCanvas({
     if (!ctx) return;
     ctx.clearRect(0, 0, width, height);
     onMaskUpdate("");
-  }, [width, height, onMaskUpdate]);
+    onClear();
+  }, [width, height, onMaskUpdate, onClear]);
 
   // Expose clear function via window for parent to call
   useEffect(() => {
-    (window as any).__brushMaskClear = clearCanvas;
+    window.__brushMaskClear = clearCanvas;
     return () => {
-      delete (window as any).__brushMaskClear;
+      delete window.__brushMaskClear;
     };
   }, [clearCanvas]);
 

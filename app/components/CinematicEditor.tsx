@@ -1,6 +1,12 @@
 "use client";
 
-import React, { Suspense, useState, useEffect, useCallback } from "react";
+import React, {
+  Suspense,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { Canvas } from "@react-three/fiber";
 import ImagePlane from "./ImagePlane";
 import HistogramAnalyzer from "./HistogramAnalyzer";
@@ -8,12 +14,22 @@ import CinematicTextOverlay, {
   TextOverlaySettings,
 } from "./CinematicTextOverlay";
 import BrushMaskCanvas from "./BrushMaskCanvas";
+import type {
+  CompositionGuide,
+  EditorSettings,
+  HistogramData,
+  ImageBounds,
+  PerformanceMode,
+  WatermarkPosition,
+  WatermarkSettings,
+} from "../types/editor";
 
 export default function CinematicEditor({
   settings,
   imageUrl,
   onStatsUpdate,
   textOverlay,
+  watermark,
   brushMaskActive,
   brushSize,
   brushFeather,
@@ -24,13 +40,16 @@ export default function CinematicEditor({
   brushMaskSaturation = 0,
   brushMaskTemperature = 0,
   brushMaskClarity = 0,
+  performanceMode = "balanced",
+  compositionGuide = "off",
   onBrushMaskUpdate,
   onBoundsChange,
 }: {
-  settings: any;
+  settings: EditorSettings;
   imageUrl: string;
-  onStatsUpdate: (data: any) => void;
+  onStatsUpdate: (data: HistogramData) => void;
   textOverlay?: TextOverlaySettings;
+  watermark?: WatermarkSettings;
   brushMaskActive?: boolean;
   brushSize?: number;
   brushFeather?: number;
@@ -41,20 +60,17 @@ export default function CinematicEditor({
   brushMaskSaturation?: number;
   brushMaskTemperature?: number;
   brushMaskClarity?: number;
+  performanceMode?: PerformanceMode;
+  compositionGuide?: CompositionGuide;
   onBrushMaskUpdate?: (maskDataUrl: string) => void;
-  onBoundsChange?: (bounds: {
-    width: number;
-    height: number;
-    left: number;
-    top: number;
-  }) => void;
+  onBoundsChange?: (bounds: ImageBounds) => void;
 }) {
-  const [imageBounds, setImageBounds] = useState<{
-    width: number;
-    height: number;
-    left: number;
-    top: number;
-  } | null>(null);
+  const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null);
+  const dpr = useMemo<[number, number]>(() => {
+    if (performanceMode === "draft") return [0.75, 1];
+    if (performanceMode === "quality") return [1.5, 2];
+    return [1, 1.5];
+  }, [performanceMode]);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -170,6 +186,7 @@ export default function CinematicEditor({
       <Canvas
         id="main-editor-canvas"
         flat
+        dpr={dpr}
         gl={{ preserveDrawingBuffer: true }}
         camera={{ position: [0, 0, 5], fov: 50 }}
         style={{ cursor: settings.wiperActive ? "ew-resize" : "default" }}
@@ -216,6 +233,10 @@ export default function CinematicEditor({
         </div>
       )}
 
+      {imageBounds && (
+        <CompositionGuideOverlay guide={compositionGuide} bounds={imageBounds} />
+      )}
+
       {/* Brush Mode Indicator */}
       {brushMaskActive && (
         <div
@@ -223,8 +244,8 @@ export default function CinematicEditor({
           className="absolute top-6 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-cyan-500/20 backdrop-blur-xl border border-cyan-500/50 rounded-lg"
         >
           <span className="text-cyan-400 text-xs font-mono uppercase tracking-widest">
-            {brushErasing ? "🧹 Eraser Mode" : "🖌️ Brush Mode"} — Paint on image
-            to create mask
+            {brushErasing ? "Eraser Mode" : "Brush Mode"} - Paint on image to
+            create mask
           </span>
         </div>
       )}
@@ -244,6 +265,122 @@ export default function CinematicEditor({
           <CinematicTextOverlay settings={textOverlay} />
         </div>
       )}
+
+      {imageBounds && watermark?.enabled && watermark.text.trim() && (
+        <div
+          id="watermark-overlay-container"
+          className="absolute pointer-events-none"
+          style={{
+            left: imageBounds.left,
+            top: imageBounds.top,
+            width: imageBounds.width,
+            height: imageBounds.height,
+          }}
+        >
+          <WatermarkOverlay settings={watermark} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WatermarkOverlay({ settings }: { settings: WatermarkSettings }) {
+  const positionStyles: Record<WatermarkPosition, React.CSSProperties> = {
+    "top-left": { top: "4%", left: "4%" },
+    "top-right": { top: "4%", right: "4%" },
+    "bottom-left": { bottom: "4%", left: "4%" },
+    "bottom-right": { bottom: "4%", right: "4%" },
+    center: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" },
+  };
+
+  return (
+    <div
+      className="absolute select-none whitespace-nowrap font-mono font-semibold uppercase text-white"
+      style={{
+        ...positionStyles[settings.position],
+        opacity: settings.opacity,
+        fontSize: `${Math.round(13 + settings.size * 44)}px`,
+        letterSpacing: "0.08em",
+        textShadow:
+          "0 2px 18px rgba(0,0,0,0.92), 0 0 2px rgba(255,255,255,0.35)",
+      }}
+    >
+      {settings.text}
+    </div>
+  );
+}
+
+function CompositionGuideOverlay({
+  guide,
+  bounds,
+}: {
+  guide: CompositionGuide;
+  bounds: ImageBounds;
+}) {
+  if (guide === "off") return null;
+
+  const line = "absolute bg-white/35 shadow-[0_0_12px_rgba(0,0,0,0.55)]";
+  const verticalLine = (left: string) => (
+    <div key={`v-${left}`} className={`${line} top-0 bottom-0 w-px`} style={{ left }} />
+  );
+  const horizontalLine = (top: string) => (
+    <div key={`h-${top}`} className={`${line} left-0 right-0 h-px`} style={{ top }} />
+  );
+
+  let children: React.ReactNode = null;
+
+  if (guide === "thirds") {
+    children = (
+      <>
+        {verticalLine("33.333%")}
+        {verticalLine("66.666%")}
+        {horizontalLine("33.333%")}
+        {horizontalLine("66.666%")}
+      </>
+    );
+  }
+
+  if (guide === "center") {
+    children = (
+      <>
+        {verticalLine("50%")}
+        {horizontalLine("50%")}
+      </>
+    );
+  }
+
+  if (guide === "golden") {
+    children = (
+      <>
+        {verticalLine("38.2%")}
+        {verticalLine("61.8%")}
+        {horizontalLine("38.2%")}
+        {horizontalLine("61.8%")}
+      </>
+    );
+  }
+
+  if (guide === "safe") {
+    children = (
+      <>
+        <div className="absolute inset-[6%] border border-white/35" />
+        <div className="absolute inset-[12%] border border-amber-300/40" />
+      </>
+    );
+  }
+
+  return (
+    <div
+      data-export-ignore="true"
+      className="pointer-events-none absolute z-20"
+      style={{
+        left: bounds.left,
+        top: bounds.top,
+        width: bounds.width,
+        height: bounds.height,
+      }}
+    >
+      {children}
     </div>
   );
 }

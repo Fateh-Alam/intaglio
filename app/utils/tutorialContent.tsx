@@ -14,6 +14,7 @@ import {
   IconCamera,
 } from "@tabler/icons-react";
 import { TutorialContent } from "../components/TutorialModal";
+import { STORAGE_KEYS } from "../lib/brand";
 
 export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
   basic: {
@@ -36,11 +37,11 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
     title: "Color Temperature",
     subtitle: "Warm & Cool Tones",
     description:
-      "Shape the mood of your image with color temperature and tint. Push towards warm oranges for a cozy feel, or cool blues for a cinematic look.",
+      "Shape the mood of your image with color temperature and tint. Push toward warm light or cooler shade with restraint.",
     tips: [
       "Temperature affects the warm/cool balance",
       "Tint corrects green/magenta color casts",
-      "Teal-Orange is our signature cinema look",
+      "Color separation can be subtle and still readable",
     ],
     icon: <IconPalette size={28} />,
     accentColor: "#a855f7",
@@ -99,7 +100,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Recreate the look of classic film stocks instantly. From Kodak Portra's warm skin tones to CineStill's halation — bring analog character to digital images.",
     tips: [
       "Portra 400: Warm, creamy skin tones",
-      "CineStill 800T: Cinematic tungsten look",
+      "CineStill 800T: Tungsten halation",
       "Velvia 50: Punchy, saturated landscapes",
     ],
     icon: <IconMovie size={28} />,
@@ -138,10 +139,10 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
 
   text: {
     id: "text",
-    title: "Cinematic Text",
-    subtitle: "Title Cards",
+    title: "Editorial Text",
+    subtitle: "Captions & Titles",
     description:
-      "Add professional movie-style titles and subtitles. Choose from iconic film typography styles and position your text with precision.",
+      "Add quiet titles, captions, and date/location notes with precise placement.",
     tips: [
       "Enable subtitles for movie poster effects",
       "Add date/location for documentary style",
@@ -216,12 +217,14 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
 };
 
 // LocalStorage helpers
-const STORAGE_KEY = "nyvarra_tutorials_seen";
+const STORAGE_KEY = STORAGE_KEYS.tutorialsSeen;
 
 export function getSeenTutorials(): Record<string, boolean> {
   if (typeof window === "undefined") return {};
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored =
+      localStorage.getItem(STORAGE_KEY) ??
+      localStorage.getItem(STORAGE_KEYS.legacyTutorialsSeen);
     return stored ? JSON.parse(stored) : {};
   } catch {
     return {};

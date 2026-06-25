@@ -3,6 +3,9 @@
 import React, { useMemo, useRef } from "react";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import type { EditorSettings, LutUserData } from "../types/editor";
+import { FILM_EMULATION_INDEX } from "../lib/filmEmulations";
+import { FILM_EMULATION_SHADER_CHUNK } from "../lib/filmShaderChunk";
 
 const vertexShader = `
   varying vec2 vUv;
@@ -406,154 +409,7 @@ const fragmentShader = `
   }
 
   // Film Emulation - authentic film stock simulation
-  vec3 applyFilmEmulation(vec3 color, int filmType, float strength) {
-    if (filmType == 0) return color; // None
-    
-    vec3 filmColor = color;
-    
-    if (filmType == 1) { // Kodak Portra 400 - warm skin tones, pastel highlights
-      // Lift shadows, soften contrast
-      filmColor = pow(filmColor, vec3(0.95));
-      // Warm highlight bias
-      filmColor.r += 0.02 * filmColor.r;
-      filmColor.g += 0.01 * filmColor.g;
-      // Reduce saturation in shadows
-      float luma = getLuma(filmColor);
-      float shadowMask = 1.0 - smoothstep(0.0, 0.4, luma);
-      filmColor = mix(filmColor, mix(vec3(luma), filmColor, 0.7), shadowMask * 0.3);
-      // Pastel highlight rolloff
-      float highlightMask = smoothstep(0.6, 1.0, luma);
-      filmColor = mix(filmColor, filmColor * 0.95 + 0.05, highlightMask);
-    }
-    else if (filmType == 2) { // Kodak Ektar 100 - vivid, punchy
-      // Increase saturation
-      float luma = getLuma(filmColor);
-      filmColor = mix(vec3(luma), filmColor, 1.15);
-      // S-curve contrast
-      filmColor = filmColor * filmColor * (3.0 - 2.0 * filmColor);
-      // Warm cast
-      filmColor.r *= 1.03;
-      filmColor.b *= 0.97;
-    }
-    else if (filmType == 3) { // Fuji Velvia 50 - hyper-saturated, deep shadows
-      // Crush blacks
-      filmColor = max(filmColor - 0.03, 0.0) * 1.03;
-      // Boost saturation heavily
-      float luma = getLuma(filmColor);
-      filmColor = mix(vec3(luma), filmColor, 1.3);
-      // Push greens and blues
-      filmColor.g *= 1.02;
-      filmColor.b *= 1.04;
-    }
-    else if (filmType == 4) { // Fuji Pro 400H - soft pastels, lifted shadows
-      // Lift shadows significantly
-      filmColor = mix(filmColor, sqrt(filmColor), 0.15);
-      // Reduce saturation overall
-      float luma = getLuma(filmColor);
-      filmColor = mix(vec3(luma), filmColor, 0.85);
-      // Cool highlight bias
-      filmColor.b += 0.015 * smoothstep(0.5, 1.0, luma);
-    }
-    else if (filmType == 5) { // Cinestill 800T - tungsten, halation glow
-      // Tungsten white balance (cool shadows, warm highlights)
-      float luma = getLuma(filmColor);
-      filmColor.r += 0.03 * smoothstep(0.5, 1.0, luma);
-      filmColor.b += 0.04 * (1.0 - luma);
-      // Teal shadows
-      float shadowMask = 1.0 - smoothstep(0.0, 0.3, luma);
-      filmColor.r -= 0.02 * shadowMask;
-      filmColor.g += 0.01 * shadowMask;
-      filmColor.b += 0.03 * shadowMask;
-      // Halation effect on highlights
-      float highlightMask = smoothstep(0.7, 1.0, luma);
-      filmColor.r += 0.05 * highlightMask;
-    }
-    else if (filmType == 6) { // Kodak Vision3 500T - cinema tungsten
-      // Orange-teal split
-      float luma = getLuma(filmColor);
-      filmColor.r += 0.025 * smoothstep(0.4, 0.9, luma);
-      filmColor.b += 0.035 * (1.0 - smoothstep(0.3, 0.7, luma));
-      // Deep shadows
-      filmColor = max(filmColor - 0.02, 0.0) * 1.02;
-      // Cinema contrast curve
-      filmColor = pow(filmColor, vec3(0.98, 1.0, 1.02));
-    }
-    else if (filmType == 7) { // Ilford HP5 Plus - classic B&W
-      float luma = getLuma(filmColor);
-      // Classic B&W with slight green sensitivity boost
-      float bw = filmColor.r * 0.25 + filmColor.g * 0.65 + filmColor.b * 0.10;
-      // Add slight grain texture in shadows
-      bw = pow(bw, 0.95);
-      // Lift shadows slightly
-      bw = bw * 0.9 + 0.03;
-      filmColor = vec3(bw);
-    }
-    else if (filmType == 8) { // Agfa Vista 400 - vintage warm tones
-      float luma = getLuma(filmColor);
-      // Strong warm cast
-      filmColor.r *= 1.08;
-      filmColor.g *= 1.02;
-      filmColor.b *= 0.90;
-      // Slight saturation boost
-      filmColor = mix(vec3(luma), filmColor, 1.1);
-      // Lifted blacks with warm tint
-      filmColor = filmColor * 0.95 + vec3(0.04, 0.03, 0.01);
-    }
-    else if (filmType == 9) { // Lomography 800 - cross-processed look
-      float luma = getLuma(filmColor);
-      // Push contrast
-      filmColor = pow(filmColor, vec3(1.1));
-      // Cyan shadows, yellow highlights
-      float shadowMask = 1.0 - smoothstep(0.0, 0.5, luma);
-      float highlightMask = smoothstep(0.5, 1.0, luma);
-      filmColor.r -= 0.03 * shadowMask;
-      filmColor.g += 0.02 * shadowMask;
-      filmColor.b += 0.04 * shadowMask;
-      filmColor.r += 0.04 * highlightMask;
-      filmColor.g += 0.02 * highlightMask;
-      // High saturation
-      filmColor = mix(vec3(luma), filmColor, 1.25);
-    }
-    else if (filmType == 10) { // Technicolor 3-Strip - vintage cinema
-      float luma = getLuma(filmColor);
-      // Boost primaries separately
-      filmColor.r = pow(filmColor.r, 0.9) * 1.1;
-      filmColor.g = pow(filmColor.g, 0.95) * 0.95;
-      filmColor.b = pow(filmColor.b, 0.85) * 1.05;
-      // S-curve for that cinema punch
-      filmColor = filmColor * filmColor * (3.0 - 2.0 * filmColor);
-      // Slight color bleed
-      filmColor = mix(filmColor, vec3(luma), 0.05);
-    }
-    else if (filmType == 11) { // Bleach Bypass - desaturated, high contrast
-      float luma = getLuma(filmColor);
-      // Desaturate significantly
-      filmColor = mix(vec3(luma), filmColor, 0.5);
-      // High contrast S-curve
-      filmColor = pow(filmColor, vec3(1.2));
-      filmColor = filmColor * filmColor * (3.0 - 2.0 * filmColor);
-      // Slight blue-gray cast
-      filmColor.b += 0.02;
-      filmColor = filmColor * 0.95 + 0.02;
-    }
-    else if (filmType == 12) { // Cross Process E-6 to C-41 - wild colors
-      float luma = getLuma(filmColor);
-      // Heavy contrast push
-      filmColor = pow(filmColor, vec3(1.15));
-      // Shift colors dramatically
-      filmColor.r = pow(filmColor.r, 0.85);
-      filmColor.g = pow(filmColor.g, 1.1);
-      filmColor.b = pow(filmColor.b, 0.75);
-      // Green-cyan in shadows, magenta in highlights
-      float shadowMask = 1.0 - smoothstep(0.0, 0.4, luma);
-      float highlightMask = smoothstep(0.6, 1.0, luma);
-      filmColor.g += 0.05 * shadowMask;
-      filmColor.r += 0.04 * highlightMask;
-      filmColor.b += 0.02 * highlightMask;
-    }
-    
-    return mix(color, clamp(filmColor, 0.0, 1.0), strength);
-  }
+  ${FILM_EMULATION_SHADER_CHUNK}
 
   void main() {
     vec2 uv = vUv;
@@ -819,7 +675,7 @@ const fragmentShader = `
     // Film Emulation - authentic film stock simulation
     color = applyFilmEmulation(color, uFilmEmulation, uFilmEmulationStrength);
 
-    // Advanced God Light (3D Relighting with specular, rim, color)
+    // Directional light pass with specular, rim, and color.
     if (uGodLightStrength > 0.0) {
         vec2 step = 1.0 / uResolution;
         float t = getLuma(texture2D(uTexture, vUv + vec2(0.0, step.y)).rgb);
@@ -1072,7 +928,7 @@ export default function ImagePlane({
   brushMaskClarity = 0,
 }: {
   imageUrl: string;
-  settings: any;
+  settings: EditorSettings;
   wiperPosition?: number;
   brushMaskData?: string;
   brushMaskExposure?: number;
@@ -1209,7 +1065,11 @@ export default function ImagePlane({
           uGodLightFalloff: { value: settings.godLightFalloff || 1.0 },
           uLutTexture: { value: settings.lutTexture || null },
           uLutStrength: { value: settings.lutStrength || 0 },
-          uLutSize: { value: (settings.lutTexture as any)?.lutSize || 0 },
+          uLutSize: {
+            value:
+              ((settings.lutTexture?.userData as LutUserData | undefined)
+                ?.lutSize ?? 0),
+          },
           uToneCurve: { value: settings.toneCurveTexture || null },
           uToneCurveEnabled: { value: settings.toneCurveTexture ? 1.0 : 0.0 },
           uTargetHue: { value: settings.targetHue },
@@ -1404,32 +1264,7 @@ export default function ImagePlane({
 
           // Film Emulation
           uFilmEmulation: {
-            value:
-              settings.filmEmulation === "portra400"
-                ? 1
-                : settings.filmEmulation === "ektar100"
-                  ? 2
-                  : settings.filmEmulation === "velvia50"
-                    ? 3
-                    : settings.filmEmulation === "pro400h"
-                      ? 4
-                      : settings.filmEmulation === "cinestill800t"
-                        ? 5
-                        : settings.filmEmulation === "vision3500t"
-                          ? 6
-                          : settings.filmEmulation === "hp5"
-                            ? 7
-                            : settings.filmEmulation === "vista400"
-                              ? 8
-                              : settings.filmEmulation === "lomo800"
-                                ? 9
-                                : settings.filmEmulation === "technicolor"
-                                  ? 10
-                                  : settings.filmEmulation === "bleachbypass"
-                                    ? 11
-                                    : settings.filmEmulation === "crossprocess"
-                                      ? 12
-                                      : 0,
+            value: FILM_EMULATION_INDEX[settings.filmEmulation] ?? 0,
           },
           uFilmEmulationStrength: {
             value: settings.filmEmulationStrength || 1.0,

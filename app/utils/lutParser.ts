@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { LutUserData } from "../types/editor";
 
 export function parseCubeLUT(text: string): THREE.DataTexture | null {
   const lines = text.split(/\r?\n/);
@@ -65,8 +66,8 @@ export function parseCubeLUT(text: string): THREE.DataTexture | null {
     texture.magFilter = THREE.LinearFilter;
     texture.needsUpdate = true;
 
-    // Store the original size as metadata for shader lookup
-    (texture as any).lutSize = size;
+    // Store the original size as metadata for shader lookup.
+    (texture.userData as LutUserData).lutSize = size;
 
     return texture;
   }

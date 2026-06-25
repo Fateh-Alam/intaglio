@@ -140,6 +140,7 @@ export default function ReferenceViewer({
             className="w-full h-full flex items-center justify-center overflow-hidden"
             style={{ transform: `scale(${zoom})` }}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={displayUrl}
               alt="Reference"

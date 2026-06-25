@@ -4,9 +4,7 @@ import React from "react";
 import {
   IconTypography,
   IconMapPin,
-  IconCalendar,
   IconMovie,
-  IconChevronRight,
   IconItalic,
   IconLetterCase,
   IconLetterCaseUpper,
@@ -270,7 +268,8 @@ export default function CinematicTextControls({
               onClick={() =>
                 setTextOverlay((prev) => ({
                   ...prev,
-                  subtitleStyle: style.id as any,
+                  subtitleStyle:
+                    style.id as TextOverlaySettings["subtitleStyle"],
                   letterSpacing: style.tracking,
                 }))
               }
@@ -418,7 +417,8 @@ export default function CinematicTextControls({
                   onClick={() =>
                     setTextOverlay((prev) => ({
                       ...prev,
-                      customTextTransform: opt.id as any,
+                      customTextTransform:
+                        opt.id as TextOverlaySettings["customTextTransform"],
                     }))
                   }
                   className={`flex-1 py-1.5 flex items-center justify-center rounded transition ${
@@ -462,10 +462,10 @@ export default function CinematicTextControls({
           min={0.5}
           max={3}
           step={0.1}
-          onChange={(v: any) =>
+          onChange={(v) =>
             setTextOverlay((prev) => ({
               ...prev,
-              fontSize: parseFloat(v),
+              fontSize: v,
             }))
           }
           icon={<IconTypography size={14} />}
@@ -477,10 +477,10 @@ export default function CinematicTextControls({
           min={-0.2}
           max={1.0}
           step={0.01}
-          onChange={(v: any) =>
+          onChange={(v) =>
             setTextOverlay((prev) => ({
               ...prev,
-              letterSpacing: parseFloat(v),
+              letterSpacing: v,
             }))
           }
           icon={<IconSpacingHorizontal size={14} />}
@@ -492,10 +492,10 @@ export default function CinematicTextControls({
           value={textOverlay.opacity}
           min={0}
           max={1}
-          onChange={(v: any) =>
+          onChange={(v) =>
             setTextOverlay((prev) => ({
               ...prev,
-              opacity: parseFloat(v),
+              opacity: v,
             }))
           }
           icon={<IconEye size={14} />}

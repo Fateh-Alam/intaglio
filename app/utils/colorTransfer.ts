@@ -8,6 +8,9 @@ interface ROI {
   h: number;
 }
 
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
 async function getImageData(
   url: string,
   roi?: ROI
@@ -29,19 +32,10 @@ async function getImageData(
         h = img.height;
 
       if (roi) {
-        x = class Clamp {
-          static val(v: number, min: number, max: number) {
-            return Math.min(Math.max(v, min), max);
-          }
-        }.val(Math.floor(roi.x * img.width), 0, img.width - 1);
-
-        y = Math.floor(roi.y * img.height);
-        w = Math.floor(roi.w * img.width);
-        h = Math.floor(roi.h * img.height);
-
-        // Safety clamps
-        if (x + w > img.width) w = img.width - x;
-        if (y + h > img.height) h = img.height - y;
+        x = clamp(Math.floor(roi.x * img.width), 0, img.width - 1);
+        y = clamp(Math.floor(roi.y * img.height), 0, img.height - 1);
+        w = clamp(Math.floor(roi.w * img.width), 1, img.width - x);
+        h = clamp(Math.floor(roi.h * img.height), 1, img.height - y);
       }
 
       resolve(ctx.getImageData(x, y, w, h).data);
