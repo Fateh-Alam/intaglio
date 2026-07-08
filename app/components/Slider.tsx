@@ -32,62 +32,60 @@ const Slider = ({
   const centerPercentage = bipolar ? ((0 - min) / (max - min)) * 100 : 0;
 
   const accentColors: Record<string, string> = {
-    amber: "bg-[var(--ormond-brass)]",
-    purple: "bg-[var(--ormond-oxblood)]",
-    cyan: "bg-[var(--ormond-green)]",
-    orange: "bg-[var(--ormond-copper)]",
-    green: "bg-[var(--ormond-olive)]",
+    amber: "bg-[var(--intaglio-brass)]",
+    purple: "bg-[var(--intaglio-copper)]",
+    cyan: "bg-[var(--intaglio-brass)]",
+    orange: "bg-[var(--intaglio-copper)]",
+    green: "bg-[var(--intaglio-brass)]",
   };
 
   return (
-    <div className="group relative space-y-2">
-      <div className="flex items-center justify-between gap-3 text-[rgba(231,223,208,0.58)] transition group-hover:text-[rgba(231,223,208,0.86)]">
+    <div className="group relative space-y-2 py-1">
+      <div className="flex items-center justify-between gap-3 text-white/60 transition group-hover:text-white/90">
         <div className="flex items-center gap-2">
-          <span className="text-[rgba(231,223,208,0.35)] transition group-hover:text-[rgba(231,223,208,0.62)]">
+          <span className="text-white/40 transition group-hover:text-white/80">
             {icon}
           </span>
-          <label className="font-mono text-[10px] font-medium uppercase tracking-[0.18em]">
+          <label className="text-xs font-medium text-white/80">
             {label}
           </label>
         </div>
         <div className="flex items-center gap-2">
           {isModified && (
-            <button
+            <div role="button"
               onClick={() => onChange(defaultValue)}
-              className="border border-[var(--ormond-line)] bg-black/20 px-2 py-1 font-mono text-[8px] uppercase tracking-[0.18em] text-[rgba(231,223,208,0.42)] transition hover:border-[var(--ormond-line-strong)] hover:text-[var(--ormond-paper)] md:opacity-0 md:group-hover:opacity-100"
+              className="px-2 py-0.5 text-[10px] font-medium text-white/40 transition hover:text-white md:opacity-0 md:group-hover:opacity-100"
             >
               Reset
-            </button>
+            </div>
           )}
           <span
-            className={`min-w-[48px] border px-2 py-1 text-right font-mono text-[10px] tracking-wider ${
-              isModified
-                ? "border-[rgba(176,138,82,0.38)] bg-[rgba(176,138,82,0.12)] text-[var(--ormond-paper)]"
-                : "border-[var(--ormond-line)] bg-black/20 text-[rgba(231,223,208,0.42)]"
+            className={`min-w-[36px] text-right font-mono text-xs font-medium ${
+              isModified ? "text-blue-400" : "text-white/50"
             }`}
           >
             {value.toFixed(2)}
           </span>
         </div>
       </div>
-      <div className="relative h-2 overflow-hidden bg-[rgba(231,223,208,0.1)] transition group-hover:bg-[rgba(231,223,208,0.14)]">
+      
+      <div className="relative h-4 flex items-center">
         {/* Background track */}
-        <div className="absolute inset-0" />
+        <div className="absolute left-0 right-0 h-1.5 rounded-full bg-white/10 transition-colors group-hover:bg-white/[0.15]" />
 
         {/* Center zero indicator for bipolar sliders */}
         {bipolar && (
           <div
-            className="absolute bottom-0 top-0 z-10 w-px bg-[rgba(231,223,208,0.34)]"
+            className="absolute h-2.5 w-0.5 rounded-full bg-white/30 top-1/2 -translate-y-1/2 z-10"
             style={{ left: `${centerPercentage}%` }}
           />
         )}
 
         {/* Value track */}
         {bipolar ? (
-          // Bipolar: fill from center
           value >= 0 ? (
             <div
-              className={`absolute bottom-0 top-0 ${accentColors[accentColor] || accentColors.amber} transition-all duration-150`}
+              className={`absolute h-1.5 rounded-full ${accentColors[accentColor] || "bg-blue-500"} transition-all duration-150`}
               style={{
                 left: `${centerPercentage}%`,
                 width: `${percentage - centerPercentage}%`,
@@ -95,7 +93,7 @@ const Slider = ({
             />
           ) : (
             <div
-              className={`absolute bottom-0 top-0 ${accentColors[accentColor] || accentColors.amber} transition-all duration-150`}
+              className={`absolute h-1.5 rounded-full ${accentColors[accentColor] || "bg-blue-500"} transition-all duration-150`}
               style={{
                 left: `${percentage}%`,
                 width: `${centerPercentage - percentage}%`,
@@ -103,17 +101,16 @@ const Slider = ({
             />
           )
         ) : (
-          // Regular: fill from left
           <div
-            className={`absolute bottom-0 left-0 top-0 ${accentColors[accentColor] || accentColors.amber} transition-all duration-150`}
+            className={`absolute left-0 h-1.5 rounded-full ${accentColors[accentColor] || "bg-blue-500"} transition-all duration-150`}
             style={{ width: `${percentage}%` }}
           />
         )}
 
-        {/* Thumb indicator - always visible on mobile */}
+        {/* Thumb indicator - Native Circular Thumb */}
         <div
-          className="pointer-events-none absolute top-1/2 h-3.5 w-1.5 -translate-y-1/2 bg-[var(--ormond-paper)] shadow-lg shadow-black/50 transition-opacity md:opacity-0 md:group-hover:opacity-100"
-          style={{ left: `calc(${percentage}% - 3px)` }}
+          className="pointer-events-none absolute h-3.5 w-3.5 rounded-full -translate-x-1/2 bg-white shadow-md border border-black/10 transition-transform md:scale-90 md:group-hover:scale-110 z-20"
+          style={{ left: `${percentage}%` }}
         />
       </div>
       <input
@@ -124,7 +121,7 @@ const Slider = ({
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         onDoubleClick={() => onChange(defaultValue)}
-        className="absolute bottom-0 left-0 right-0 h-10 md:h-6 opacity-0 cursor-pointer touch-pan-y"
+        className="absolute bottom-0 left-0 right-0 h-full w-full opacity-0 cursor-pointer touch-pan-y"
       />
     </div>
   );

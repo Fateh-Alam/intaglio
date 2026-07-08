@@ -25,20 +25,7 @@ export interface ColorGradingSettings {
   balance: number;
 }
 
-export type FilmEmulation =
-  | "none"
-  | "portra400"
-  | "ektar100"
-  | "velvia50"
-  | "pro400h"
-  | "cinestill800t"
-  | "vision3500t"
-  | "hp5"
-  | "vista400"
-  | "lomo800"
-  | "technicolor"
-  | "bleachbypass"
-  | "crossprocess";
+export type FilmEmulation = string;
 
 export interface LutUserData {
   lutSize?: number;
@@ -199,4 +186,35 @@ export interface ImageBounds {
   height: number;
   left: number;
   top: number;
+}
+
+export interface AssetMetadataSettings {
+  title: string;
+  author: string;
+  copyright: string;
+  camera: string;
+  lens: string;
+  iso: string;
+  focalLength: string;
+  aperture: string;
+  shutterSpeed: string;
+  date: string;
+  location: string;
+  description: string;
+  caption: string;
+  rating: number;
+  colorLabel: string;
+  flagStatus: string;
+  creator: string;
+  keywords: string;
+}
+
+export interface AppCommand {
+  id: string;
+  title: string;
+  section: string;
+  shortcut?: string;
+  keywords?: string[];
+  disabled?: boolean;
+  run: () => void;
 }

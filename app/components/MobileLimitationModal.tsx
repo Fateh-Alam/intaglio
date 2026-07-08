@@ -32,14 +32,14 @@ export default function MobileLimitationModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-sm overflow-hidden border border-[var(--ormond-line)] bg-[var(--ormond-panel)] shadow-2xl"
+            className="relative w-full max-w-sm overflow-hidden border border-[var(--intaglio-line)] bg-[var(--intaglio-panel)] shadow-2xl"
           >
             {/* Header Art */}
-            <div className="relative h-28 overflow-hidden bg-[var(--ormond-charcoal-2)]">
-              <div className="ormond-grain absolute" />
+            <div className="relative h-28 overflow-hidden bg-[var(--intaglio-charcoal-2)]">
+              <div className="intaglio-grain absolute" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="relative z-10 border border-[var(--ormond-line)] bg-black/20 p-3">
-                  <IconDeviceLaptop size={32} className="text-[var(--ormond-brass)]" />
+                <div className="relative z-10 border border-[var(--intaglio-line)] bg-black/20 p-3">
+                  <IconDeviceLaptop size={32} className="text-[var(--intaglio-brass)]" />
                 </div>
               </div>
             </div>
@@ -52,31 +52,31 @@ export default function MobileLimitationModal({
 
               <div className="space-y-3">
                 <p className="text-sm text-gray-400 leading-relaxed">
-                  Ormond is designed for the precision and power of a desktop
+                  Intaglio is designed for the precision and power of a desktop
                   darkroom workflow.
                 </p>
-                <p className="border border-[var(--ormond-line)] bg-white/5 py-2 font-mono text-xs text-gray-500">
+                <p className="border border-[var(--intaglio-line)] bg-white/5 py-2 font-mono text-xs text-gray-500">
                   Mobile experience is limited.
                 </p>
               </div>
 
               <div className="pt-4 flex flex-col gap-3">
-                <button
+                <div role="button" tabIndex={0}
                   onClick={onClose}
-                  className="w-full border border-[var(--ormond-brass)] bg-[var(--ormond-brass)] py-3 text-sm font-semibold uppercase tracking-wider text-black transition-colors hover:bg-[#c49b62]"
+                  className="w-full border border-[var(--intaglio-brass)] bg-[var(--intaglio-brass)] py-3 text-sm font-semibold uppercase tracking-wider text-black transition-colors hover:bg-[#c49b62]"
                 >
                   Continue Anyway
-                </button>
+                </div>
               </div>
             </div>
 
             {/* Close Button */}
-            <button
+            <div role="button" tabIndex={0}
               onClick={onClose}
               className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors"
             >
               <IconX size={20} />
-            </button>
+            </div>
           </motion.div>
         </div>
       )}

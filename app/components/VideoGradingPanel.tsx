@@ -154,13 +154,13 @@ export default function VideoGradingPanel({
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-4xl overflow-hidden border border-[var(--ormond-line)] bg-[var(--ormond-panel)] shadow-2xl"
+        className="relative w-full max-w-4xl overflow-hidden border border-[var(--intaglio-line)] bg-[var(--intaglio-panel)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="border border-[var(--ormond-line)] bg-black/20 p-2 text-[var(--ormond-brass)]">
+            <div className="border border-[var(--intaglio-line)] bg-black/20 p-2 text-[var(--intaglio-brass)]">
               <IconMovie size={20} />
             </div>
             <div>
@@ -172,12 +172,12 @@ export default function VideoGradingPanel({
               </p>
             </div>
           </div>
-          <button
+          <div role="button" tabIndex={0}
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition"
           >
             <IconX size={20} />
-          </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -246,14 +246,14 @@ export default function VideoGradingPanel({
               {/* Controls */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <button
+                  <div role="button" tabIndex={0}
                     onClick={() => handleSkip(-5)}
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition"
                     title="Skip back 5s"
                   >
                     <IconPlayerSkipBack size={18} />
-                  </button>
-                  <button
+                  </div>
+                  <div role="button" tabIndex={0}
                     onClick={handlePlayPause}
                     className="p-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white transition"
                   >
@@ -262,23 +262,23 @@ export default function VideoGradingPanel({
                     ) : (
                       <IconPlayerPlay size={20} />
                     )}
-                  </button>
-                  <button
+                  </div>
+                  <div role="button" tabIndex={0}
                     onClick={() => handleSkip(5)}
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition"
                     title="Skip forward 5s"
                   >
                     <IconPlayerSkipForward size={18} />
-                  </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
+                  <div role="button" tabIndex={0}
                     onClick={handleExtractFrame}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 transition font-mono text-xs uppercase"
                   >
                     <IconCamera size={16} /> Lift Frame
-                  </button>
+                  </div>
                   <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition font-mono text-xs uppercase cursor-pointer">
                     <IconUpload size={16} /> New Video
                     <input

@@ -45,7 +45,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: `Open ${ROUTE_LABELS.editor}`,
         short_name: ROUTE_LABELS.editor,
-        description: "Open the Ormond darkroom.",
+        description: "Open the Intaglio darkroom.",
         url: "/editor",
         icons: [{ src: "/logo.svg", sizes: "any", type: "image/svg+xml" }],
       },

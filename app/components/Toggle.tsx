@@ -10,19 +10,19 @@ interface ToggleProps {
 
 const Toggle = ({ checked, onChange, className = "" }: ToggleProps) => {
   return (
-    <button
-      type="button"
+    <div role="button" tabIndex={0}
+      
       onClick={() => onChange(!checked)}
-      className={`w-9 h-5 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${
-        checked ? "bg-amber-500" : "bg-gray-700"
+      className={`w-9 h-5 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-inner ${
+        checked ? "bg-blue-500 border border-blue-500" : "bg-white/10 border border-white/5"
       } ${className}`}
     >
       <div
-        className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all duration-200 shadow-sm ${
-          checked ? "left-5" : "left-1"
+        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all duration-200 shadow-md ${
+          checked ? "left-[1.125rem]" : "left-0.5"
         }`}
       />
-    </button>
+    </div>
   );
 };
 

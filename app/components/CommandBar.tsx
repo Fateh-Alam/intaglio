@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { IconCommand, IconKeyboard, IconSearch, IconX } from "@tabler/icons-react";
 
 export interface AppCommand {
@@ -51,19 +52,28 @@ export function CommandBar({ isOpen, commands, onClose }: CommandBarProps) {
     });
   }, [commands, query]);
 
-  if (!isOpen) return null;
+  
 
   return (
-    <div
-      className="fixed inset-0 z-[120] bg-black/72 p-4 backdrop-blur-md md:p-8"
-      onClick={onClose}
-    >
-      <div
-        className="mx-auto mt-20 w-full max-w-2xl overflow-hidden border border-[var(--ormond-line)] bg-[var(--ormond-panel)] shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-center gap-3 border-b border-[var(--ormond-line)] px-5 py-4">
-          <IconSearch size={18} className="text-[var(--ormond-brass)]" />
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[120] bg-black/72 p-4 backdrop-blur-md md:p-8"
+          onClick={onClose}
+        >
+              <motion.div
+          initial={{ scale: 0.95, opacity: 0, y: 10 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 10 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="mx-auto mt-20 w-full max-w-2xl overflow-hidden border border-white/10 bg-[#1c1c1e] shadow-2xl rounded-xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+          <IconSearch size={18} className="text-blue-400" />
           <input
             ref={inputRef}
             value={query}
@@ -79,14 +89,14 @@ export function CommandBar({ isOpen, commands, onClose }: CommandBarProps) {
               }
             }}
             placeholder="Search commands..."
-            className="w-full bg-transparent text-sm text-[var(--ormond-paper)] outline-none placeholder:text-[rgba(231,223,208,0.28)]"
+            className="w-full bg-transparent text-sm text-[var(--intaglio-paper)] outline-none placeholder:text-[rgba(231,223,208,0.28)]"
           />
-          <button
+          <div role="button" tabIndex={0}
             onClick={onClose}
-            className="p-1.5 text-[rgba(231,223,208,0.38)] transition hover:bg-white/10 hover:text-[var(--ormond-paper)]"
+            className="p-1.5 text-[rgba(231,223,208,0.38)] transition hover:bg-white/10 hover:text-[var(--intaglio-paper)]"
           >
             <IconX size={16} />
-          </button>
+          </div>
         </div>
 
         <div className="max-h-[420px] overflow-y-auto p-2">
@@ -96,9 +106,9 @@ export function CommandBar({ isOpen, commands, onClose }: CommandBarProps) {
             </div>
           ) : (
             filteredCommands.map((command) => (
-              <button
+              <div role="button" tabIndex={0}
                 key={command.id}
-                disabled={command.disabled}
+                aria-disabled={command.disabled}
                 onClick={() => {
                   command.run();
                   onClose();
@@ -109,21 +119,23 @@ export function CommandBar({ isOpen, commands, onClose }: CommandBarProps) {
                   <span className="block text-sm text-white">
                     {command.title}
                   </span>
-                  <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.28em] text-white/35">
+                  <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.28em] text-white/35">
                     {command.section}
                   </span>
                 </span>
                 {command.shortcut && (
-                  <kbd className="border border-[var(--ormond-line)] bg-white/5 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-[rgba(231,223,208,0.46)]">
+                  <kbd className="border border-white/10 bg-white/5 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-[rgba(231,223,208,0.46)]">
                     {command.shortcut}
                   </kbd>
                 )}
-              </button>
+              </div>
             ))
           )}
         </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -132,23 +144,30 @@ export function ShortcutHelp({
   commands,
   onClose,
 }: CommandBarProps) {
-  if (!isOpen) return null;
-
   const visibleCommands = commands.filter((command) => command.shortcut);
 
   return (
-    <div
-      className="fixed inset-0 z-[120] bg-black/72 p-4 backdrop-blur-md md:p-8"
-      onClick={onClose}
-    >
-      <div
-        className="mx-auto mt-20 w-full max-w-2xl overflow-hidden border border-[var(--ormond-line)] bg-[var(--ormond-panel)] shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-[var(--ormond-line)] px-6 py-5">
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[120] bg-black/72 p-4 backdrop-blur-md md:p-8"
+          onClick={onClose}
+        >
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0, y: 10 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 10 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="mx-auto mt-20 w-full max-w-2xl overflow-hidden border border-white/10 bg-[#1c1c1e] shadow-2xl rounded-xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
           <div>
             <div className="flex items-center gap-2 text-white">
-              <IconKeyboard size={18} className="text-[var(--ormond-brass)]" />
+              <IconKeyboard size={18} className="text-blue-400" />
               <h2 className="font-mono text-sm uppercase tracking-[0.3em]">
                 Shortcuts
               </h2>
@@ -157,40 +176,42 @@ export function ShortcutHelp({
               Keyboard-first controls for editing without breaking flow.
             </p>
           </div>
-          <button
+          <div role="button" tabIndex={0}
             onClick={onClose}
             className="p-1.5 text-white/35 transition hover:bg-white/10 hover:text-white"
           >
             <IconX size={16} />
-          </button>
+          </div>
         </div>
 
         <div className="grid gap-2 p-4 md:grid-cols-2">
           {visibleCommands.map((command) => (
             <div
               key={command.id}
-              className="flex items-center justify-between border border-[var(--ormond-line)] bg-white/[0.03] px-4 py-3"
+              className="flex items-center justify-between border border-white/10 bg-white/[0.03] px-4 py-3"
             >
               <span>
                 <span className="block text-sm text-white/80">
                   {command.title}
                 </span>
-                <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.28em] text-white/30">
+                <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-[0.28em] text-white/30">
                   {command.section}
                 </span>
               </span>
-              <kbd className="border border-[var(--ormond-line)] bg-black px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-[var(--ormond-brass)]">
+              <kbd className="border border-white/10 bg-black px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-blue-400">
                 {command.shortcut}
               </kbd>
             </div>
           ))}
         </div>
 
-        <div className="border-t border-[var(--ormond-line)] px-6 py-4 text-xs text-white/35">
+        <div className="border-t border-white/10 px-6 py-4 text-xs text-white/35">
           <IconCommand size={14} className="mr-2 inline text-white/25" />
           Press Cmd/Ctrl + K for the command bar.
         </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

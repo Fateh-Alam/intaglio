@@ -1,31 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --background: #14130f;
-  --foreground: #e7dfd0;
-  --ormond-charcoal: #14130f;
-  --ormond-charcoal-2: #1b1914;
-  --ormond-panel: #201d17;
-  --ormond-panel-soft: #27231b;
-  --ormond-paper: #e7dfd0;
-  --ormond-paper-muted: #b9ad98;
-  --ormond-brass: #b08a52;
-  --ormond-copper: #8f563f;
-  --ormond-green: #3f5545;
-  --ormond-navy: #273848;
-  --ormond-oxblood: #5c2e2b;
-  --ormond-olive: #70704e;
-  --ormond-silver: #aaa394;
-  --ormond-line: rgba(231, 223, 208, 0.12);
-  --ormond-line-strong: rgba(231, 223, 208, 0.22);
-  --ormond-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+  --background: #1c1c1e;
+  --foreground: #ffffff;
+  --intaglio-charcoal: #1c1c1e;
+  --intaglio-charcoal-2: #242426;
+  --intaglio-panel: #2c2c2e;
+  --intaglio-panel-soft: #3a3a3c;
+  --intaglio-paper: #ffffff;
+  --intaglio-paper-muted: #ebebf599;
+  --intaglio-brass: #0a84ff; /* Changed from brass to native blue for focus/active states */
+  --intaglio-copper: #5e5ce6;
+  --intaglio-green: #30d158;
+  --intaglio-navy: #0a84ff;
+  --intaglio-oxblood: #ff453a;
+  --intaglio-olive: #ffd60a;
+  --intaglio-silver: #8e8e93;
+  --intaglio-line: rgba(255, 255, 255, 0.08);
+  --intaglio-line-strong: rgba(255, 255, 255, 0.15);
+  --intaglio-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  --font-serif: var(--font-playfair);
+  --font-serif: var(--font-inter); /* Fallback serif alias to Inter so existing classes don't break */
   --font-mono: var(--font-geist-mono);
 }
 
@@ -34,156 +34,138 @@
 }
 
 html {
-  background: var(--ormond-charcoal);
-  color: var(--ormond-paper);
+  background: var(--intaglio-charcoal);
+  color: var(--intaglio-paper);
   scroll-behavior: smooth;
 }
 
 body {
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(231, 223, 208, 0.025), transparent 28rem),
-    var(--ormond-charcoal);
-  color: var(--ormond-paper);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--intaglio-charcoal);
+  color: var(--intaglio-paper);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   letter-spacing: 0;
 }
 
 ::selection {
-  background: rgba(176, 138, 82, 0.34);
-  color: var(--ormond-paper);
+  background: rgba(10, 132, 255, 0.3);
+  color: var(--intaglio-paper);
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+.font-intaglio-serif {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-button {
-  cursor: pointer;
+.font-intaglio-sans {
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-button:disabled {
-  cursor: not-allowed;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.font-ormond-serif {
-  font-family: var(--font-playfair), Georgia, serif;
-}
-
-.font-ormond-sans {
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-}
-
-.ormond-page {
+.intaglio-page {
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(231, 223, 208, 0.035), transparent 38rem),
-    var(--ormond-charcoal);
-  color: var(--ormond-paper);
+  background: var(--intaglio-charcoal);
+  color: var(--intaglio-paper);
 }
 
-.ormond-paper {
-  background: var(--ormond-paper);
-  color: #201d17;
+.intaglio-paper {
+  background: var(--intaglio-paper);
+  color: #1c1c1e;
 }
 
-.ormond-panel {
-  border: 1px solid var(--ormond-line);
-  background: rgba(32, 29, 23, 0.94);
-  box-shadow: var(--ormond-shadow);
+.intaglio-panel {
+  border: 1px solid var(--intaglio-line);
+  background: rgba(44, 44, 46, 0.95);
+  box-shadow: var(--intaglio-shadow);
 }
 
-.ormond-panel-soft {
-  border: 1px solid var(--ormond-line);
-  background: rgba(39, 35, 27, 0.72);
+.intaglio-panel-soft {
+  border: 1px solid var(--intaglio-line);
+  background: rgba(58, 58, 60, 0.8);
 }
 
-.ormond-hairline {
-  border-color: var(--ormond-line);
+.intaglio-hairline {
+  border-color: var(--intaglio-line);
 }
 
-.ormond-label {
-  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
-    Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 10px;
-  line-height: 1.4;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: rgba(231, 223, 208, 0.48);
+.intaglio-label {
+  font-family: var(--font-inter), -apple-system, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+  text-transform: none;
+  color: rgba(255, 255, 255, 0.6);
 }
 
-.ormond-button {
+.intaglio-glass {
+  background: rgba(44, 44, 46, 0.65);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.intaglio-button {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 32px;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  border: 1px solid var(--ormond-line-strong);
-  background: rgba(231, 223, 208, 0.045);
-  color: rgba(231, 223, 208, 0.82);
-  padding: 0.75rem 1rem;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  transition:
-    border-color 360ms ease,
-    background-color 360ms ease,
-    color 360ms ease,
-    transform 360ms ease;
+  gap: 0.5rem;
+  border: 1px solid var(--intaglio-line);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.25rem 0.75rem;
+  font-family: var(--font-inter), -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 200ms ease-out;
 }
 
-.ormond-button:hover {
-  border-color: rgba(176, 138, 82, 0.55);
-  background: rgba(176, 138, 82, 0.12);
-  color: var(--ormond-paper);
+.intaglio-button:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
-.ormond-button:active {
-  transform: translateY(1px);
+.intaglio-button:active {
+  transform: scale(0.97);
 }
 
-.ormond-button-primary {
-  border-color: rgba(176, 138, 82, 0.72);
-  background: var(--ormond-brass);
+.intaglio-button-primary {
+  border-color: rgba(176, 138, 82, 0.6);
+  background: var(--intaglio-brass);
   color: #17130d;
 }
 
-.ormond-button-primary:hover {
+.intaglio-button-primary:hover {
   background: #c49b62;
   color: #17130d;
+  box-shadow: 0 0 12px rgba(176, 138, 82, 0.3);
 }
 
-.ormond-input {
+.intaglio-input {
   width: 100%;
-  border: 1px solid var(--ormond-line);
-  background: rgba(20, 19, 15, 0.72);
-  color: rgba(231, 223, 208, 0.86);
+  border: 1px solid var(--intaglio-line);
+  background: rgba(20, 19, 15, 0.5);
+  color: rgba(231, 223, 208, 0.9);
   outline: none;
-  transition:
-    border-color 320ms ease,
-    background-color 320ms ease;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 13px;
+  transition: all 300ms ease;
 }
 
-.ormond-input::placeholder {
-  color: rgba(231, 223, 208, 0.28);
+.intaglio-input::placeholder {
+  color: rgba(231, 223, 208, 0.3);
 }
 
-.ormond-input:focus {
-  border-color: rgba(176, 138, 82, 0.58);
-  background: rgba(20, 19, 15, 0.92);
+.intaglio-input:focus {
+  border-color: rgba(176, 138, 82, 0.5);
+  background: rgba(20, 19, 15, 0.8);
+  box-shadow: 0 0 0 1px rgba(176, 138, 82, 0.2);
 }
 
-.ormond-grain {
+.intaglio-grain {
   pointer-events: none;
   position: fixed;
   inset: 0;
@@ -194,23 +176,21 @@ a {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(231, 223, 208, 0.04);
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(176, 138, 82, 0.3);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: rgba(231, 223, 208, 0.1);
+  border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(176, 138, 82, 0.48);
-  background-clip: padding-box;
+  background: rgba(176, 138, 82, 0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {

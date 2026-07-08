@@ -1,8 +1,8 @@
-# Ormond
+# Intaglio
 
 A timeless digital darkroom for photographs that deserve patience.
 
-Ormond is a browser-based, local-first photography workspace built with Next.js,
+Intaglio is a browser-based, local-first photography workspace built with Next.js,
 React, Three.js, and WebGL. The visible product direction is quiet, archival,
 and photo-led; the editing capabilities remain client-side.
 
@@ -14,9 +14,9 @@ and photo-led; the editing capabilities remain client-side.
 - Reference matching, history, virtual copies, edit diff viewer, snapshots, and
   A/B comparison.
 - `.orm` Print Recipes for reusable edit settings.
-- Ormond Collections with search, tags, favorites, local imports, and native
+- Intaglio Collections with search, tags, favorites, local imports, and native
   `.orm` downloads.
-- `.ormond` Ormond Archives for complete portable sessions.
+- `.ormond` Intaglio Archives for complete portable sessions.
 - Legacy `.nyv`, `.nyvlt`, and `.nyvproj` imports remain supported.
 - Manual culling with ratings, pick/reject flags, color labels, and shortcuts.
 - Editable title, caption, creator, copyright, and keyword metadata saved inside
@@ -28,7 +28,7 @@ and photo-led; the editing capabilities remain client-side.
 ## Native File Formats
 
 - `.orm` - Print Recipe. Stores selected edit settings as a reusable recipe.
-- `.ormond` - Ormond Archive. Stores a full local session: image source, edit
+- `.ormond` - Intaglio Archive. Stores a full local session: image source, edit
   recipe, text overlay, metadata, watermark settings, export recipe, virtual
   copies, and restore state.
 - `.nyv` - Legacy recipe import.
@@ -66,9 +66,9 @@ pnpm test:e2e
 
 ## Project Structure
 
-- `app/page.tsx` - Ormond editorial home.
+- `app/page.tsx` - Intaglio editorial home.
 - `app/editor/page.tsx` - main darkroom workspace.
-- `app/presets/page.tsx` - Ormond Collections.
+- `app/presets/page.tsx` - Intaglio Collections.
 - `app/components` - editor controls, modals, WebGL canvas components, and panels.
 - `app/lib/brand.ts` - product naming, format, and storage-key constants.
 - `app/utils` - LUT parsing, reference matching, spline, and tutorial helpers.

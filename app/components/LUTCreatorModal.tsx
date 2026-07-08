@@ -228,12 +228,12 @@ export default function LUTCreatorModal({
               </p>
             </div>
           </div>
-          <button
+          <div role="button" tabIndex={0}
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition"
           >
             <IconX size={20} />
-          </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -257,16 +257,16 @@ export default function LUTCreatorModal({
               <label className="text-xs font-mono uppercase tracking-widest text-gray-500">
                 Quick Presets
               </label>
-              <button
+              <div role="button" tabIndex={0}
                 onClick={handleReset}
                 className="flex items-center gap-1 text-[10px] font-mono uppercase text-gray-500 hover:text-white transition"
               >
                 <IconRefresh size={12} /> Reset
-              </button>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {LUT_PRESETS.map((preset) => (
-                <button
+                <div role="button" tabIndex={0}
                   key={preset.name}
                   onClick={() => handlePreset(preset)}
                   className={`px-3 py-2 rounded-lg text-xs font-mono uppercase transition ${
@@ -276,7 +276,7 @@ export default function LUTCreatorModal({
                   }`}
                 >
                   {preset.name}
-                </button>
+                </div>
               ))}
             </div>
           </div>
@@ -425,18 +425,18 @@ export default function LUTCreatorModal({
 
         {/* Footer */}
         <div className="sticky bottom-0 flex gap-3 p-6 border-t border-white/5 bg-[#0a0a0a]">
-          <button
+          <div role="button" tabIndex={0}
             onClick={handleExportCube}
             className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition font-mono text-sm uppercase"
           >
             <IconDownload size={16} /> Export .cube
-          </button>
-          <button
+          </div>
+          <div role="button" tabIndex={0}
             onClick={handleApply}
             className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-violet-500 border border-violet-400 text-white hover:bg-violet-400 transition font-mono text-sm uppercase"
           >
             <IconWand size={16} /> Apply to Image
-          </button>
+          </div>
         </div>
       </div>
     </div>

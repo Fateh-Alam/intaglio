@@ -15,234 +15,7 @@ import {
 } from "lucide-react";
 import { BRAND, FORMAT, STORAGE_KEYS } from "../lib/brand";
 
-type Preset = {
-  id: string;
-  name: string;
-  description: string;
-  tags: string[];
-  settings: Record<string, unknown>;
-  source?: "built-in" | "imported";
-};
-
-// Built-in Ormond collections reuse the existing editor settings.
-const PRESETS: Preset[] = [
-  {
-    id: "noir",
-    name: "Morning Newspaper",
-    description:
-      "High contrast shadows, restrained highlights, and a black-and-white editorial print character.",
-    tags: ["Editorial", "B&W", "Archive"],
-    settings: {
-      contrast: 0.4,
-      brightness: -0.15,
-      tealOrange: 0,
-      temperature: -0.1,
-      tint: 0,
-      skinProtect: 0,
-      grain: 0.08,
-      vignette: 0.5,
-      halation: 0,
-      sharpness: 0.15,
-      dehaze: 0.2,
-      aberration: 0,
-      structure: 0.25,
-      filmBorder: false,
-      falseColor: false,
-      anamorphicDistortion: 0,
-      anamorphicStreaks: 0,
-      godLightStrength: 0,
-      godLightX: 0.5,
-      godLightY: 0.5,
-      lutTexture: null,
-      lutStrength: 0,
-      targetHue: 0,
-      hueShift: 0,
-      rotate: 0,
-      zoom: 1,
-      wiperActive: false,
-    },
-  },
-  {
-    id: "teal-orange",
-    name: "1968 Rome",
-    description:
-      "Warm stone, cool shade, and a gentle travel-journal separation.",
-    tags: ["Travel", "Warm", "Color"],
-    settings: {
-      contrast: 0.25,
-      brightness: 0.05,
-      tealOrange: 0.6,
-      temperature: 0.15,
-      tint: -0.05,
-      skinProtect: 0.8,
-      grain: 0.04,
-      vignette: 0.25,
-      halation: 0.15,
-      sharpness: 0.2,
-      dehaze: 0.15,
-      aberration: 0.002,
-      structure: 0.15,
-      filmBorder: false,
-      falseColor: false,
-      anamorphicDistortion: 0.05,
-      anamorphicStreaks: 0.1,
-      godLightStrength: 0,
-      godLightX: 0.5,
-      godLightY: 0.5,
-      lutTexture: null,
-      lutStrength: 0,
-      targetHue: 0,
-      hueShift: 0,
-      rotate: 0,
-      zoom: 1,
-      wiperActive: false,
-    },
-  },
-  {
-    id: "blade-runner",
-    name: "English Rain",
-    description:
-      "Muted contrast, lifted darks, and weathered color for overcast street photographs.",
-    tags: ["Muted", "Rain", "Street"],
-    settings: {
-      contrast: 0.15,
-      brightness: -0.1,
-      tealOrange: 0.35,
-      temperature: 0.25,
-      tint: -0.15,
-      skinProtect: 0.6,
-      grain: 0.12,
-      vignette: 0.3,
-      halation: 0.35,
-      sharpness: 0.05,
-      dehaze: -0.2,
-      aberration: 0.003,
-      structure: 0,
-      filmBorder: false,
-      falseColor: false,
-      anamorphicDistortion: 0.08,
-      anamorphicStreaks: 0.25,
-      godLightStrength: 0,
-      godLightX: 0.5,
-      godLightY: 0.5,
-      lutTexture: null,
-      lutStrength: 0,
-      targetHue: 0,
-      hueShift: 0,
-      rotate: 0,
-      zoom: 1,
-      wiperActive: false,
-    },
-  },
-  {
-    id: "golden-hour",
-    name: "Late Autumn",
-    description:
-      "Soft warmth, protected skin, and quiet glow for low afternoon light.",
-    tags: ["Warm", "Portrait", "Seasonal"],
-    settings: {
-      contrast: 0.1,
-      brightness: 0.12,
-      tealOrange: 0.25,
-      temperature: 0.35,
-      tint: 0.05,
-      skinProtect: 1.0,
-      grain: 0.02,
-      vignette: 0.15,
-      halation: 0.25,
-      sharpness: 0.1,
-      dehaze: 0.1,
-      aberration: 0,
-      structure: 0.1,
-      filmBorder: false,
-      falseColor: false,
-      anamorphicDistortion: 0,
-      anamorphicStreaks: 0,
-      godLightStrength: 0.4,
-      godLightX: 0.7,
-      godLightY: 0.3,
-      lutTexture: null,
-      lutStrength: 0,
-      targetHue: 0,
-      hueShift: 0,
-      rotate: 0,
-      zoom: 1,
-      wiperActive: false,
-    },
-  },
-  {
-    id: "wes-anderson",
-    name: "Museum Print",
-    description:
-      "Controlled color, clean detail, and a slightly softened gallery-print balance.",
-    tags: ["Gallery", "Soft", "Print"],
-    settings: {
-      contrast: 0.2,
-      brightness: 0.08,
-      tealOrange: 0.15,
-      temperature: 0.05,
-      tint: 0.08,
-      skinProtect: 0.9,
-      grain: 0.06,
-      vignette: 0.1,
-      halation: 0.1,
-      sharpness: 0.25,
-      dehaze: 0.25,
-      aberration: 0,
-      structure: 0.2,
-      filmBorder: true,
-      falseColor: false,
-      anamorphicDistortion: 0,
-      anamorphicStreaks: 0,
-      godLightStrength: 0,
-      godLightX: 0.5,
-      godLightY: 0.5,
-      lutTexture: null,
-      lutStrength: 0,
-      targetHue: 0,
-      hueShift: 0,
-      rotate: 0,
-      zoom: 1,
-      wiperActive: false,
-    },
-  },
-  {
-    id: "horror",
-    name: "Old Cinema",
-    description:
-      "Cooler shadows, deeper blacks, and a restrained theatrical edge.",
-    tags: ["Dark", "Cool", "Film"],
-    settings: {
-      contrast: 0.35,
-      brightness: -0.2,
-      tealOrange: 0.4,
-      temperature: -0.25,
-      tint: -0.1,
-      skinProtect: 0.3,
-      grain: 0.15,
-      vignette: 0.6,
-      halation: 0,
-      sharpness: 0,
-      dehaze: 0.3,
-      aberration: 0.004,
-      structure: 0.3,
-      filmBorder: false,
-      falseColor: false,
-      anamorphicDistortion: 0,
-      anamorphicStreaks: 0,
-      godLightStrength: 0,
-      godLightX: 0.5,
-      godLightY: 0.5,
-      lutTexture: null,
-      lutStrength: 0,
-      targetHue: 0,
-      hueShift: 0,
-      rotate: 0,
-      zoom: 1,
-      wiperActive: false,
-    },
-  },
-];
+import { PRESETS, Preset } from "../lib/presets";
 
 interface PresetCardProps {
   preset: Preset;
@@ -258,16 +31,19 @@ const PresetCard: React.FC<PresetCardProps> = ({
   onPreview,
   onToggleFavorite,
   isFavorite,
-}) => (
-  <article className="group relative border border-white/10 bg-[#080808] p-6 transition-all duration-500 hover:bg-[#0a0a0a] hover:border-amber-500/30">
+}) => {
+  const isIntaglio = preset.tags.includes("Intaglio-0");
+
+  return (
+  <article className={`group relative border transition-all duration-500 ${isIntaglio ? "border-[var(--intaglio-brass)]/30 bg-[#0d0c0a] hover:border-[var(--intaglio-brass)]" : "border-white/10 bg-[#080808] hover:bg-[#0a0a0a] hover:border-amber-500/30"} p-6`}>
     {/* Hover glow */}
     <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-      <div className="absolute -inset-24 bg-radial from-amber-900/20 via-transparent to-transparent blur-3xl" />
+      <div className={`absolute -inset-24 bg-radial ${isIntaglio ? "from-[var(--intaglio-brass)]/10" : "from-amber-900/20"} via-transparent to-transparent blur-3xl`} />
     </div>
 
     <div className="relative z-10">
       <div className="mb-4 flex items-start justify-between">
-        <h3 className="font-mono text-xl font-light tracking-wide text-white">
+        <h3 className={`font-mono text-xl font-light tracking-wide ${isIntaglio ? "text-[var(--intaglio-paper)]" : "text-white"}`}>
           {preset.name}
         </h3>
         <div className="flex gap-2">
@@ -297,20 +73,20 @@ const PresetCard: React.FC<PresetCardProps> = ({
         </div>
       </div>
 
-      <p className="mb-4 text-sm font-light leading-relaxed text-gray-500 group-hover:text-gray-400 transition-colors">
+      <p className={`mb-4 text-sm font-light leading-relaxed transition-colors ${isIntaglio ? "font-serif italic text-[rgba(231,223,208,0.7)] group-hover:text-[rgba(231,223,208,0.9)]" : "text-gray-500 group-hover:text-gray-400"}`}>
         {preset.description}
       </p>
 
       <div className="flex flex-wrap gap-2">
         {preset.source === "imported" && (
-          <span className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-cyan-300/80">
+          <span className="border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-300/80">
             Imported
           </span>
         )}
         {preset.tags.map((tag) => (
           <span
             key={tag}
-            className="border border-white/10 bg-black/40 px-3 py-1 font-mono text-[9px] uppercase tracking-[0.25em] text-gray-500"
+            className={`border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] ${tag === "Intaglio-0" ? "border-[var(--intaglio-brass)]/40 bg-[var(--intaglio-brass)]/10 text-[var(--intaglio-brass)] font-bold" : "border-white/10 bg-black/40 text-gray-500"}`}
           >
             {tag}
           </span>
@@ -318,7 +94,8 @@ const PresetCard: React.FC<PresetCardProps> = ({
       </div>
     </div>
   </article>
-);
+  );
+};
 
 const readPresetFile = (file: File) =>
   new Promise<Preset>((resolve, reject) => {
@@ -340,7 +117,7 @@ const readPresetFile = (file: File) =>
             file.name.replace(/\.(orm|nyv|json)$/i, "") ||
             "Imported Look",
           description:
-            parsed.description || "Imported local Ormond Print Recipe.",
+            parsed.description || "Imported local Intaglio Print Recipe.",
           tags: parsed.tags?.length ? parsed.tags : ["Imported"],
           settings,
           source: "imported",
@@ -440,7 +217,7 @@ export default function PresetsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `ormond-${preset.id}.${FORMAT.recipeExtension}`;
+    a.download = `intaglio-${preset.id}.${FORMAT.recipeExtension}`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -481,24 +258,24 @@ export default function PresetsPage() {
   };
 
   return (
-    <div className="ormond-page relative min-h-screen w-full overflow-x-hidden font-sans">
+    <div className="intaglio-page relative min-h-screen w-full overflow-x-hidden font-sans">
       {/* Film grain overlay */}
-      <div className="ormond-grain" />
+      <div className="intaglio-grain" />
 
       <div className="relative z-10">
         {/* Header */}
-        <nav className="fixed top-0 z-40 w-full border-b border-[var(--ormond-line)] bg-[#14130f]/80 backdrop-blur-md">
+        <nav className="fixed top-0 z-40 w-full border-b border-[var(--intaglio-line)] bg-[#14130f]/80 backdrop-blur-md">
           <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
             <Link href="/" className="flex items-center gap-3 group">
               <div className="relative h-8 w-8">
                 <Image
                   src="/logo.svg"
-                  alt="Ormond Logo"
+                  alt="Intaglio Logo"
                   fill
                   className="object-contain opacity-80 transition-opacity duration-300 group-hover:opacity-100"
                 />
               </div>
-              <span className="font-ormond-serif text-xl font-light tracking-wide text-[var(--ormond-paper)] transition-colors group-hover:text-white">
+              <span className="font-intaglio-serif text-xl font-light tracking-wide text-[var(--intaglio-paper)] transition-colors group-hover:text-white">
                 {BRAND.name}
               </span>
             </Link>
@@ -517,10 +294,10 @@ export default function PresetsPage() {
         <main className="mx-auto max-w-7xl px-6 pt-32 pb-20">
           {/* Header */}
           <div className="mb-16 text-center">
-            <span className="mb-6 inline-block border border-[var(--ormond-line)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--ormond-brass)]">
-              Ormond Collections
+            <span className="mb-6 inline-block border border-[var(--intaglio-line)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--intaglio-brass)]">
+              Intaglio Collections
             </span>
-            <h1 className="font-ormond-serif mb-8 text-5xl font-light text-[var(--ormond-paper)] md:text-7xl">
+            <h1 className="font-intaglio-serif mb-8 text-5xl font-light text-[var(--intaglio-paper)] md:text-7xl">
               Print Recipes
             </h1>
             <p className="mx-auto max-w-2xl text-lg font-light leading-relaxed text-[rgba(231,223,208,0.62)]">
@@ -573,7 +350,7 @@ export default function PresetsPage() {
                 <button
                   key={tag}
                   onClick={() => setActiveTag(tag)}
-                  className={`border px-3 py-2 font-mono text-[9px] uppercase tracking-[0.22em] transition ${
+                  className={`border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.22em] transition ${
                     activeTag === tag
                       ? "border-amber-500/45 bg-amber-500/10 text-amber-200"
                       : "border-white/10 bg-black/25 text-white/40 hover:border-white/25 hover:text-white/70"

@@ -3,7 +3,6 @@ import {
   Geist,
   Geist_Mono,
   Bebas_Neue,
-  Playfair_Display,
   Inter,
 } from "next/font/google";
 import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
@@ -27,11 +26,6 @@ const bebasNeue = Bebas_Neue({
   subsets: ["latin"],
 });
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-});
-
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -39,7 +33,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(BRAND.domain),
-  title: "Ormond - A Timeless Digital Darkroom",
+  title: "Intaglio - A Precision-Machined Digital Darkroom",
   description: BRAND.shortDescription,
   keywords: [
     "digital darkroom",
@@ -56,7 +50,7 @@ export const metadata: Metadata = {
   creator: BRAND.author,
   publisher: BRAND.author,
   openGraph: {
-    title: "Ormond - A Timeless Digital Darkroom",
+    title: "Intaglio - A Precision-Machined Digital Darkroom",
     description: BRAND.shortDescription,
     url: BRAND.domain,
     siteName: BRAND.name,
@@ -66,13 +60,13 @@ export const metadata: Metadata = {
         url: "/og-image.svg",
         width: 1200,
         height: 630,
-        alt: "Ormond - A Timeless Digital Darkroom",
+        alt: "Intaglio - A Precision-Machined Digital Darkroom",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ormond - A Timeless Digital Darkroom",
+    title: "Intaglio - A Precision-Machined Digital Darkroom",
     description: BRAND.shortDescription,
     images: ["/og-image.svg"],
   },
@@ -97,7 +91,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${playfair.variable} ${inter.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${inter.variable} antialiased`}
       >
         <ServiceWorkerRegister />
         {children}

@@ -77,19 +77,19 @@ export default function HistoryPanel({
           <IconClock size={14} className="text-amber-500" />
           Edit History
         </h3>
-        <button
+        <div role="button" tabIndex={0}
           onClick={onClearHistory}
           className="text-[10px] text-gray-500 hover:text-red-400 transition uppercase tracking-wider"
         >
           Clear
-        </button>
+        </div>
       </div>
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 p-3 border-b border-white/5 bg-black/20">
-        <button
+        <div role="button" tabIndex={0}
           onClick={onUndo}
-          disabled={currentIndex <= 0}
+          aria-disabled={currentIndex <= 0}
           className={`flex-1 py-1.5 flex items-center justify-center gap-2 rounded transition ${
             currentIndex > 0
               ? "bg-white/5 hover:bg-white/10 text-gray-200"
@@ -99,10 +99,10 @@ export default function HistoryPanel({
         >
           <IconArrowBackUp size={14} />
           <span className="text-[10px] font-mono uppercase">Undo</span>
-        </button>
-        <button
+        </div>
+        <div role="button" tabIndex={0}
           onClick={onRedo}
-          disabled={currentIndex >= history.length - 1}
+          aria-disabled={currentIndex >= history.length - 1}
           className={`flex-1 py-1.5 flex items-center justify-center gap-2 rounded transition ${
             currentIndex < history.length - 1
               ? "bg-white/5 hover:bg-white/10 text-gray-200"
@@ -112,7 +112,7 @@ export default function HistoryPanel({
         >
           <span className="text-[10px] font-mono uppercase">Redo</span>
           <IconArrowForwardUp size={14} />
-        </button>
+        </div>
       </div>
 
       {/* Virtual copy section */}
@@ -122,12 +122,12 @@ export default function HistoryPanel({
             <span className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
               Virtual Copies
             </span>
-            <button
+            <div role="button" tabIndex={0}
               onClick={onCreateBranch}
               className="text-[10px] text-amber-500 hover:text-amber-400 transition font-mono uppercase"
             >
               + New
-            </button>
+            </div>
           </div>
           <div className="space-y-1 max-h-24 overflow-y-auto">
             {branches.map((branch) => (
@@ -139,25 +139,25 @@ export default function HistoryPanel({
                     : "bg-white/5 hover:bg-white/10 border border-transparent"
                 }`}
               >
-                <button
+                <div role="button" tabIndex={0}
                   onClick={() => onRestoreBranch && onRestoreBranch(branch.id)}
-                  className="flex items-center gap-2 text-[11px] text-gray-300 hover:text-white transition flex-1 text-left"
+                  className="flex items-center gap-2 text-xs text-gray-300 hover:text-white transition flex-1 text-left"
                 >
                   <IconGitBranch size={12} className="text-cyan-500" />
                   <span className="truncate">{branch.name}</span>
-                </button>
-                <button
+                </div>
+                <div role="button" tabIndex={0}
                   onClick={() => onDiffBranch && onDiffBranch(branch.id)}
-                  className="px-1.5 py-1 text-[9px] font-mono uppercase text-cyan-400/70 hover:text-cyan-200 transition"
+                  className="px-1.5 py-1 text-[10px] font-mono uppercase text-cyan-400/70 hover:text-cyan-200 transition"
                 >
                   Diff
-                </button>
-                <button
+                </div>
+                <div role="button" tabIndex={0}
                   onClick={() => onDeleteBranch && onDeleteBranch(branch.id)}
                   className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-400 transition"
                 >
                   <IconX size={12} />
-                </button>
+                </div>
               </div>
             ))}
           </div>
@@ -167,13 +167,13 @@ export default function HistoryPanel({
       {/* Create virtual copy button */}
       {onCreateBranch && (!branches || branches.length === 0) && (
         <div className="p-3 border-b border-white/5">
-          <button
+          <div role="button" tabIndex={0}
             onClick={onCreateBranch}
             className="w-full py-2 flex items-center justify-center gap-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-mono uppercase hover:bg-cyan-500/20 transition"
           >
             <IconGitBranch size={14} />
             Create Virtual Copy
-          </button>
+          </div>
         </div>
       )}
 
@@ -188,7 +188,7 @@ export default function HistoryPanel({
             const isFuture = index > currentIndex;
 
             return (
-              <button
+              <div role="button" tabIndex={0}
                 key={state.id}
                 onClick={() => onJumpToState(index)}
                 className={`w-full text-left px-3 py-3 rounded-lg flex items-center gap-3 transition group ${
@@ -217,11 +217,11 @@ export default function HistoryPanel({
 
                 <div className="flex-1 min-w-0">
                   <div
-                    className={`text-[11px] font-medium truncate ${isActive ? "text-amber-100" : "text-gray-400 group-hover:text-gray-200"}`}
+                    className={`text-xs font-medium truncate ${isActive ? "text-amber-100" : "text-gray-400 group-hover:text-gray-200"}`}
                   >
                     {state.action}
                   </div>
-                  <div className="text-[9px] text-gray-600 mt-0.5 font-mono">
+                  <div className="text-[10px] text-gray-600 mt-0.5 font-mono">
                     {new Date(state.timestamp).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -235,7 +235,7 @@ export default function HistoryPanel({
                     <IconRestore size={12} className="text-amber-500/70" />
                   </div>
                 )}
-              </button>
+              </div>
             );
           })}
 

@@ -78,7 +78,7 @@ export default function CinematicTextControls({
         <div className="space-y-3">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs text-gray-400 font-medium">
+              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
                 <IconMovie size={14} className="inline mr-2" />
                 Title
               </label>
@@ -102,13 +102,13 @@ export default function CinematicTextControls({
                   subtitleText: e.target.value,
                 }))
               }
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition font-serif tracking-wide"
+              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] uppercase tracking-widest text-[var(--intaglio-paper)] font-mono placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
             />
           </div>
 
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-xs text-gray-400 font-medium">
+              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
                 <IconMapPin size={14} className="inline mr-2" />
                 Location/Date
               </label>
@@ -132,7 +132,7 @@ export default function CinematicTextControls({
                   dateText: e.target.value,
                 }))
               }
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition font-mono mb-2"
+              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition mb-2"
             />
             <input
               type="text"
@@ -144,7 +144,7 @@ export default function CinematicTextControls({
                   locationText: e.target.value,
                 }))
               }
-              className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition uppercase"
+              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition uppercase"
             />
           </div>
         </div>
@@ -152,7 +152,7 @@ export default function CinematicTextControls({
 
       {/* 2. Visual Style Presets */}
       <ControlGroup title="Visual Style">
-        <div className="grid grid-cols-3 gap-2 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
+        <div className="grid grid-cols-4 gap-1 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
           {[
             {
               id: "blade_runner",
@@ -263,7 +263,7 @@ export default function CinematicTextControls({
               tracking: 0.1,
             },
           ].map((style) => (
-            <button
+            <div role="button" tabIndex={0}
               key={style.id}
               onClick={() =>
                 setTextOverlay((prev) => ({
@@ -273,14 +273,14 @@ export default function CinematicTextControls({
                   letterSpacing: style.tracking,
                 }))
               }
-              className={`py-2 px-2 text-[9px] uppercase tracking-wider font-medium rounded-lg transition border flex flex-col items-center justify-center gap-1 ${
+              className={`py-1.5 px-1 text-[8px] font-mono uppercase tracking-widest transition border border-[var(--intaglio-line)] rounded-none flex flex-col items-center justify-center gap-1 ${
                 textOverlay.subtitleStyle === style.id
                   ? `bg-white/10 border-amber-500/50 ${style.color} ring-1 ring-amber-500/20`
                   : "bg-white/5 border-white/5 text-gray-500 hover:text-gray-300 hover:bg-white/10"
               }`}
             >
-              {style.label}
-            </button>
+              <span className="truncate w-full text-center">{style.label}</span>
+            </div>
           ))}
         </div>
       </ControlGroup>
@@ -289,7 +289,7 @@ export default function CinematicTextControls({
       <ControlGroup title="Typography">
         {/* Font Override Toggle */}
         <div className="flex items-center justify-between mb-3 px-1">
-          <label className="text-xs text-gray-400 font-medium">
+          <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
             Custom Typography
           </label>
           <Toggle
@@ -352,7 +352,7 @@ export default function CinematicTextControls({
                     customFontName: e.target.value,
                   }))
                 }
-                className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
+                className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
               />
             )}
 
@@ -377,7 +377,7 @@ export default function CinematicTextControls({
                   }
                 />
               </div>
-              <button
+              <div role="button" tabIndex={0}
                 onClick={() =>
                   setTextOverlay((prev) => ({
                     ...prev,
@@ -392,11 +392,11 @@ export default function CinematicTextControls({
                 }`}
               >
                 <IconItalic size={14} /> Italic
-              </button>
+              </div>
             </div>
 
             {/* Transform Row */}
-            <div className="flex bg-black/30 border border-white/10 rounded-lg p-1 gap-1">
+            <div className="flex bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none p-1 gap-1">
               {[
                 { id: "none", icon: <IconX size={14} /> },
                 {
@@ -412,7 +412,7 @@ export default function CinematicTextControls({
                   icon: <IconLetterCase size={14} />,
                 },
               ].map((opt) => (
-                <button
+                <div role="button" tabIndex={0}
                   key={opt.id}
                   onClick={() =>
                     setTextOverlay((prev) => ({
@@ -428,12 +428,12 @@ export default function CinematicTextControls({
                   }`}
                 >
                   {opt.icon}
-                </button>
+                </div>
               ))}
             </div>
             {/* Small Caps */}
             <div className="">
-              <button
+              <div role="button" tabIndex={0}
                 onClick={() =>
                   setTextOverlay((prev) => ({
                     ...prev,
@@ -450,7 +450,7 @@ export default function CinematicTextControls({
                 }`}
               >
                 <span className="font-variant-small-caps">Small Caps</span>
-              </button>
+              </div>
             </div>
           </div>
         )}

@@ -110,7 +110,7 @@ export default function ReferenceViewer({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <button
+          <div role="button" tabIndex={0}
             onClick={() => setIsPinned(!isPinned)}
             className={`p-1.5 rounded-lg transition ${
               isPinned
@@ -120,13 +120,13 @@ export default function ReferenceViewer({
             title={isPinned ? "Unpin" : "Pin position"}
           >
             {isPinned ? <IconPinFilled size={14} /> : <IconPin size={14} />}
-          </button>
-          <button
+          </div>
+          <div role="button" tabIndex={0}
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition"
           >
             <IconX size={14} />
-          </button>
+          </div>
         </div>
       </div>
 
@@ -167,27 +167,27 @@ export default function ReferenceViewer({
       {/* Controls */}
       <div className="flex items-center justify-between px-3 py-2 bg-black/60 border-t border-white/5">
         <div className="flex items-center gap-1">
-          <button
+          <div role="button" tabIndex={0}
             onClick={handleZoomOut}
-            disabled={zoom <= 0.5}
+            aria-disabled={zoom <= 0.5}
             className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <IconZoomOut size={14} />
-          </button>
+          </div>
           <span className="text-[10px] text-gray-500 w-10 text-center">
             {Math.round(zoom * 100)}%
           </span>
-          <button
+          <div role="button" tabIndex={0}
             onClick={handleZoomIn}
-            disabled={zoom >= 3}
+            aria-disabled={zoom >= 3}
             className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <IconZoomIn size={14} />
-          </button>
+          </div>
         </div>
 
         {originalUrl && (
-          <button
+          <div role="button" tabIndex={0}
             onClick={() => setShowOriginal(!showOriginal)}
             className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono uppercase transition ${
               showOriginal
@@ -197,7 +197,7 @@ export default function ReferenceViewer({
           >
             <IconRefresh size={12} />
             {showOriginal ? "Original" : "Reference"}
-          </button>
+          </div>
         )}
 
         {!referenceUrl && (

@@ -292,12 +292,12 @@ export default function PresetCreatorModal({
         <div className="absolute -top-20 -right-20 w-48 h-48 rounded-full blur-[100px] bg-amber-500/20" />
 
         {/* Close Button */}
-        <button
+        <div role="button" tabIndex={0}
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-all text-gray-400 hover:text-white"
         >
           <IconX size={18} />
-        </button>
+        </div>
 
         {/* Header */}
         <div className="p-8 pb-0">
@@ -305,7 +305,7 @@ export default function PresetCreatorModal({
             <IconDeviceFloppy size={28} />
           </div>
           <h2 className="text-2xl font-light text-white mb-2">
-            Create Ormond Print Recipe
+            Create Intaglio Print Recipe
           </h2>
           <p className="text-sm font-mono uppercase tracking-[0.2em] text-amber-500 mb-4">
             {step === 1
@@ -332,9 +332,9 @@ export default function PresetCreatorModal({
                     <strong className="text-amber-400">
                       .{FORMAT.recipeExtension}
                     </strong>{" "}
-                    file is an Ormond Print Recipe. It stores selected edit
+                    file is an Intaglio Print Recipe. It stores selected edit
                     settings so you can carry the same treatment to other
-                    photographs. Use an Ormond Archive{" "}
+                    photographs. Use an Intaglio Archive{" "}
                     <strong className="text-cyan-300">
                       .{FORMAT.archiveExtension}
                     </strong>{" "}
@@ -371,12 +371,12 @@ export default function PresetCreatorModal({
               </div>
             </div>
 
-            <button
+            <div role="button" tabIndex={0}
               onClick={() => setStep(2)}
               className="w-full py-4 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25 transition flex items-center justify-center gap-2"
             >
               Next: Select Settings <IconChevronRight size={16} />
-            </button>
+            </div>
           </div>
         )}
 
@@ -388,19 +388,19 @@ export default function PresetCreatorModal({
                 Choose which settings to include:
               </p>
               <div className="flex gap-2 text-[10px] font-mono uppercase">
-                <button
+                <div role="button" tabIndex={0}
                   onClick={handleSelectAll}
                   className="text-amber-500 hover:underline"
                 >
                   All
-                </button>
+                </div>
                 <span className="text-gray-600">|</span>
-                <button
+                <div role="button" tabIndex={0}
                   onClick={handleSelectNone}
                   className="text-gray-500 hover:underline"
                 >
                   None
-                </button>
+                </div>
               </div>
             </div>
 
@@ -408,7 +408,7 @@ export default function PresetCreatorModal({
               {SETTING_CATEGORIES.map((category) => {
                 const isSelected = selectedCategories.includes(category.id);
                 return (
-                  <button
+                  <div role="button" tabIndex={0}
                     key={category.id}
                     onClick={() => handleToggleCategory(category.id)}
                     className={`w-full p-3 rounded-xl border text-left transition ${
@@ -424,7 +424,7 @@ export default function PresetCreatorModal({
                         >
                           {category.label}
                         </p>
-                        <p className="text-[11px] text-gray-500">
+                        <p className="text-xs text-gray-500">
                           {category.description}
                         </p>
                       </div>
@@ -440,21 +440,21 @@ export default function PresetCreatorModal({
                         )}
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
 
             <div className="flex gap-3 pt-4">
-              <button
+              <div role="button" tabIndex={0}
                 onClick={() => setStep(1)}
                 className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition"
               >
                 Back
-              </button>
-              <button
+              </div>
+              <div role="button" tabIndex={0}
                 onClick={() => setStep(3)}
-                disabled={selectedCategories.length === 0}
+                aria-disabled={selectedCategories.length === 0}
                 className={`flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest transition flex items-center justify-center gap-2 ${
                   selectedCategories.length > 0
                     ? "bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25"
@@ -462,7 +462,7 @@ export default function PresetCreatorModal({
                 }`}
               >
                 Next <IconChevronRight size={16} />
-              </button>
+              </div>
             </div>
           </div>
         )}
@@ -513,7 +513,7 @@ export default function PresetCreatorModal({
                 </code>{" "}
                 file. To apply it later, choose Load .{FORMAT.recipeExtension}{" "}
                 in the sidebar or drag the file onto the editor. Full sessions
-                are saved as Ormond Archive{" "}
+                are saved as Intaglio Archive{" "}
                 <code className="bg-blue-500/20 px-1 rounded">
                   .{FORMAT.archiveExtension}
                 </code>{" "}
@@ -522,18 +522,18 @@ export default function PresetCreatorModal({
             </div>
 
             <div className="flex gap-3">
-              <button
+              <div role="button" tabIndex={0}
                 onClick={() => setStep(2)}
                 className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition"
               >
                 Back
-              </button>
-              <button
+              </div>
+              <div role="button" tabIndex={0}
                 onClick={handleSave}
                 className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 transition flex items-center justify-center gap-2"
               >
                 <IconDeviceFloppy size={16} /> Save Recipe
-              </button>
+              </div>
             </div>
           </div>
         )}

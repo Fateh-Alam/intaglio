@@ -60,133 +60,120 @@ export default function TutorialModal({
   return (
     <div
       className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-all duration-500 ease-out ${
-        showContent ? "opacity-100" : "opacity-0"
+        showContent ? "opacity-100 backdrop-blur-sm" : "opacity-0"
       }`}
       onClick={onClose}
     >
-      {/* Backdrop with organic blur */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" />
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60" />
 
-      {/* Modal */}
+      {/* Modal - Glassmorphic Redesign */}
       <div
-        className={`relative w-full max-w-md max-h-[80vh] overflow-y-auto bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl transform transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`relative w-full max-w-lg max-h-[85vh] overflow-hidden bg-[#0d0c0a]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8)] transform transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           showContent
-            ? "scale-100 translate-y-0 opacity-100"
-            : "scale-90 translate-y-12 opacity-0"
+            ? "translate-y-0 scale-100 opacity-100"
+            : "translate-y-12 scale-95 opacity-0"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Organic Glow Effect - breathing animation */}
-        <div
-          className="absolute -top-20 -right-20 w-48 h-48 rounded-full blur-[100px] animate-pulse"
-          style={{
-            backgroundColor: content.accentColor,
-            opacity: 0.25,
-            animation: "breathe 4s ease-in-out infinite",
-          }}
-        />
+        {/* Subtle top glow */}
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--intaglio-brass)]/30 to-transparent" />
 
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-all duration-300 text-gray-400 hover:text-white hover:rotate-90"
-        >
-          <IconX size={18} />
-        </button>
+        <div className="flex flex-col max-h-[85vh]">
+          {/* Header */}
+          <div className="relative p-8 pb-6 flex items-start justify-between">
+            <div className="flex gap-5">
+              {/* Icon Container */}
+              <div className="flex-shrink-0 flex items-center justify-center w-14 h-14 rounded-full border border-white/10 bg-white/5 text-[var(--intaglio-brass)] shadow-inner">
+                {content.icon}
+              </div>
+              
+              <div>
+                <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-[var(--intaglio-brass)]/70 mb-1">
+                  {content.subtitle}
+                </p>
+                <h2 className="text-2xl font-serif tracking-wide text-white mb-2">
+                  {content.title}
+                </h2>
+                <p className="text-[13px] text-gray-400 leading-relaxed max-w-md">
+                  {content.description}
+                </p>
+              </div>
+            </div>
 
-        {/* Header */}
-        <div className="relative p-8 pb-0">
-          {/* Floating Icon Badge */}
-          <div
-            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-6"
-            style={{
-              backgroundColor: `${content.accentColor}15`,
-              color: content.accentColor,
-              animation: "float 3s ease-in-out infinite",
-            }}
-          >
-            {content.icon}
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full border border-transparent hover:bg-white/10 transition-all duration-300 text-gray-500 hover:text-white"
+            >
+              <IconX size={18} />
+            </button>
           </div>
 
-          {/* Title with fade */}
-          <h2 className="text-2xl font-light text-white mb-2">
-            {content.title}
-          </h2>
-          <p
-            className="text-sm font-mono uppercase tracking-[0.2em] mb-4"
-            style={{ color: content.accentColor }}
-          >
-            {content.subtitle}
-          </p>
+          <div className="overflow-y-auto custom-scrollbar flex-1 pb-8">
+            {/* Feature-Specific Animation container */}
+            <div className="relative mx-8 my-4 h-48 rounded-lg border border-white/5 bg-black/40 overflow-hidden shadow-inner">
+              <OrganicDemo featureId={content.id} color={content.accentColor} />
+            </div>
 
-          {/* Description */}
-          <p className="text-gray-400 leading-relaxed">{content.description}</p>
-        </div>
-
-        {/* Feature-Specific Organic Animation */}
-        <div className="relative mx-8 my-6 h-40 rounded-xl overflow-hidden border border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent">
-          <OrganicDemo featureId={content.id} color={content.accentColor} />
-        </div>
-
-        {/* Tips Section */}
-        <div className="px-8 pb-6">
-          <div className="flex items-center gap-2 mb-4 text-gray-500">
-            <IconBulb size={16} className="animate-pulse" />
-            <span className="text-xs font-mono uppercase tracking-widest">
-              Quick Tips
-            </span>
-          </div>
-          <ul className="space-y-3">
-            {content.tips.map((tip, index) => (
-              <li
-                key={index}
-                className="flex items-start gap-3 text-sm text-gray-400 transition-all duration-500"
-                style={{
-                  opacity: showContent ? 1 : 0,
-                  transform: showContent
-                    ? "translateX(0)"
-                    : "translateX(-20px)",
-                  transitionDelay: `${300 + index * 150}ms`,
-                }}
-              >
-                <IconChevronRight
-                  size={14}
-                  className="mt-1 shrink-0 transition-transform duration-300 hover:translate-x-1"
-                  style={{ color: content.accentColor }}
-                />
-                <span>{tip}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Plain English Section */}
-          {content.plainEnglish && (
-            <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
-              <div className="flex items-center gap-2 mb-2 text-gray-400">
-                <span className="text-xs font-mono uppercase tracking-widest">
-                  In Plain English
+            {/* Tips Section */}
+            <div className="px-8 mt-8">
+              <div className="flex items-center gap-2 mb-4">
+                <IconBulb size={14} className="text-[var(--intaglio-brass)]" />
+                <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
+                  Quick Tips
                 </span>
               </div>
-              <p className="text-sm text-gray-300 leading-relaxed italic">
-                &ldquo;{content.plainEnglish}&rdquo;
-              </p>
-            </div>
-          )}
-        </div>
+              <ul className="space-y-3">
+                {content.tips.map((tip, index) => (
+                  <li
+                    key={index}
+                    className="flex items-start gap-3 text-[13px] text-gray-300 transition-all duration-500"
+                    style={{
+                      opacity: showContent ? 1 : 0,
+                      transform: showContent
+                        ? "translateX(0)"
+                        : "translateX(-20px)",
+                      transitionDelay: `${300 + index * 150}ms`,
+                    }}
+                  >
+                    <IconChevronRight
+                      size={14}
+                      className="mt-0.5 shrink-0 text-[var(--intaglio-brass)]"
+                    />
+                    <span className="leading-relaxed">{tip}</span>
+                  </li>
+                ))}
+              </ul>
 
-        {/* Footer */}
-        <div className="px-8 pb-8">
-          <button
-            onClick={onClose}
-            className="w-full py-4 rounded-xl font-mono text-sm uppercase tracking-widest transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] hover:shadow-lg"
-            style={{
-              backgroundColor: `${content.accentColor}15`,
-              color: content.accentColor,
-              border: `1px solid ${content.accentColor}30`,
-            }}
-          >
-            Got It!
-          </button>
+              {/* Plain English Section */}
+              {content.plainEnglish && (
+                <div className="mt-8 p-5 rounded-lg bg-white/[0.02] border border-white/5 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[var(--intaglio-brass)]/50" />
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--intaglio-brass)]">
+                      In Plain English
+                    </span>
+                  </div>
+                  <p className="text-[13px] text-gray-400 leading-relaxed italic font-serif">
+                    "{content.plainEnglish}"
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="px-8 pb-8 pt-4">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={onClose}
+              className="w-full py-4 text-center border border-[var(--intaglio-line)] bg-[#161410] text-[var(--intaglio-paper)] font-mono text-[10px] uppercase tracking-widest transition-colors hover:bg-[var(--intaglio-brass)] hover:text-[#0d0c0a] cursor-pointer"
+            >
+              Acknowledge
+            </div>
+          </div>
         </div>
       </div>
 
@@ -575,7 +562,7 @@ function OrganicDemo({
                 className="w-14 h-10 rounded bg-black/40 mb-2"
                 style={{ boxShadow: `inset 0 0 20px ${film.bg}30` }}
               />
-              <span className="text-[9px] text-gray-400 font-mono">
+              <span className="text-[10px] text-gray-400 font-mono">
                 {film.name}
               </span>
             </div>
@@ -602,7 +589,7 @@ function OrganicDemo({
           >
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent" />
           </div>
-          <span className="text-[9px] text-gray-500 mt-2 block">Grain</span>
+          <span className="text-[10px] text-gray-500 mt-2 block">Grain</span>
         </div>
 
         {/* Halation */}
@@ -616,7 +603,7 @@ function OrganicDemo({
               }}
             />
           </div>
-          <span className="text-[9px] text-gray-500 mt-2 block">Halation</span>
+          <span className="text-[10px] text-gray-500 mt-2 block">Halation</span>
         </div>
       </div>
     );
@@ -837,7 +824,7 @@ function OrganicDemo({
                 className="w-2.5 h-2.5 rounded-full"
                 style={{ backgroundColor: c.color }}
               />
-              <span className="text-[9px] text-gray-400">{c.label}</span>
+              <span className="text-[10px] text-gray-400">{c.label}</span>
             </div>
           ))}
         </div>
@@ -863,12 +850,12 @@ function OrganicDemo({
 // Helper component for manual tutorial trigger
 export function TutorialTrigger({ onClick }: { onClick: () => void }) {
   return (
-    <button
+    <div role="button" tabIndex={0}
       onClick={onClick}
       className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white transition-all duration-300 hover:scale-110 hover:rotate-12"
       title="View tutorial"
     >
       <IconInfoCircle size={14} />
-    </button>
+    </div>
   );
 }

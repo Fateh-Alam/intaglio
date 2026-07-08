@@ -1,38 +1,38 @@
 export const BRAND = {
-  name: "Ormond",
-  productName: "Ormond",
-  descriptor: "A timeless digital darkroom.",
+  name: "Intaglio",
+  productName: "Intaglio",
+  descriptor: "An elite, precision-machined digital darkroom.",
   shortDescription:
-    "A quiet local-first darkroom for photographs that deserve patience.",
-  domain: "https://ormond.app",
-  author: "Ormond",
+    "A razor-sharp, heavy digital darkroom for photographs built for absolute, permanent ownership.",
+  domain: "https://intaglio.app",
+  author: "Intaglio",
 } as const;
 
 export const FORMAT = {
-  recipeExtension: "orm",
-  archiveExtension: "ormond",
-  legacyRecipeExtensions: ["nyv", "json"],
-  legacyArchiveExtensions: ["nyvlt", "nyvproj"],
+  recipeExtension: "int",
+  archiveExtension: "intaglio",
+  legacyRecipeExtensions: ["orm", "nyv", "json"],
+  legacyArchiveExtensions: ["ormond", "nyvlt", "nyvproj"],
   recipeName: "Print Recipe",
-  archiveName: "Ormond Archive",
+  archiveName: "Intaglio Archive",
   legacyRecipeName: "Legacy Recipe",
   legacyArchiveName: "Legacy Session",
-  appId: "ormond-darkroom",
-  legacyAppIds: ["nyvarra-studio"],
+  appId: "intaglio-darkroom",
+  legacyAppIds: ["ormond-darkroom", "nyvarra-studio"],
   version: "1.0",
-  archiveMimeType: "application/x-ormond-archive",
-  legacyArchiveMimeType: "application/x-nyvarra-vault",
+  archiveMimeType: "application/x-intaglio-archive",
+  legacyArchiveMimeType: "application/x-ormond-archive",
 } as const;
 
 export const STORAGE_KEYS = {
-  presetPreview: "ormond_preset_preview",
-  legacyPresetPreview: "nyvarra_preset_preview",
-  presetFavorites: "ormond_preset_favorites",
-  legacyPresetFavorites: "nyvarra_preset_favorites",
-  importedPresets: "ormond_imported_presets",
-  legacyImportedPresets: "nyvarra_imported_presets",
-  tutorialsSeen: "ormond_tutorials_seen",
-  legacyTutorialsSeen: "nyvarra_tutorials_seen",
+  presetPreview: "intaglio_preset_preview",
+  legacyPresetPreview: "ormond_preset_preview",
+  presetFavorites: "intaglio_preset_favorites",
+  legacyPresetFavorites: "ormond_preset_favorites",
+  importedPresets: "intaglio_imported_presets",
+  legacyImportedPresets: "ormond_imported_presets",
+  tutorialsSeen: "intaglio_tutorials_seen",
+  legacyTutorialsSeen: "ormond_tutorials_seen",
 } as const;
 
 export const ROUTE_LABELS = {

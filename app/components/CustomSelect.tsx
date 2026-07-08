@@ -44,10 +44,10 @@ const CustomSelect = ({
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      <button
-        type="button"
+      <div role="button" tabIndex={0}
+        
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-black/30 border border-white/10 rounded-lg pl-3 pr-2 py-2 text-xs flex items-center justify-between transition-colors focus:outline-none focus:border-amber-500/50 hover:bg-white/5 ${
+        className={`w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none pl-3 pr-2 py-2 text-sm flex items-center justify-between transition-colors focus:outline-none focus:border-amber-500/50 hover:bg-white/5 ${
           isOpen ? "border-amber-500/50 bg-white/5" : ""
         }`}
       >
@@ -62,20 +62,20 @@ const CustomSelect = ({
             isOpen ? "rotate-180 text-amber-500" : ""
           }`}
         />
-      </button>
+      </div>
 
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-gray-900/95 backdrop-blur-xl border border-white/10 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
           <div className="py-1">
             {options.map((option) => (
-              <button
+              <div role="button" tabIndex={0}
                 key={option.value}
                 onClick={() => {
                   onChange(option.value);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between group transition-colors ${
+                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between group transition-colors ${
                   option.value === value
                     ? "bg-amber-500/10 text-amber-400"
                     : "text-gray-300 hover:bg-white/10 hover:text-white"
@@ -83,10 +83,10 @@ const CustomSelect = ({
               >
                 <span className="truncate">{option.label}</span>
                 {option.value === value && <IconCheck size={12} />}
-              </button>
+              </div>
             ))}
             {options.length === 0 && (
-              <div className="px-3 py-2 text-xs text-gray-500 text-center">
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">
                 No options
               </div>
             )}
