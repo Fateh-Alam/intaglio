@@ -39,7 +39,7 @@ export default function MobileLimitationModal({
               <div className="intaglio-grain absolute" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="relative z-10 border border-[var(--intaglio-line)] bg-black/20 p-3">
-                  <IconDeviceLaptop size={32} className="text-[var(--intaglio-brass)]" />
+                  <IconDeviceLaptop className="intaglio-icon text-[var(--intaglio-brass)]"/>
                 </div>
               </div>
             </div>
@@ -75,7 +75,7 @@ export default function MobileLimitationModal({
               onClick={onClose}
               className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors"
             >
-              <IconX size={20} />
+              <IconX className="intaglio-icon"/>
             </div>
           </motion.div>
         </div>

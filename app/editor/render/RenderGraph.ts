@@ -24,6 +24,10 @@ export class RenderGraph {
     this.passes.push(pass);
   }
 
+  public getPasses() {
+    return this.passes;
+  }
+
   public render(
     renderer: THREE.WebGLRenderer,
     settings: EditorSettings,
@@ -32,15 +36,17 @@ export class RenderGraph {
   ) {
     let currentInput: THREE.Texture | THREE.WebGLRenderTarget = inputTexture;
 
+    // First, update all uniforms so passes can decide if they are enabled
+    for (const pass of this.passes) {
+      pass.updateUniforms(settings);
+    }
+
     // Filter enabled passes
     const activePasses = this.passes.filter(pass => pass.enabled);
 
     for (let i = 0; i < activePasses.length; i++) {
       const pass = activePasses[i];
       const isLast = i === activePasses.length - 1;
-
-      // Ensure uniforms are updated with latest state
-      pass.updateUniforms(settings);
 
       const writeBuffer = isLast ? (finalTarget || null) : this.pingPongTarget.write;
 
@@ -57,5 +63,13 @@ export class RenderGraph {
   public dispose() {
     this.passes.forEach(pass => pass.dispose());
     this.pingPongTarget.dispose();
+  }
+
+  public setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number) {
+    this.passes.forEach(pass => pass.setViewOffset(fullWidth, fullHeight, x, y, width, height));
+  }
+
+  public clearViewOffset() {
+    this.passes.forEach(pass => pass.clearViewOffset());
   }
 }

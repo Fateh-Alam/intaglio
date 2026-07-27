@@ -178,29 +178,8 @@ const SETTING_CATEGORIES: SettingCategory[] = [
   {
     id: "masking",
     label: "Masking",
-    description: "Radial, linear, and luminosity masks",
-    keys: [
-      "radialMaskEnabled",
-      "radialMaskX",
-      "radialMaskY",
-      "radialMaskRadius",
-      "radialMaskFeather",
-      "radialMaskInvert",
-      "radialMaskExposure",
-      "radialMaskContrast",
-      "radialMaskSaturation",
-      "linearMaskEnabled",
-      "linearMaskAngle",
-      "linearMaskPosition",
-      "linearMaskFeather",
-      "linearMaskExposure",
-      "linearMaskContrast",
-      "luminosityMaskEnabled",
-      "luminosityMaskTarget",
-      "luminosityMaskRange",
-      "luminosityMaskExposure",
-      "luminosityMaskSaturation",
-    ],
+    description: "Layer adjustments and mask stacks",
+    keys: ["adjustmentLayers", "masks"],
   },
 ];
 
@@ -296,13 +275,13 @@ export default function PresetCreatorModal({
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-all text-gray-400 hover:text-white"
         >
-          <IconX size={18} />
+          <IconX className="intaglio-icon"/>
         </div>
 
         {/* Header */}
         <div className="p-8 pb-0">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-6 bg-amber-500/15 text-amber-500">
-            <IconDeviceFloppy size={28} />
+            <IconDeviceFloppy className="intaglio-icon"/>
           </div>
           <h2 className="text-2xl font-light text-white mb-2">
             Create Intaglio Print Recipe
@@ -322,10 +301,7 @@ export default function PresetCreatorModal({
             {/* Explanation */}
             <div className="p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-start gap-3">
-                <IconInfoCircle
-                  className="text-amber-500 shrink-0 mt-0.5"
-                  size={18}
-                />
+                <IconInfoCircle className="intaglio-icon text-amber-500 shrink-0 mt-0.5"/>
                 <div>
                   <p className="text-sm text-gray-300 leading-relaxed">
                     A{" "}
@@ -375,7 +351,7 @@ export default function PresetCreatorModal({
               onClick={() => setStep(2)}
               className="w-full py-4 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25 transition flex items-center justify-center gap-2"
             >
-              Next: Select Settings <IconChevronRight size={16} />
+              Next: Select Settings <IconChevronRight className="intaglio-icon"/>
             </div>
           </div>
         )}
@@ -436,7 +412,7 @@ export default function PresetCreatorModal({
                         }`}
                       >
                         {isSelected && (
-                          <IconCheck size={14} className="text-black" />
+                          <IconCheck className="intaglio-icon text-black"/>
                         )}
                       </div>
                     </div>
@@ -461,7 +437,7 @@ export default function PresetCreatorModal({
                     : "bg-gray-800 text-gray-600 border border-gray-700 cursor-not-allowed"
                 }`}
               >
-                Next <IconChevronRight size={16} />
+                Next <IconChevronRight className="intaglio-icon"/>
               </div>
             </div>
           </div>
@@ -532,7 +508,7 @@ export default function PresetCreatorModal({
                 onClick={handleSave}
                 className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 transition flex items-center justify-center gap-2"
               >
-                <IconDeviceFloppy size={16} /> Save Recipe
+                <IconDeviceFloppy className="intaglio-icon"/> Save Recipe
               </div>
             </div>
           </div>

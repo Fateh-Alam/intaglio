@@ -4,7 +4,7 @@
 import { motion, MotionValue, useTransform } from "framer-motion";
 import { ReactNode } from "react";
 import Link from "next/link";
-import { Camera, BookOpen } from "lucide-react";
+import { IconCamera, IconBook } from "@tabler/icons-react";
 
 function ContentBlock({ 
   scrollY, 
@@ -106,11 +106,11 @@ export function JourneyContent({ scrollY }: { scrollY: MotionValue<number> }) {
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/editor" className="intaglio-button intaglio-button-primary px-8 py-4 text-sm">
               Open Darkroom
-              <Camera size={16} />
+              <IconCamera className="intaglio-icon"/>
             </Link>
             <Link href="/presets" className="intaglio-button px-8 py-4 text-sm">
               View Recipes
-              <BookOpen size={16} />
+              <IconBook className="intaglio-icon"/>
             </Link>
           </div>
         </div>

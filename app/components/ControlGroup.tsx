@@ -18,12 +18,12 @@ const ControlGroup = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="relative border-b border-white/5 bg-transparent transition-colors hover:bg-white/[0.02]">
+    <div className="relative border-b border-[var(--intaglio-line)] bg-transparent transition-colors hover:bg-white/[0.02]">
       <div role="button" tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
         className="group flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <h3 className="flex items-center gap-2 text-xs font-medium text-white/70 transition-colors group-hover:text-white">
+        <h3 className="flex items-center gap-2 intaglio-label text-white/70 transition-colors group-hover:text-white">
           {icon && <span className="text-white/40 transition-colors group-hover:text-white/80">{icon}</span>}
           {title}
         </h3>

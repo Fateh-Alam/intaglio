@@ -28,7 +28,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Use contrast sparingly — a little goes a long way",
       "Watch your histogram to avoid clipping",
     ],
-    icon: <IconSun size={28} />,
+    icon: <IconSun className="intaglio-icon"/>,
     accentColor: "#f59e0b",
   },
 
@@ -43,7 +43,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Tint corrects green/magenta color casts",
       "Color separation can be subtle and still readable",
     ],
-    icon: <IconPalette size={28} />,
+    icon: <IconPalette className="intaglio-icon"/>,
     accentColor: "#a855f7",
   },
 
@@ -58,7 +58,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "S-curves add contrast, inverse-S reduces it",
       "Use RGB channels for creative color grading",
     ],
-    icon: <IconChartLine size={28} />,
+    icon: <IconChartLine className="intaglio-icon"/>,
     accentColor: "#3b82f6",
   },
 
@@ -73,7 +73,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Midtones: Affect skin tones and general color",
       "Highlights: Add warmth or cool to bright areas",
     ],
-    icon: <IconCircles size={28} />,
+    icon: <IconCircles className="intaglio-icon"/>,
     accentColor: "#a855f7",
   },
 
@@ -88,7 +88,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Red/Orange channels affect skin tones",
       "Shift hues for creative color transformations",
     ],
-    icon: <IconCircle size={28} />,
+    icon: <IconCircle className="intaglio-icon"/>,
     accentColor: "#06b6d4",
   },
 
@@ -103,7 +103,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "CineStill 800T: Tungsten halation",
       "Velvia 50: Punchy, saturated landscapes",
     ],
-    icon: <IconMovie size={28} />,
+    icon: <IconMovie className="intaglio-icon"/>,
     accentColor: "#f97316",
   },
 
@@ -118,7 +118,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Halation creates that dreamy highlight glow",
       "Vignette draws focus to your subject",
     ],
-    icon: <IconSparkles size={28} />,
+    icon: <IconSparkles className="intaglio-icon"/>,
     accentColor: "#06b6d4",
   },
 
@@ -133,7 +133,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Linear gradients: Ideal for sky/ground blends",
       "Luminosity: Target shadows, mids, or highlights",
     ],
-    icon: <IconLayersIntersect size={28} />,
+    icon: <IconLayersIntersect className="intaglio-icon"/>,
     accentColor: "#f97316",
   },
 
@@ -148,7 +148,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Add date/location for documentary style",
       "Adjust opacity for seamless integration",
     ],
-    icon: <IconTypography size={28} />,
+    icon: <IconTypography className="intaglio-icon"/>,
     accentColor: "#22c55e",
   },
 
@@ -163,7 +163,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Lens distortion fixes barrel/pincushion",
       "Tilt-shift creates selective focus",
     ],
-    icon: <IconArrowsMaximize size={28} />,
+    icon: <IconArrowsMaximize className="intaglio-icon"/>,
     accentColor: "#f59e0b",
   },
 
@@ -178,7 +178,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Click any history state to jump back",
       "Clear history to start fresh",
     ],
-    icon: <IconHistory size={28} />,
+    icon: <IconHistory className="intaglio-icon"/>,
     accentColor: "#f43f5e",
   },
 
@@ -193,7 +193,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
       "Click Compare to activate split-screen",
       "Drag the wiper to reveal before/after",
     ],
-    icon: <IconCamera size={28} />,
+    icon: <IconCamera className="intaglio-icon"/>,
     accentColor: "#22c55e",
   },
 
@@ -211,7 +211,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
     ],
     plainEnglish:
       "Think of it like a heat map for light. The colors aren't real — they're a guide showing you where your image is properly exposed (green) and where you're losing detail in shadows (blue) or highlights (red).",
-    icon: <IconChartLine size={28} />,
+    icon: <IconChartLine className="intaglio-icon"/>,
     accentColor: "#ef4444",
   },
 };

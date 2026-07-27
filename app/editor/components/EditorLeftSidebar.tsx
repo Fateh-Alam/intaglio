@@ -36,12 +36,12 @@ export function EditorLeftSidebar() {
               className={`group relative flex h-14 w-14 cursor-pointer flex-col items-center justify-center gap-1 transition-colors duration-200 ${
                 isActive
                   ? "bg-[#161410] text-[var(--intaglio-brass)]"
-                  : "text-[rgba(231,223,208,0.3)] hover:bg-[#13110e] hover:text-[rgba(231,223,208,0.8)]"
+                  : "text-white/30 hover:bg-[#13110e] hover:text-white/80"
               }`}
             >
               <item.icon size={20} strokeWidth={isActive ? 1.5 : 1.25} className={`transition-transform duration-300 group-active:scale-95`} />
               
-              <span className={`text-[9px] font-mono tracking-widest uppercase transition-opacity duration-200 ${isActive ? "opacity-0" : "opacity-0 group-hover:opacity-100 absolute left-16 bg-[#0a0908] px-3 py-1.5 border border-[var(--intaglio-line)] z-50 pointer-events-none whitespace-nowrap shadow-2xl text-[var(--intaglio-paper)]"}`}>
+              <span className={`intaglio-label transition-opacity duration-200 ${isActive ? "opacity-0" : "opacity-0 group-hover:opacity-100 absolute left-16 bg-[#0a0908] px-3 py-1.5 border border-[var(--intaglio-line)] z-50 pointer-events-none whitespace-nowrap shadow-2xl text-[var(--intaglio-paper)]"}`}>
                 {item.shortLabel}
               </span>
               
@@ -63,12 +63,12 @@ export function EditorLeftSidebar() {
               className={`group relative flex h-12 w-14 cursor-pointer flex-col items-center justify-center transition-colors duration-200 ${
                 isActive
                   ? "bg-[#161410] text-[var(--intaglio-paper)]"
-                  : "text-[rgba(231,223,208,0.3)] hover:bg-[#13110e] hover:text-[rgba(231,223,208,0.8)]"
+                  : "text-white/30 hover:bg-[#13110e] hover:text-white/80"
               }`}
             >
               <item.icon size={18} strokeWidth={isActive ? 1.5 : 1.25} className="transition-transform duration-300 group-active:scale-95" />
               
-              <span className={`text-[9px] font-mono tracking-widest uppercase transition-opacity opacity-0 group-hover:opacity-100 absolute left-16 bg-[#0a0908] px-3 py-1.5 border border-[var(--intaglio-line)] z-50 pointer-events-none whitespace-nowrap shadow-2xl text-[var(--intaglio-paper)]`}>
+              <span className={`intaglio-label transition-opacity opacity-0 group-hover:opacity-100 absolute left-16 bg-[#0a0908] px-3 py-1.5 border border-[var(--intaglio-line)] z-50 pointer-events-none whitespace-nowrap shadow-2xl text-[var(--intaglio-paper)]`}>
                 {item.shortLabel}
               </span>
 
@@ -82,8 +82,8 @@ export function EditorLeftSidebar() {
 
       {/* Bottom Actions */}
       <div className="flex flex-col items-center gap-1.5 border-t border-[var(--intaglio-line)] bg-transparent py-4">
-        <label className="group relative flex h-12 w-14 cursor-pointer items-center justify-center text-[rgba(231,223,208,0.3)] transition-colors hover:bg-[#13110e] hover:text-[var(--intaglio-paper)]">
-          <IconUpload size={18} strokeWidth={1.25} />
+        <label className="group relative flex h-12 w-14 cursor-pointer items-center justify-center text-white/30 transition-colors hover:bg-[#13110e] hover:text-[var(--intaglio-paper)]">
+          <IconUpload className="intaglio-icon"/>
           <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           <span className="absolute left-16 whitespace-nowrap border border-[var(--intaglio-line)] bg-[#0a0908] px-3 py-1.5 text-[9px] font-mono uppercase tracking-widest text-[var(--intaglio-paper)] opacity-0 shadow-2xl transition-opacity group-hover:opacity-100 z-50 pointer-events-none">
             Import Image
@@ -92,9 +92,9 @@ export function EditorLeftSidebar() {
         
         <div
           onClick={handleSaveProjectSession}
-          className="group relative flex h-12 w-14 cursor-pointer items-center justify-center text-[rgba(231,223,208,0.3)] transition-colors hover:bg-[#13110e] hover:text-[var(--intaglio-brass)]"
+          className="group relative flex h-12 w-14 cursor-pointer items-center justify-center text-white/30 transition-colors hover:bg-[#13110e] hover:text-[var(--intaglio-brass)]"
         >
-          <IconDeviceFloppy size={18} strokeWidth={1.25} />
+          <IconDeviceFloppy className="intaglio-icon"/>
           <span className="absolute left-16 whitespace-nowrap border border-[var(--intaglio-line)] bg-[#0a0908] px-3 py-1.5 text-[9px] font-mono uppercase tracking-widest text-[var(--intaglio-paper)] opacity-0 shadow-2xl transition-opacity group-hover:opacity-100 z-50 pointer-events-none">
             Save Archive
           </span>
@@ -102,9 +102,9 @@ export function EditorLeftSidebar() {
         
         <div
           onClick={openProjectPicker}
-          className="group relative flex h-12 w-14 cursor-pointer items-center justify-center text-[rgba(231,223,208,0.3)] transition-colors hover:bg-[#13110e] hover:text-cyan-600"
+          className="group relative flex h-12 w-14 cursor-pointer items-center justify-center text-white/30 transition-colors hover:bg-[#13110e] hover:text-cyan-600"
         >
-          <IconFileCode size={18} strokeWidth={1.25} />
+          <IconFileCode className="intaglio-icon"/>
           <span className="absolute left-16 whitespace-nowrap border border-[var(--intaglio-line)] bg-[#0a0908] px-3 py-1.5 text-[9px] font-mono uppercase tracking-widest text-[var(--intaglio-paper)] opacity-0 shadow-2xl transition-opacity group-hover:opacity-100 z-50 pointer-events-none">
             Open Archive
           </span>

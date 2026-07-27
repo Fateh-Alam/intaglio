@@ -5,20 +5,21 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  Download,
-  Eye,
-  Search,
-  Star,
-  Upload,
-  X,
-} from "lucide-react";
+  IconArrowLeft,
+  IconDownload,
+  IconEye,
+  IconSearch,
+  IconStar,
+  IconUpload,
+  IconX,
+} from "@tabler/icons-react";
 import { BRAND, FORMAT, STORAGE_KEYS } from "../lib/brand";
 
-import { PRESETS, Preset } from "../lib/presets";
+import { PRESETS } from "../lib/presets";
+import { NyvarraRecipe } from "../types/recipe";
 
 interface PresetCardProps {
-  preset: Preset;
+  preset: NyvarraRecipe;
   onDownload: () => void;
   onPreview: () => void;
   onToggleFavorite: () => void;
@@ -54,26 +55,26 @@ const PresetCard: React.FC<PresetCardProps> = ({
             }`}
             aria-label={isFavorite ? "Remove favorite" : "Favorite preset"}
           >
-            <Star size={14} fill={isFavorite ? "currentColor" : "none"} />
+            <IconStar className="intaglio-icon" fill={isFavorite ? "currentColor" : "none"}/>
           </button>
           <button
             onClick={onPreview}
             className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/5 border border-white/10"
             aria-label="Preview preset"
           >
-            <Eye size={14} className="text-gray-400" />
+            <IconEye className="intaglio-icon text-gray-400"/>
           </button>
           <button
             onClick={onDownload}
             className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/5 border border-white/10"
             aria-label="Download preset"
           >
-            <Download size={14} className="text-amber-400" />
+            <IconDownload className="intaglio-icon text-amber-400"/>
           </button>
         </div>
       </div>
 
-      <p className={`mb-4 text-sm font-light leading-relaxed transition-colors ${isIntaglio ? "font-serif italic text-[rgba(231,223,208,0.7)] group-hover:text-[rgba(231,223,208,0.9)]" : "text-gray-500 group-hover:text-gray-400"}`}>
+      <p className={`mb-4 text-sm font-light leading-relaxed transition-colors ${isIntaglio ? "font-serif italic text-white/70 group-hover:text-[rgba(231,223,208,0.9)]" : "text-gray-500 group-hover:text-gray-400"}`}>
         {preset.description}
       </p>
 
@@ -83,7 +84,7 @@ const PresetCard: React.FC<PresetCardProps> = ({
             Imported
           </span>
         )}
-        {preset.tags.map((tag) => (
+        {preset.tags.map((tag: string) => (
           <span
             key={tag}
             className={`border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] ${tag === "Intaglio-0" ? "border-[var(--intaglio-brass)]/40 bg-[var(--intaglio-brass)]/10 text-[var(--intaglio-brass)] font-bold" : "border-white/10 bg-black/40 text-gray-500"}`}
@@ -98,7 +99,7 @@ const PresetCard: React.FC<PresetCardProps> = ({
 };
 
 const readPresetFile = (file: File) =>
-  new Promise<Preset>((resolve, reject) => {
+  new Promise<NyvarraRecipe>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       try {
@@ -119,7 +120,8 @@ const readPresetFile = (file: File) =>
           description:
             parsed.description || "Imported local Intaglio Print Recipe.",
           tags: parsed.tags?.length ? parsed.tags : ["Imported"],
-          settings,
+          settings: { raw: settings } as any,
+          intensityDefault: 1.0,
           source: "imported",
         });
       } catch (error) {
@@ -146,14 +148,14 @@ export default function PresetsPage() {
       return [];
     }
   });
-  const [importedPresets, setImportedPresets] = React.useState<Preset[]>(() => {
+  const [importedPresets, setImportedPresets] = React.useState<NyvarraRecipe[]>(() => {
     if (typeof window === "undefined") return [];
     try {
       return JSON.parse(
         localStorage.getItem(STORAGE_KEYS.importedPresets) ||
           localStorage.getItem(STORAGE_KEYS.legacyImportedPresets) ||
           "[]"
-      ) as Preset[];
+      ) as NyvarraRecipe[];
     } catch {
       return [];
     }
@@ -178,7 +180,7 @@ export default function PresetsPage() {
   const presetTags = React.useMemo(() => {
     const tags = new Set<string>(["All", "Favorites"]);
     allPresets.forEach((preset) => {
-      preset.tags.forEach((tag) => tags.add(tag));
+      preset.tags.forEach((tag: string) => tags.add(tag));
     });
     return Array.from(tags);
   }, [allPresets]);
@@ -203,7 +205,7 @@ export default function PresetsPage() {
     });
   }, [activeTag, allPresets, favorites, query]);
 
-  const handleDownload = (preset: Preset) => {
+  const handleDownload = (preset: NyvarraRecipe) => {
     const payload = {
       version: "2.7",
       id: preset.id,
@@ -222,7 +224,7 @@ export default function PresetsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handlePreview = (preset: Preset) => {
+  const handlePreview = (preset: NyvarraRecipe) => {
     // Store preset in localStorage and redirect to editor
     localStorage.setItem(
       STORAGE_KEYS.presetPreview,
@@ -284,7 +286,7 @@ export default function PresetsPage() {
               href="/"
               className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-gray-400 transition-colors hover:text-white"
             >
-              <ArrowLeft size={14} />
+              <IconArrowLeft className="intaglio-icon"/>
               Back
             </Link>
           </div>
@@ -311,10 +313,7 @@ export default function PresetsPage() {
           <div className="mb-10 border border-white/10 bg-black/30 p-5">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
               <div className="relative">
-                <Search
-                  size={16}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/25"
-                />
+                <IconSearch className="intaglio-icon absolute left-4 top-1/2 -translate-y-1/2 text-white/25"/>
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -327,13 +326,13 @@ export default function PresetsPage() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 transition hover:text-white"
                     aria-label="Clear search"
                   >
-                    <X size={16} />
+                    <IconX className="intaglio-icon"/>
                   </button>
                 )}
               </div>
 
               <label className="inline-flex cursor-pointer items-center justify-center gap-2 border border-cyan-500/20 bg-cyan-500/10 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.24em] text-cyan-200 transition hover:border-cyan-400/40 hover:bg-cyan-500/15">
-                <Upload size={14} />
+                <IconUpload className="intaglio-icon"/>
                 Import .{FORMAT.recipeExtension}
                 <input
                   type="file"

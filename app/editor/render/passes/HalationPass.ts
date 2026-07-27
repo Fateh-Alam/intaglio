@@ -155,10 +155,16 @@ export class HalationPass extends RenderPass {
 
     const inputTexture = (readBuffer as THREE.WebGLRenderTarget).texture ?? readBuffer;
 
-    // Use /2 or /4 resolution for halation
-    const img = inputTexture.image as any;
-    const width = img ? img.width / 4 : 256;
-    const height = img ? img.height / 4 : 256;
+    let width = 256;
+    let height = 256;
+    if ((readBuffer as THREE.WebGLRenderTarget).width !== undefined) {
+      width = Math.max(1, Math.floor((readBuffer as THREE.WebGLRenderTarget).width / 4));
+      height = Math.max(1, Math.floor((readBuffer as THREE.WebGLRenderTarget).height / 4));
+    } else {
+      const img = inputTexture.image as any;
+      width = img && img.width ? Math.max(1, Math.floor(img.width / 4)) : 256;
+      height = img && img.height ? Math.max(1, Math.floor(img.height / 4)) : 256;
+    }
     
     if (this.renderTargetBright.width !== width || this.renderTargetBright.height !== height) {
       this.renderTargetBright.setSize(width, height);

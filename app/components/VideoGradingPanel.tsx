@@ -161,7 +161,7 @@ export default function VideoGradingPanel({
         <div className="flex items-center justify-between p-4 border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="border border-[var(--intaglio-line)] bg-black/20 p-2 text-[var(--intaglio-brass)]">
-              <IconMovie size={20} />
+              <IconMovie className="intaglio-icon"/>
             </div>
             <div>
               <h2 className="text-lg font-light text-white">
@@ -176,7 +176,7 @@ export default function VideoGradingPanel({
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition"
           >
-            <IconX size={20} />
+            <IconX className="intaglio-icon"/>
           </div>
         </div>
 
@@ -185,7 +185,7 @@ export default function VideoGradingPanel({
           {!videoUrl ? (
             /* Upload Area */
             <label className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-white/10 rounded-xl hover:border-rose-500/50 hover:bg-rose-500/5 transition cursor-pointer">
-              <IconUpload size={48} className="text-gray-600 mb-4" />
+              <IconUpload className="intaglio-icon text-gray-600 mb-4"/>
               <span className="text-gray-400 text-sm mb-2">
                 Click to upload video
               </span>
@@ -213,7 +213,7 @@ export default function VideoGradingPanel({
 
                 {/* Grading Indicator */}
                 <div className="absolute top-3 left-3 px-2 py-1 bg-black/70 rounded-lg flex items-center gap-1.5 text-[10px] text-rose-400 font-mono uppercase">
-                  <IconAdjustments size={12} /> Live Grade
+                  <IconAdjustments className="intaglio-icon"/> Live Grade
                 </div>
               </div>
 
@@ -251,16 +251,16 @@ export default function VideoGradingPanel({
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition"
                     title="Skip back 5s"
                   >
-                    <IconPlayerSkipBack size={18} />
+                    <IconPlayerSkipBack className="intaglio-icon"/>
                   </div>
                   <div role="button" tabIndex={0}
                     onClick={handlePlayPause}
                     className="p-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white transition"
                   >
                     {isPlaying ? (
-                      <IconPlayerPause size={20} />
+                      <IconPlayerPause className="intaglio-icon"/>
                     ) : (
-                      <IconPlayerPlay size={20} />
+                      <IconPlayerPlay className="intaglio-icon"/>
                     )}
                   </div>
                   <div role="button" tabIndex={0}
@@ -268,7 +268,7 @@ export default function VideoGradingPanel({
                     className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition"
                     title="Skip forward 5s"
                   >
-                    <IconPlayerSkipForward size={18} />
+                    <IconPlayerSkipForward className="intaglio-icon"/>
                   </div>
                 </div>
 
@@ -277,10 +277,10 @@ export default function VideoGradingPanel({
                     onClick={handleExtractFrame}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 transition font-mono text-xs uppercase"
                   >
-                    <IconCamera size={16} /> Lift Frame
+                    <IconCamera className="intaglio-icon"/> Lift Frame
                   </div>
                   <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition font-mono text-xs uppercase cursor-pointer">
-                    <IconUpload size={16} /> New Video
+                    <IconUpload className="intaglio-icon"/> New Video
                     <input
                       type="file"
                       accept="video/mp4,video/quicktime,video/webm"

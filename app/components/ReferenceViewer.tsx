@@ -104,7 +104,7 @@ export default function ReferenceViewer({
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-black/60 border-b border-white/5">
         <div className="flex items-center gap-2">
-          <IconPhoto size={14} className="text-amber-500" />
+          <IconPhoto className="intaglio-icon text-amber-500"/>
           <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
             Reference
           </span>
@@ -119,13 +119,13 @@ export default function ReferenceViewer({
             }`}
             title={isPinned ? "Unpin" : "Pin position"}
           >
-            {isPinned ? <IconPinFilled size={14} /> : <IconPin size={14} />}
+            {isPinned ? <IconPinFilled className="intaglio-icon"/> : <IconPin className="intaglio-icon"/>}
           </div>
           <div role="button" tabIndex={0}
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition"
           >
-            <IconX size={14} />
+            <IconX className="intaglio-icon"/>
           </div>
         </div>
       </div>
@@ -150,7 +150,7 @@ export default function ReferenceViewer({
           </div>
         ) : (
           <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-white/5 transition">
-            <IconPhoto size={32} className="text-gray-600 mb-2" />
+            <IconPhoto className="intaglio-icon text-gray-600 mb-2"/>
             <span className="text-xs text-gray-500">
               Click to upload reference
             </span>
@@ -172,7 +172,7 @@ export default function ReferenceViewer({
             aria-disabled={zoom <= 0.5}
             className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <IconZoomOut size={14} />
+            <IconZoomOut className="intaglio-icon"/>
           </div>
           <span className="text-[10px] text-gray-500 w-10 text-center">
             {Math.round(zoom * 100)}%
@@ -182,7 +182,7 @@ export default function ReferenceViewer({
             aria-disabled={zoom >= 3}
             className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <IconZoomIn size={14} />
+            <IconZoomIn className="intaglio-icon"/>
           </div>
         </div>
 
@@ -195,14 +195,14 @@ export default function ReferenceViewer({
                 : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
             }`}
           >
-            <IconRefresh size={12} />
+            <IconRefresh className="intaglio-icon"/>
             {showOriginal ? "Original" : "Reference"}
           </div>
         )}
 
         {!referenceUrl && (
           <label className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/20 text-amber-400 text-[10px] font-mono uppercase cursor-pointer hover:bg-amber-500/30 transition border border-amber-500/30">
-            <IconPhoto size={12} />
+            <IconPhoto className="intaglio-icon"/>
             Upload
             <input
               type="file"

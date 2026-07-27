@@ -106,7 +106,7 @@ export default function TutorialModal({
               onClick={onClose}
               className="p-2 rounded-full border border-transparent hover:bg-white/10 transition-all duration-300 text-gray-500 hover:text-white"
             >
-              <IconX size={18} />
+              <IconX className="intaglio-icon"/>
             </button>
           </div>
 
@@ -119,7 +119,7 @@ export default function TutorialModal({
             {/* Tips Section */}
             <div className="px-8 mt-8">
               <div className="flex items-center gap-2 mb-4">
-                <IconBulb size={14} className="text-[var(--intaglio-brass)]" />
+                <IconBulb className="intaglio-icon text-[var(--intaglio-brass)]"/>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
                   Quick Tips
                 </span>
@@ -137,10 +137,7 @@ export default function TutorialModal({
                       transitionDelay: `${300 + index * 150}ms`,
                     }}
                   >
-                    <IconChevronRight
-                      size={14}
-                      className="mt-0.5 shrink-0 text-[var(--intaglio-brass)]"
-                    />
+                    <IconChevronRight className="intaglio-icon mt-0.5 shrink-0 text-[var(--intaglio-brass)]"/>
                     <span className="leading-relaxed">{tip}</span>
                   </li>
                 ))}
@@ -855,7 +852,7 @@ export function TutorialTrigger({ onClick }: { onClick: () => void }) {
       className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-500 hover:text-white transition-all duration-300 hover:scale-110 hover:rotate-12"
       title="View tutorial"
     >
-      <IconInfoCircle size={14} />
+      <IconInfoCircle className="intaglio-icon"/>
     </div>
   );
 }

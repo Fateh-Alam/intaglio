@@ -56,12 +56,7 @@ const CustomSelect = ({
         >
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <IconChevronDown
-          size={14}
-          className={`text-gray-500 transition-transform duration-200 ${
-            isOpen ? "rotate-180 text-amber-500" : ""
-          }`}
-        />
+        <IconChevronDown className={`text-gray-500 transition-transform duration-200 ${ isOpen ? "rotate-180 text-amber-500" : "" }`}/>
       </div>
 
       {/* Dropdown Menu */}
@@ -82,7 +77,7 @@ const CustomSelect = ({
                 }`}
               >
                 <span className="truncate">{option.label}</span>
-                {option.value === value && <IconCheck size={12} />}
+                {option.value === value && <IconCheck className="intaglio-icon"/>}
               </div>
             ))}
             {options.length === 0 && (

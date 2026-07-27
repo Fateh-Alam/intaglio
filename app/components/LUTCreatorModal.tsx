@@ -219,7 +219,7 @@ export default function LUTCreatorModal({
         <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-white/5 bg-[#0a0a0a]">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-violet-500/15 text-violet-400">
-              <IconPalette size={20} />
+              <IconPalette className="intaglio-icon"/>
             </div>
             <div>
               <h2 className="text-xl font-light text-white">3D LUT Creator</h2>
@@ -232,7 +232,7 @@ export default function LUTCreatorModal({
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition"
           >
-            <IconX size={20} />
+            <IconX className="intaglio-icon"/>
           </div>
         </div>
 
@@ -261,7 +261,7 @@ export default function LUTCreatorModal({
                 onClick={handleReset}
                 className="flex items-center gap-1 text-[10px] font-mono uppercase text-gray-500 hover:text-white transition"
               >
-                <IconRefresh size={12} /> Reset
+                <IconRefresh className="intaglio-icon"/> Reset
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -429,13 +429,13 @@ export default function LUTCreatorModal({
             onClick={handleExportCube}
             className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition font-mono text-sm uppercase"
           >
-            <IconDownload size={16} /> Export .cube
+            <IconDownload className="intaglio-icon"/> Export .cube
           </div>
           <div role="button" tabIndex={0}
             onClick={handleApply}
             className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-violet-500 border border-violet-400 text-white hover:bg-violet-400 transition font-mono text-sm uppercase"
           >
-            <IconWand size={16} /> Apply to Image
+            <IconWand className="intaglio-icon"/> Apply to Image
           </div>
         </div>
       </div>

@@ -46,7 +46,7 @@ const Slider = ({
           <span className="text-white/40 transition group-hover:text-white/80">
             {icon}
           </span>
-          <label className="text-xs font-medium text-white/80">
+          <label className="intaglio-label">
             {label}
           </label>
         </div>
@@ -54,7 +54,7 @@ const Slider = ({
           {isModified && (
             <div role="button"
               onClick={() => onChange(defaultValue)}
-              className="px-2 py-0.5 text-[10px] font-medium text-white/40 transition hover:text-white md:opacity-0 md:group-hover:opacity-100"
+              className="px-2 py-0.5 text-[9px] font-mono tracking-widest uppercase font-medium text-white/40 transition hover:text-white md:opacity-0 md:group-hover:opacity-100"
             >
               Reset
             </div>

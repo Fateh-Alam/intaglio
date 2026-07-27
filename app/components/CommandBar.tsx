@@ -73,7 +73,7 @@ export function CommandBar({ isOpen, commands, onClose }: CommandBarProps) {
           onClick={(event) => event.stopPropagation()}
         >
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-          <IconSearch size={18} className="text-blue-400" />
+          <IconSearch className="intaglio-icon text-blue-400"/>
           <input
             ref={inputRef}
             value={query}
@@ -93,9 +93,9 @@ export function CommandBar({ isOpen, commands, onClose }: CommandBarProps) {
           />
           <div role="button" tabIndex={0}
             onClick={onClose}
-            className="p-1.5 text-[rgba(231,223,208,0.38)] transition hover:bg-white/10 hover:text-[var(--intaglio-paper)]"
+            className="p-1.5 text-white/40 transition hover:bg-white/10 hover:text-[var(--intaglio-paper)]"
           >
-            <IconX size={16} />
+            <IconX className="intaglio-icon"/>
           </div>
         </div>
 
@@ -167,7 +167,7 @@ export function ShortcutHelp({
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
           <div>
             <div className="flex items-center gap-2 text-white">
-              <IconKeyboard size={18} className="text-blue-400" />
+              <IconKeyboard className="intaglio-icon text-blue-400"/>
               <h2 className="font-mono text-sm uppercase tracking-[0.3em]">
                 Shortcuts
               </h2>
@@ -180,7 +180,7 @@ export function ShortcutHelp({
             onClick={onClose}
             className="p-1.5 text-white/35 transition hover:bg-white/10 hover:text-white"
           >
-            <IconX size={16} />
+            <IconX className="intaglio-icon"/>
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export function ShortcutHelp({
         </div>
 
         <div className="border-t border-white/10 px-6 py-4 text-xs text-white/35">
-          <IconCommand size={14} className="mr-2 inline text-white/25" />
+          <IconCommand className="intaglio-icon mr-2 inline text-white/25"/>
           Press Cmd/Ctrl + K for the command bar.
         </div>
         </motion.div>

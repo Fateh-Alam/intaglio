@@ -4,7 +4,7 @@
 import { useScroll, motion, useTransform, MotionValue } from "framer-motion";
 import { useRef } from "react";
 import Link from "next/link";
-import { Camera, BookOpen, Hexagon, Crosshair, Layers, Zap, Sliders, Database, ArrowRight } from "lucide-react";
+import { IconCamera, IconBook, IconHexagon, IconTarget, IconLayersIntersect, IconBolt, IconAdjustmentsHorizontal, IconDatabase, IconArrowRight } from "@tabler/icons-react";
 import { MasterShader } from "./MasterShader";
 import { CameraHUD } from "./CameraHUD";
 
@@ -45,7 +45,7 @@ function StickySection({
           style={{ opacity, y, scale, filter: blur }}
        >
          <p className="intaglio-label mb-6 text-[#e2ae65] tracking-[0.4em] uppercase text-sm drop-shadow-md flex items-center gap-3">
-            <Hexagon size={12} className="text-[#e2ae65]/50 animate-pulse" />
+            <IconHexagon className="intaglio-icon text-[#e2ae65]/50 animate-pulse"/>
             {eyebrow}
          </p>
          <h2 className="font-intaglio-serif text-6xl md:text-8xl font-light leading-[1.05] text-white mb-8 drop-shadow-2xl">
@@ -116,7 +116,7 @@ export function CameraJourney() {
             </p>
             <div className="flex gap-4">
                <Link href="/editor" className="intaglio-button intaglio-button-primary px-8 py-3 text-xs tracking-widest uppercase flex items-center gap-2">
-                 <Crosshair size={14} /> Open Darkroom
+                 <IconTarget className="intaglio-icon"/> Open Darkroom
                </Link>
             </div>
             
@@ -136,17 +136,17 @@ export function CameraJourney() {
         >
            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 w-full max-w-4xl border-t border-white/10 pt-12">
              <div>
-                <Layers className="text-[#e2ae65] mb-4" size={24} />
+                <IconLayersIntersect className="intaglio-icon text-[#e2ae65] mb-4"/>
                 <h3 className="text-white font-mono text-sm tracking-widest mb-2">FIDELITY</h3>
                 <p className="text-sm text-white/60">Every effect is treated as a render decision, not a random overlay.</p>
              </div>
              <div>
-                <Crosshair className="text-[#e2ae65] mb-4" size={24} />
+                <IconTarget className="intaglio-icon text-[#e2ae65] mb-4"/>
                 <h3 className="text-white font-mono text-sm tracking-widest mb-2">PRECISION</h3>
                 <p className="text-sm text-white/60">Tools built for macro adjustments. Half-float accuracy.</p>
              </div>
              <div>
-                <Zap className="text-[#e2ae65] mb-4" size={24} />
+                <IconBolt className="intaglio-icon text-[#e2ae65] mb-4"/>
                 <h3 className="text-white font-mono text-sm tracking-widest mb-2">WORKFLOW</h3>
                 <p className="text-sm text-white/60">Import, develop, batch, and export without ever breaking focus.</p>
              </div>
@@ -175,7 +175,7 @@ export function CameraJourney() {
         >
           <div className="flex gap-4 mt-8">
              <Link href="/editor" className="intaglio-button px-6 py-3 text-xs tracking-widest uppercase">
-               Test The Engine <ArrowRight size={14} className="inline ml-2"/>
+               Test The Engine <IconArrowRight className="intaglio-icon inline ml-2"/>
              </Link>
           </div>
         </StickySection>
@@ -197,14 +197,14 @@ export function CameraJourney() {
         >
            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-5xl mt-8">
               {[
-                { i: <Sliders/>, t: "Node-Based Grading" },
-                { i: <Database/>, t: "LUT Generation" },
-                { i: <Layers/>, t: "Batch Processing" },
-                { i: <Crosshair/>, t: "Film Emulation" },
-                { i: <Zap/>, t: "GPU Acceleration" },
-                { i: <Hexagon/>, t: "Color Matrix" },
-                { i: <BookOpen/>, t: "Recipe Archiving" },
-                { i: <Camera/>, t: "Tethered Capture" }
+                { i: <IconAdjustmentsHorizontal/>, t: "Node-Based Grading" },
+                { i: <IconDatabase/>, t: "LUT Generation" },
+                { i: <IconLayersIntersect/>, t: "Batch Processing" },
+                { i: <IconTarget/>, t: "Film Emulation" },
+                { i: <IconBolt/>, t: "GPU Acceleration" },
+                { i: <IconHexagon/>, t: "Color Matrix" },
+                { i: <IconBook/>, t: "Recipe Archiving" },
+                { i: <IconCamera/>, t: "Tethered Capture" }
               ].map((item, idx) => (
                 <div key={idx} className="bg-white/5 border border-white/10 p-6 flex flex-col items-center justify-center text-center hover:bg-white/10 transition-colors cursor-pointer">
                    <div className="text-[#e2ae65] mb-3">{item.i}</div>
@@ -240,7 +240,7 @@ export function CameraJourney() {
             <div className="flex flex-col sm:flex-row justify-center gap-6 relative z-10">
               <Link href="/editor" className="intaglio-button intaglio-button-primary px-12 py-5 text-sm tracking-widest uppercase">
                 Launch Application
-                <ArrowRight size={16} />
+                <IconArrowRight className="intaglio-icon"/>
               </Link>
               <Link href="/presets" className="intaglio-button px-12 py-5 text-sm tracking-widest uppercase">
                 View Recipes

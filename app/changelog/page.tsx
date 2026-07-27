@@ -2,32 +2,32 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Archive, Brush, Camera, FileText } from "lucide-react";
+import { IconArrowLeft, IconArchive, IconBrush, IconCamera, IconFileText } from "@tabler/icons-react";
 import { BRAND, FORMAT } from "../lib/brand";
 
 const entries = [
   {
     date: "2026-06-25",
     title: "The Intaglio Rebuild",
-    icon: Camera,
+    icon: IconCamera,
     body: "Rebuilt the visible product around a quieter editorial darkroom: new name, mark, palette, typography, home page, session desk, and collections language.",
   },
   {
     date: "2026-06-25",
     title: "Archive and Recipe Formats",
-    icon: Archive,
+    icon: IconArchive,
     body: `Introduced .${FORMAT.archiveExtension} Intaglio Archives and .${FORMAT.recipeExtension} Print Recipes while keeping legacy .nyv, .nyvlt, and .nyvproj imports available.`,
   },
   {
     date: "2026-06-25",
     title: "Engine Preserved",
-    icon: Brush,
+    icon: IconBrush,
     body: "Kept the existing local rendering capabilities intact: light, color, LUTs, masks, history, metadata, text overlays, proof marks, and browser export.",
   },
   {
     date: "2026-06-25",
     title: "Collections",
-    icon: FileText,
+    icon: IconFileText,
     body: "Renamed the preset library into Intaglio Collections with era-led Print Recipes such as Morning Newspaper, Late Autumn, Museum Print, English Rain, and 1968 Rome.",
   },
 ];
@@ -43,7 +43,7 @@ export default function Changelog() {
             href="/"
             className="flex items-center gap-2 text-[rgba(231,223,208,0.56)] transition hover:text-[var(--intaglio-paper)]"
           >
-            <ArrowLeft size={16} strokeWidth={1.5} />
+            <IconArrowLeft className="intaglio-icon"/>
             <span className="intaglio-label">Back</span>
           </Link>
           <Link href="/" className="flex items-center gap-3">
@@ -62,7 +62,7 @@ export default function Changelog() {
           <h1 className="font-intaglio-serif mt-6 text-6xl font-light leading-tight md:text-8xl">
             Notes from the darkroom.
           </h1>
-          <p className="mt-7 max-w-2xl text-sm leading-7 text-[rgba(231,223,208,0.58)]">
+          <p className="mt-7 max-w-2xl text-sm leading-7 text-white/60">
             A concise record of changes that affect how Intaglio feels, reads,
             and preserves work. The capability engine remains local-first.
           </p>
@@ -80,13 +80,13 @@ export default function Changelog() {
                   {entry.date}
                 </time>
                 <div className="flex h-12 w-12 items-center justify-center border border-[var(--intaglio-line)] text-[var(--intaglio-brass)]">
-                  <Icon size={20} strokeWidth={1.25} />
+                  <Icon className="intaglio-icon" />
                 </div>
                 <div>
                   <h2 className="font-intaglio-serif text-3xl font-light">
                     {entry.title}
                   </h2>
-                  <p className="mt-4 max-w-2xl text-sm leading-7 text-[rgba(231,223,208,0.58)]">
+                  <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60">
                     {entry.body}
                   </p>
                 </div>

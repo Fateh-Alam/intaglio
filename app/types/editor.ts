@@ -25,6 +25,123 @@ export interface ColorGradingSettings {
   balance: number;
 }
 
+// --- MASK SYSTEM TYPES ---
+
+export type MaskBlendMode = "ADD" | "SUBTRACT" | "INTERSECT";
+
+export type BrushStroke = {
+  id: string;
+  points: Array<{ x: number; y: number; pressure?: number; t: number }>;
+  size: number;
+  feather: number;
+  flow: number;
+  opacity: number;
+  mode: "paint" | "erase";
+};
+
+export type RadialMaskParams = {
+  center: { x: number; y: number };
+  radius: number;
+  feather: number;
+  invert: boolean;
+};
+
+export type LinearMaskParams = {
+  angle: number;
+  position: number;
+  feather: number;
+  invert: boolean;
+};
+
+export type LuminosityMaskParams = {
+  target: number;
+  range: number;
+  feather: number;
+};
+
+export type ColorRangeMaskParams = {
+  targetHue: number;
+  hueWidth: number;
+  targetChroma: number;
+  chromaRange: number;
+};
+
+export type BrushMaskParams = {
+  strokes: BrushStroke[];
+};
+
+export type RadialMaskLayer = {
+  id: string;
+  name: string;
+  type: "radial";
+  blendMode: MaskBlendMode;
+  opacity: number;
+  params: RadialMaskParams;
+};
+
+export type LinearMaskLayer = {
+  id: string;
+  name: string;
+  type: "linear";
+  blendMode: MaskBlendMode;
+  opacity: number;
+  params: LinearMaskParams;
+};
+
+export type LuminosityMaskLayer = {
+  id: string;
+  name: string;
+  type: "luminosity";
+  blendMode: MaskBlendMode;
+  opacity: number;
+  params: LuminosityMaskParams;
+};
+
+export type ColorRangeMaskLayer = {
+  id: string;
+  name: string;
+  type: "colorRange";
+  blendMode: MaskBlendMode;
+  opacity: number;
+  params: ColorRangeMaskParams;
+};
+
+export type BrushMaskLayer = {
+  id: string;
+  name: string;
+  type: "brush";
+  blendMode: MaskBlendMode;
+  opacity: number;
+  params: BrushMaskParams;
+};
+
+export type MaskLayer =
+  | RadialMaskLayer
+  | LinearMaskLayer
+  | LuminosityMaskLayer
+  | ColorRangeMaskLayer
+  | BrushMaskLayer;
+
+export type AdjustmentLayer = {
+  id: string;
+  name: string;
+  maskIds: string[];
+  opacity: number;
+  blendMode: "normal"; // Extendable later
+  params: {
+    exposure: number;
+    contrast: number;
+    highlights: number;
+    shadows: number;
+    temperature: number;
+    tint: number;
+    saturation: number;
+    clarity: number;
+  };
+};
+
+// -------------------------
+
 export type FilmEmulation = string;
 
 export interface LutUserData {
@@ -43,6 +160,8 @@ export interface EditorSettings {
   temperature: number;
   tint: number;
   skinProtect: number;
+  safeSkinEnabled: boolean;
+  protectHighlights: boolean;
   grain: number;
   vignette: number;
   sharpness: number;
@@ -50,6 +169,15 @@ export interface EditorSettings {
   aberration: number;
   structure: number;
   filmBorder: boolean;
+  filmToeStrength: number;
+  filmToeLength: number;
+  filmShoulderStrength: number;
+  filmShoulderLength: number;
+  filmGamma: number;
+  filmBlackLift: number;
+  filmWhiteRolloff: number;
+  colorCrossover: number;
+  lumaDesat: number;
   toneCurveTexture: THREE.DataTexture | null;
   curvePoints: CurvePoints;
   colorGrading: ColorGradingSettings;
@@ -86,26 +214,12 @@ export interface EditorSettings {
   hueShift: number;
   rotate: number;
   zoom: number;
-  radialMaskEnabled: boolean;
-  radialMaskX: number;
-  radialMaskY: number;
-  radialMaskRadius: number;
-  radialMaskFeather: number;
-  radialMaskInvert: boolean;
-  radialMaskExposure: number;
-  radialMaskContrast: number;
-  radialMaskSaturation: number;
-  linearMaskEnabled: boolean;
-  linearMaskAngle: number;
-  linearMaskPosition: number;
-  linearMaskFeather: number;
-  linearMaskExposure: number;
-  linearMaskContrast: number;
-  luminosityMaskEnabled: boolean;
-  luminosityMaskTarget: number;
-  luminosityMaskRange: number;
-  luminosityMaskExposure: number;
-  luminosityMaskSaturation: number;
+
+  appliedRecipeId: string | null;
+  recipeIntensity: number;
+
+  adjustmentLayers: AdjustmentLayer[];
+  masks: MaskLayer[];
   hslRedHue: number;
   hslRedSat: number;
   hslRedLum: number;
@@ -157,6 +271,8 @@ export type WatermarkPosition =
   | "bottom-right"
   | "center";
 
+export type GridOverlayMode = "none" | "1:1" | "4:5" | "9:16" | "carousel-4:5-2" | "carousel-4:5-3" | "title-safe" | "action-safe";
+
 export interface WatermarkSettings {
   enabled: boolean;
   text: string;
@@ -166,19 +282,19 @@ export interface WatermarkSettings {
 }
 
 export interface HistogramData {
-  r: number[];
-  g: number[];
-  b: number[];
+  rgb: [number[], number[], number[]];
   luma: number[];
-  clipping: {
-    shadows: number;
-    highlights: number;
-  };
-  average: {
-    r: number;
-    g: number;
-    b: number;
-  };
+  shadowClipPct: number;
+  highlightClipPct: number;
+  redClipPct: number;
+  greenClipPct: number;
+  blueClipPct: number;
+  meanLuma: number;
+  meanRgb: [number, number, number];
+  medianLuma: number;
+  contrastP95P5: number;
+  saturationMean: number;
+  palette: string[];
 }
 
 export interface ImageBounds {

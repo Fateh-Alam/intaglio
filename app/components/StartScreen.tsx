@@ -227,20 +227,16 @@ export default function StartScreen({
                 ].map((item) => (
                   <div
                     key={item}
-                    className="flex items-start gap-3 border border-[var(--intaglio-line)] bg-black/10 px-3 py-3 text-xs leading-5 text-[rgba(231,223,208,0.48)]"
+                    className="flex items-start gap-3 border border-[var(--intaglio-line)] bg-black/10 px-3 py-3 text-xs leading-5 text-white/50"
                   >
-                    <IconSparkles
-                      size={13}
-                      stroke={1.25}
-                      className="mt-0.5 shrink-0 text-[var(--intaglio-brass)]"
-                    />
+                    <IconSparkles className="intaglio-icon mt-0.5 shrink-0 text-[var(--intaglio-brass)]"/>
                     {item}
                   </div>
                 ))}
               </div>
               <div className="border-t border-[var(--intaglio-line)] p-5">
                 <div role="button" tabIndex={0} onClick={onOpenArchive} className="intaglio-button w-full">
-                  <IconFileImport size={14} stroke={1.25} />
+                  <IconFileImport className="intaglio-icon"/>
                   Open Archive
                 </div>
               </div>

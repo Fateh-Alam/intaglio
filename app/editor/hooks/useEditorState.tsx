@@ -1,9 +1,11 @@
 import { getEditorModuleLabel, VirtualCopy, ProjectSessionFile, ExportFormat, ExportRecipeId, ExportSafetyWarning, createHistoryState, ExportRecipe, EXPORT_RECIPES, PERFORMANCE_MODES, COMPOSITION_GUIDES, isPerformanceMode, isCompositionGuide, isExportFormat, isExportRecipeId, ImageFileInfo } from "../pageTypes";
-import type { EditorSettings, EditorSettingKey, EditorSettingValue, CompositionGuide, HistogramData, ImageBounds, PerformanceMode, SerializableEditorSettings, WatermarkPosition, WatermarkSettings, AssetMetadataSettings, AppCommand } from "../../types/editor";
+import type { EditorSettings, EditorSettingKey, EditorSettingValue, CompositionGuide, HistogramData, ImageBounds, PerformanceMode, SerializableEditorSettings, WatermarkPosition, WatermarkSettings, AssetMetadataSettings, AppCommand, GridOverlayMode } from "../../types/editor";
 
 
 import React, { createContext, useContext, useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { DEFAULT_TEXT_OVERLAY, TextOverlaySettings } from "../../components/CinematicTextOverlay";
+import { applyRecipe, removeRecipe } from "../../lib/recipeEngine";
+import { PRESETS } from "../../lib/presets";
 import { FORMAT, STORAGE_KEYS } from "../../lib/brand";
 import { toPng } from "html-to-image";
 import { solveCatmullRom } from "../../utils/spline";
@@ -11,6 +13,7 @@ import * as THREE from "three";
 import { parseCubeLUT } from "../../utils/lutParser";
 import { generatePaletteHeist2DLUT } from "../../utils/colorTransfer";
 import { TUTORIAL_CONTENT, getSeenTutorials, markTutorialSeen } from "../../utils/tutorialContent";
+import { ExportEngine } from "../render/ExportEngine";
 
 // We need to import all types and constants from page.tsx or extract them.
 // For now, we will just export them from page.tsx and import them here.
@@ -59,6 +62,8 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageName, setImageName] = useState("Untitled Image");
   const [imageInfo, setImageInfo] = useState<ImageFileInfo | null>(null);
+  const [gridOverlayMode, setGridOverlayMode] = useState<GridOverlayMode>("none");
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [histogram, setHistogram] = useState<HistogramData | null>(null);
   const [activeTab, setActiveTab] = useState("basic");
 
@@ -229,18 +234,18 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    if (histogram && histogram.clipping.highlights > 0.02) {
+    if (histogram && histogram.highlightClipPct > 0.02) {
       warnings.push({
         title: "Highlights Clipped",
-        detail: `${(histogram.clipping.highlights * 100).toFixed(1)}% of sampled pixels are at highlight limit.`,
+        detail: `${(histogram.highlightClipPct * 100).toFixed(1)}% of sampled pixels are at highlight limit.`,
         tone: "warn",
       });
     }
 
-    if (histogram && histogram.clipping.shadows > 0.05) {
+    if (histogram && histogram.shadowClipPct > 0.05) {
       warnings.push({
         title: "Shadows Crushed",
-        detail: `${(histogram.clipping.shadows * 100).toFixed(1)}% of sampled pixels are at shadow limit.`,
+        detail: `${(histogram.shadowClipPct * 100).toFixed(1)}% of sampled pixels are at shadow limit.`,
         tone: "warn",
       });
     }
@@ -450,17 +455,12 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [history, historyIndex]);
 
-  // Brush Mask State
   const [brushMaskActive, setBrushMaskActive] = useState(false);
   const [brushSize, setBrushSize] = useState(0.3);
   const [brushFeather, setBrushFeather] = useState(0.5);
   const [brushErasing, setBrushErasing] = useState(false);
-  const [brushMaskData, setBrushMaskData] = useState<string>("");
-  const [brushMaskExposure, setBrushMaskExposure] = useState(0);
-  const [brushMaskContrast, setBrushMaskContrast] = useState(0);
-  const [brushMaskSaturation, setBrushMaskSaturation] = useState(0);
-  const [brushMaskTemperature, setBrushMaskTemperature] = useState(0);
-  const [brushMaskClarity, setBrushMaskClarity] = useState(0);
+  const [brushCanvas, setBrushCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [brushCanvasDirty, setBrushCanvasDirty] = useState(0);
 
   // Load preset from localStorage if coming from presets page
   React.useEffect(() => {
@@ -515,9 +515,14 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
 
   const loadImageFile = useCallback(async (file: File) => {
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      const nextImageInfo = await getImageFileInfo(dataUrl, file);
-      setImageSrc(dataUrl);
+      const objectUrl = URL.createObjectURL(file);
+      const nextImageInfo = await getImageFileInfo(objectUrl, file);
+      setImageSrc(prevSrc => {
+        if (prevSrc && prevSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(prevSrc);
+        }
+        return objectUrl;
+      });
       setImageName(file.name);
       setImageInfo(nextImageInfo);
       setAssetMetadata({
@@ -603,8 +608,20 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   };
 
   // ===========================================
-  // PRESET & CLIPBOARD MANAGEMENT
+  // RECIPE & PRESET & CLIPBOARD MANAGEMENT
   // ===========================================
+
+  const handleApplyRecipe = useCallback((recipeId: string, intensity: number = 1.0) => {
+    const recipe = PRESETS.find(p => p.id === recipeId);
+    if (!recipe) return;
+    
+    setSettings(prev => {
+      const newSettings = applyRecipe(prev, recipe, intensity);
+      // We don't add to history on slider drag, so we leave history out of this internal updater, 
+      // or we handle history carefully
+      return newSettings;
+    });
+  }, []);
 
   // Get serializable settings (exclude textures and non-JSON-safe values)
   const getSerializableSettings = useCallback(
@@ -900,141 +917,126 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleExport = async () => {
-    // Target the entire container
-    const editorContainer = document.getElementById(
-      "cinematic-editor-container"
-    ) as HTMLElement;
-
-    if (!editorContainer || !imageBounds) return;
-
-    // Create a composite canvas sized to the IMAGE (not window)
-    const exportCanvas = document.createElement("canvas");
-    const ctx = exportCanvas.getContext("2d");
-    if (!ctx) return;
-
-    // Set export size based on the Image dimensions
-    exportCanvas.width = imageBounds.width * exportScale;
-    exportCanvas.height = imageBounds.height * exportScale;
-
-    // Enable high-quality scaling
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
+    if (!imageSrc) return;
 
     try {
-      let fontEmbedCSS = "";
-
-      // Manually fetch and inline Google Font if custom font is active
-      if (textOverlay.customFontEnabled && textOverlay.customFontName) {
-        try {
-          const fontName = textOverlay.customFontName.trim();
-          const weight = textOverlay.customFontWeight || "400";
-          const isItalic = textOverlay.customFontStyle === "italic";
-          const axisParam = isItalic ? `1,${weight}` : `0,${weight}`;
-          const fontUrl = `https://fonts.googleapis.com/css2?family=${fontName.replace(
-            /\s+/g,
-            "+"
-          )}:ital,wght@${axisParam}&display=swap`;
-
-          const cssResponse = await fetch(fontUrl);
-          const cssText = await cssResponse.text();
-
-          // Regex to find all url(...)
-          const fontUrlRegex = /url\((.*?)\)/g;
-          const matches = [...cssText.matchAll(fontUrlRegex)];
-          let newCssText = cssText;
-
-          // Fetch and inline each font resource
-          for (const match of matches) {
-            const resourceUrl = match[1].replace(/['"]/g, "");
-            if (resourceUrl.startsWith("http")) {
-              const resourceRes = await fetch(resourceUrl);
-              const blob = await resourceRes.blob();
-              const reader = new FileReader();
-              const base64 = await new Promise<string>((resolve) => {
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(blob);
-              });
-              newCssText = newCssText.replace(match[1], `"${base64}"`);
-            }
-          }
-          fontEmbedCSS = newCssText;
-        } catch (e) {
-          console.error("Failed to inline font:", e);
-        }
-      }
-
-      // Capture the ENTIRE container using oversampling for sharpness
-      const captureScale = exportScale * 3;
-      const dataUrl = await toPng(editorContainer, {
-        quality: 1.0,
-        pixelRatio: captureScale,
-        cacheBust: true,
-        fontEmbedCSS: fontEmbedCSS || undefined,
-        // Ensure white/transparent background doesn't mess up
-        backgroundColor: "transparent",
-        filter: (node) => {
-          // Filter out external GFonts link
-          if (
-            node.tagName === "LINK" &&
-            (node as HTMLLinkElement).href.includes("fonts.googleapis.com")
-          ) {
-            return false;
-          }
-          // Filter out explicitly ignored elements (Brush Mask, UI overlays)
-          if (
-            node instanceof HTMLElement &&
-            node.getAttribute("data-export-ignore") === "true"
-          ) {
-            return false;
-          }
-          return true;
-        },
+      // 1. Load source image texture
+      const textureLoader = new THREE.TextureLoader();
+      const texture = await new Promise<THREE.Texture>((resolve, reject) => {
+        textureLoader.load(imageSrc, resolve, undefined, reject);
       });
 
-      // Crop the result
-      await new Promise<void>((resolve, reject) => {
-        const img = new globalThis.Image();
-        img.onload = () => {
-          // Source Rect: Where the image is in the container (scaled by CAPTURE scale)
-          const sx = imageBounds.left * captureScale;
-          const sy = imageBounds.top * captureScale;
-          const sWidth = imageBounds.width * captureScale;
-          const sHeight = imageBounds.height * captureScale;
-
-          // Dest Rect: Full canvas
-          const dx = 0;
-          const dy = 0;
-          const dWidth = exportCanvas.width;
-          const dHeight = exportCanvas.height;
-
-          ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
-          resolve();
-        };
-        img.onerror = reject;
-        img.src = dataUrl;
+      // 2. Instantiate ExportEngine and render full-resolution Blob
+      const exportEngine = new ExportEngine();
+      const format = exportFormat as 'image/jpeg' | 'image/png' | 'image/webp';
+      const blob = await exportEngine.exportImage(texture, settings, {
+        format,
+        quality: exportQuality / 100,
+        scale: exportScale,
+        brushCanvas
       });
 
-      // Convert to Blob and Download
-      exportCanvas.toBlob(
-        (blob) => {
-          if (!blob) return;
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          const ext = exportFormat.split("/")[1];
-          const recipeSlug = activeExportRecipeId ?? "custom";
-          link.download = `${toFileStem(imageName)}_${recipeSlug}_${createTimestampSlug()}.${ext}`;
-          link.click();
-          URL.revokeObjectURL(url);
-        },
-        exportFormat,
-        exportQuality / 100
-      );
+      // 3. Trigger clean browser download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const ext = format.split("/")[1] || "jpeg";
+      const recipeSlug = activeExportRecipeId ?? "custom";
+      link.download = `${toFileStem(imageName)}_${recipeSlug}_${createTimestampSlug()}.${ext}`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      // Clean up export engine resources
+      exportEngine.dispose();
+      texture.dispose();
     } catch (error) {
-      console.error("Failed to export:", error);
+      console.error("Failed to export via GPU RenderGraph:", error);
     }
 
     // Close modal
+    setIsExportModalOpen(false);
+  };
+
+  const handleCarouselExport = async () => {
+    if (!imageSrc) return;
+    try {
+      const textureLoader = new THREE.TextureLoader();
+      const texture = await new Promise<THREE.Texture>((resolve, reject) => {
+        textureLoader.load(imageSrc, resolve, undefined, reject);
+      });
+      const exportEngine = new ExportEngine();
+      const format = exportFormat as 'image/jpeg' | 'image/png' | 'image/webp';
+      const baseOpts = { format, quality: exportQuality / 100, scale: exportScale, brushCanvas };
+
+      // Helper to trigger download
+      const downloadBlob = (blob: Blob, suffix: string) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        const ext = format.split("/")[1] || "jpeg";
+        link.download = `${toFileStem(imageName)}_${suffix}_${createTimestampSlug()}.${ext}`;
+        link.click();
+        URL.revokeObjectURL(url);
+      };
+
+      // 1. Before Slide (Original)
+      const { DEFAULT_SETTINGS } = await import('../pageTypes');
+      const beforeBlob = await exportEngine.exportImage(texture, { ...settings, ...DEFAULT_SETTINGS }, baseOpts);
+
+      // 2. Final Edit Slide
+      const afterBlob = await exportEngine.exportImage(texture, settings, baseOpts);
+
+      exportEngine.dispose();
+      texture.dispose();
+
+      // 3. Stitch them together using Canvas 2D
+      const beforeImg = new window.Image();
+      beforeImg.src = URL.createObjectURL(beforeBlob);
+      await new Promise(r => { beforeImg.onload = r; });
+      
+      const afterImg = new window.Image();
+      afterImg.src = URL.createObjectURL(afterBlob);
+      await new Promise(r => { afterImg.onload = r; });
+
+      const canvas = document.createElement('canvas');
+      const padding = 60;
+      const textHeight = 160;
+      // Side by side layout
+      canvas.width = beforeImg.width * 2 + padding * 3;
+      canvas.height = beforeImg.height + padding * 2 + textHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Fill background
+        ctx.fillStyle = '#0f0f11';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw images
+        ctx.drawImage(beforeImg, padding, padding);
+        ctx.drawImage(afterImg, beforeImg.width + padding * 2, padding);
+
+        // Draw text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('BEFORE', padding + beforeImg.width / 2, padding + beforeImg.height + 80);
+        ctx.fillText('AFTER', beforeImg.width + padding * 2 + afterImg.width / 2, padding + afterImg.height + 80);
+        
+        ctx.fillStyle = '#888888';
+        ctx.font = '32px monospace';
+        const recipeName = activeExportRecipeId || settings.appliedRecipeId || 'Custom';
+        const specs = `Recipe: ${recipeName}  |  Contrast: ${(settings.contrast || 0).toFixed(2)}  |  Bloom: ${(settings.bloom || 0).toFixed(2)}  |  Halation: ${(settings.halation || 0).toFixed(2)}`;
+        ctx.fillText(specs, canvas.width / 2, canvas.height - 40);
+
+        // Export the stitched image
+        canvas.toBlob((stitchedBlob) => {
+          if (stitchedBlob) downloadBlob(stitchedBlob, "contact-sheet");
+          URL.revokeObjectURL(beforeImg.src);
+          URL.revokeObjectURL(afterImg.src);
+        }, format, exportQuality / 100);
+      }
+    } catch (error) {
+      console.error("Failed to export carousel:", error);
+    }
     setIsExportModalOpen(false);
   };
 
@@ -1476,17 +1478,16 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     brushSize, setBrushSize,
     brushFeather, setBrushFeather,
     brushErasing, setBrushErasing,
-    brushMaskData, setBrushMaskData,
-    brushMaskExposure, setBrushMaskExposure,
-    brushMaskContrast, setBrushMaskContrast,
-    brushMaskSaturation, setBrushMaskSaturation,
-    brushMaskTemperature, setBrushMaskTemperature,
-    brushMaskClarity, setBrushMaskClarity,
+    brushCanvas, setBrushCanvas,
+    brushCanvasDirty, setBrushCanvasDirty,
     isVideoGradingOpen, setIsVideoGradingOpen,
     videoSrc, setVideoSrc,
     updateSetting,
     handleUndo,
     handleRedo,
+    gridOverlayMode, setGridOverlayMode,
+    isAnalysisOpen,
+    setIsAnalysisOpen,
     addToHistory,
     toneCurveTexture,
     handleSaveProjectSession,
@@ -1502,6 +1503,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     handlePaletteHeist,
     handleLutUpload,
     handleExport,
+    handleCarouselExport,
     handleCompareSnapshot,
     handleDeleteVirtualCopy,
     handleTakeSnapshot,
@@ -1509,6 +1511,7 @@ export function EditorProvider({ children }: { children: React.ReactNode }) {
     handleJumpToHistory,
     handleClearHistory,
     handleLoadPreset,
+    handleApplyRecipe,
     fileInputRef,
     lutInputRef,
     appCommands,

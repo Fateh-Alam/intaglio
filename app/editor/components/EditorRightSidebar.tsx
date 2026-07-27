@@ -12,6 +12,8 @@ import ReferenceViewer from "../../components/ReferenceViewer";
 import LUTCreatorModal from "../../components/LUTCreatorModal";
 import * as THREE from "three";
 import VideoGradingPanel from "../../components/VideoGradingPanel";
+import AdjustmentLayersPanel from "./AdjustmentLayersPanel";
+import ColorMixerUI from "./ColorMixerUI";
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +27,7 @@ import ControlGroup from "../../components/ControlGroup";
 
 export function EditorRightSidebar() {
   const editorState = useEditorState();
+  const [activeMaskId, setActiveMaskId] = React.useState<string | null>(null);
   const {
     settings, setSettings,
     textOverlay, setTextOverlay,
@@ -144,9 +147,9 @@ export function EditorRightSidebar() {
           className="hidden"
         >
           {isRightSidebarOpen ? (
-            <IconChevronRight size={14} />
+            <IconChevronRight className="intaglio-icon"/>
           ) : (
-            <IconChevronLeft size={14} />
+            <IconChevronLeft className="intaglio-icon"/>
           )}
         </div>
         {/* Mobile backdrop */}
@@ -157,27 +160,30 @@ export function EditorRightSidebar() {
 
         {/* Control Panel */}
         <div className="z-20 flex h-full w-full flex-col overflow-hidden">
-          <div className="h-full w-full">
-            <div className="flex h-full w-full min-w-0 flex-col">
+          <div className="h-full w-full flex flex-col">
+            
+            {/* Scopes & Analysis (Moved to Top Toolbar) */}
+
+            <div className="flex flex-1 w-full min-w-0 flex-col overflow-hidden">
               {/* Premium Mobile Tab Bar */}
               <div
                 className="custom-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto border-b border-white/5 bg-[rgba(20,19,15,0.8)] px-3 py-3 md:hidden backdrop-blur-md"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
                 {[
-                  { id: "basic", icon: <IconSun size={16} /> },
-                  { id: "color", icon: <IconPalette size={16} /> },
-                  { id: "curves", icon: <IconChartLine size={16} /> },
-                  { id: "grading", icon: <IconCircles size={16} /> },
-                  { id: "hsl", icon: <IconCircle size={16} /> },
-                  { id: "films", icon: <IconMovie size={16} /> },
-                  { id: "effects", icon: <IconSparkles size={16} /> },
-                  { id: "masking", icon: <IconLayersIntersect size={16} /> },
-                  { id: "text", icon: <IconTypography size={16} /> },
-                  { id: "metadata", icon: <IconInfoCircle size={16} /> },
-                  { id: "transform", icon: <IconArrowsMaximize size={16} /> },
-                  { id: "history", icon: <IconHistory size={16} /> },
-                  { id: "snapshots", icon: <IconCamera size={16} /> },
+                  { id: "basic", icon: <IconSun className="intaglio-icon"/> },
+                  { id: "color", icon: <IconPalette className="intaglio-icon"/> },
+                  { id: "curves", icon: <IconChartLine className="intaglio-icon"/> },
+                  { id: "grading", icon: <IconCircles className="intaglio-icon"/> },
+                  { id: "hsl", icon: <IconCircle className="intaglio-icon"/> },
+                  { id: "films", icon: <IconMovie className="intaglio-icon"/> },
+                  { id: "effects", icon: <IconSparkles className="intaglio-icon"/> },
+                  { id: "masking", icon: <IconLayersIntersect className="intaglio-icon"/> },
+                  { id: "text", icon: <IconTypography className="intaglio-icon"/> },
+                  { id: "metadata", icon: <IconInfoCircle className="intaglio-icon"/> },
+                  { id: "transform", icon: <IconArrowsMaximize className="intaglio-icon"/> },
+                  { id: "history", icon: <IconHistory className="intaglio-icon"/> },
+                  { id: "snapshots", icon: <IconCamera className="intaglio-icon"/> },
                 ].map((tab) => {
                   const isActive = activeTab === tab.id;
 
@@ -206,7 +212,7 @@ export function EditorRightSidebar() {
                       className={`flex shrink-0 snap-start flex-col items-center gap-1.5 rounded-lg px-4 py-2.5 whitespace-nowrap transition-all duration-300 ${
                         isActive
                           ? "bg-[rgba(176,138,82,0.15)] text-[var(--intaglio-brass)] shadow-[inset_0_0_0_1px_rgba(176,138,82,0.3)]"
-                          : "text-[rgba(231,223,208,0.4)] hover:bg-[rgba(231,223,208,0.05)] active:scale-95"
+                          : "text-white/40 hover:bg-[rgba(231,223,208,0.05)] active:scale-95"
                       }`}
                     >
                       <span
@@ -232,7 +238,7 @@ export function EditorRightSidebar() {
                 </div>
                 <div className="flex items-center gap-4">
                   <TutorialTrigger onClick={() => showTutorial(activeTab)} />
-                  <div className="border border-white/5 px-2.5 py-1 text-[9px] font-mono font-medium uppercase tracking-widest text-[rgba(231,223,208,0.4)]">
+                  <div className="border border-white/5 px-2.5 py-1 text-[9px] font-mono font-medium uppercase tracking-widest text-white/40">
                     Inspector
                   </div>
                 </div>
@@ -266,7 +272,7 @@ export function EditorRightSidebar() {
                         onClick={handleTakeSnapshot}
                         className="w-full py-3 bg-green-500/10 border border-green-500/20 text-green-500 rounded font-mono text-xs font-medium hover:bg-green-500/20 transition flex items-center justify-center gap-2"
                       >
-                        <IconCamera size={14} />
+                        <IconCamera className="intaglio-icon"/>
                         Take Snapshot
                       </div>
 
@@ -290,7 +296,7 @@ export function EditorRightSidebar() {
                                 className="p-1.5 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/40"
                                 title="Compare"
                               >
-                                <IconAdjustmentsHorizontal size={14} />
+                                <IconAdjustmentsHorizontal className="intaglio-icon"/>
                               </div>
                               <div role="button"
                                 onClick={() => {
@@ -344,7 +350,7 @@ export function EditorRightSidebar() {
                                       : channel === "green"
                                         ? "bg-green-500/20 text-green-500 border-green-500"
                                         : "bg-blue-500/20 text-blue-500 border-blue-500"
-                                  : "bg-black/40 text-[rgba(231,223,208,0.38)] border-white/5 hover:bg-[rgba(231,223,208,0.045)]"
+                                  : "bg-black/40 text-white/40 border-white/5 hover:bg-[rgba(231,223,208,0.045)]"
                               }`}
                             >
                               {channel}
@@ -424,7 +430,7 @@ export function EditorRightSidebar() {
                               balance: v,
                             })
                           }
-                          icon={<IconContrast size={14} />}
+                          icon={<IconContrast className="intaglio-icon"/>}
                         />
                       </div>
                     </ControlGroup>
@@ -441,7 +447,7 @@ export function EditorRightSidebar() {
                         max={5}
                         step={0.05}
                         onChange={(v) => updateSetting("brightness", v)}
-                        icon={<IconSun size={14} />}
+                        icon={<IconSun className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
@@ -450,7 +456,7 @@ export function EditorRightSidebar() {
                         min={-1}
                         max={1}
                         onChange={(v) => updateSetting("contrast", v)}
-                        icon={<IconContrast size={14} />}
+                        icon={<IconContrast className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
@@ -459,7 +465,7 @@ export function EditorRightSidebar() {
                         min={-1}
                         max={1}
                         onChange={(v) => updateSetting("highlights", v)}
-                        icon={<IconSun size={14} />}
+                        icon={<IconSun className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
@@ -468,7 +474,7 @@ export function EditorRightSidebar() {
                         min={-1}
                         max={1}
                         onChange={(v) => updateSetting("shadows", v)}
-                        icon={<IconMoon size={14} />}
+                        icon={<IconMoon className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
@@ -477,7 +483,7 @@ export function EditorRightSidebar() {
                         min={-1}
                         max={1}
                         onChange={(v) => updateSetting("whites", v)}
-                        icon={<IconSun size={14} />}
+                        icon={<IconSun className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
@@ -486,7 +492,7 @@ export function EditorRightSidebar() {
                         min={-1}
                         max={1}
                         onChange={(v) => updateSetting("blacks", v)}
-                        icon={<IconMoon size={14} />}
+                        icon={<IconMoon className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
@@ -495,7 +501,7 @@ export function EditorRightSidebar() {
                         min={-1}
                         max={1}
                         onChange={(v) => updateSetting("vibrance", v)}
-                        icon={<IconPalette size={14} />}
+                        icon={<IconPalette className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
@@ -504,7 +510,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("dehaze", v)}
-                        icon={<IconAperture size={14} />}
+                        icon={<IconAperture className="intaglio-icon"/>}
                       />
                     </ControlGroup>
 
@@ -515,7 +521,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("structure", v)}
-                        icon={<IconBolt size={14} />}
+                        icon={<IconBolt className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Sharpness"
@@ -523,7 +529,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("sharpness", v)}
-                        icon={<IconBolt size={14} />}
+                        icon={<IconBolt className="intaglio-icon"/>}
                       />
                     </ControlGroup>
 
@@ -536,7 +542,7 @@ export function EditorRightSidebar() {
                         onChange={(v) =>
                           updateSetting("godLightStrength", v)
                         }
-                        icon={<IconSun size={14} />}
+                        icon={<IconSun className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Light X"
@@ -544,7 +550,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("godLightX", v)}
-                        icon={<IconSun size={14} />}
+                        icon={<IconSun className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Light Y"
@@ -552,7 +558,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("godLightY", v)}
-                        icon={<IconSun size={14} />}
+                        icon={<IconSun className="intaglio-icon"/>}
                       />
                       <div className="pt-2 border-t border-white/5 mt-2">
                         <p className="text-[11px] font-medium text-white/50 mb-3">
@@ -599,7 +605,7 @@ export function EditorRightSidebar() {
                         onChange={(v) =>
                           updateSetting("godLightSpecular", v)
                         }
-                        icon={<IconBolt size={14} />}
+                        icon={<IconBolt className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Rim Light (Edge Glow)"
@@ -607,7 +613,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("godLightRim", v)}
-                        icon={<IconSun size={14} />}
+                        icon={<IconSun className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Falloff"
@@ -617,7 +623,7 @@ export function EditorRightSidebar() {
                         onChange={(v) =>
                           updateSetting("godLightFalloff", v)
                         }
-                        icon={<IconAperture size={14} />}
+                        icon={<IconAperture className="intaglio-icon"/>}
                       />
                     </ControlGroup>
                   </div>
@@ -634,8 +640,8 @@ export function EditorRightSidebar() {
                           }
                           className={`flex-1 py-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${roiMode === "source" ? "bg-amber-500 text-black border-amber-500" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"}`}
                         >
-                          <IconMapPin size={16} />
-                          <span className="text-[9px] font-mono tracking-widest font-mono uppercase tracking-wider">
+                          <IconMapPin className="intaglio-icon"/>
+                          <span className="intaglio-label">
                             Select Region
                           </span>
                         </div>
@@ -644,7 +650,7 @@ export function EditorRightSidebar() {
                         <label
                           className={`flex-[2] flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-purple-900 to-blue-900 hover:from-purple-800 hover:to-blue-800 text-xs font-medium font-medium rounded-lg transition border border-white/20 cursor-pointer shadow-lg`}
                         >
-                          <IconBolt size={14} className="text-yellow-400" />{" "}
+                          <IconBolt className="intaglio-icon text-yellow-400"/>{" "}
                           Match Reference
                           <input
                             type="file"
@@ -664,12 +670,12 @@ export function EditorRightSidebar() {
                             onClick={() => setSourceROI(null)}
                             className="text-white/40 hover:text-white"
                           >
-                            <IconX size={12} />
+                            <IconX className="intaglio-icon"/>
                           </div>
                         </div>
                       )}
 
-                      <p className="text-[9px] font-mono tracking-widest text-[rgba(231,223,208,0.38)] italic text-center">
+                      <p className="text-[9px] font-mono tracking-widest text-white/40 italic text-center">
                         Select a region of your image (optional) and upload a
                         reference to borrow its color balance.
                       </p>
@@ -678,7 +684,7 @@ export function EditorRightSidebar() {
                     <ControlGroup title="LUT Cabinet">
                       <div className="grid grid-cols-2 gap-2 mb-4">
                         <label className="flex items-center justify-center gap-2 py-3 bg-[rgba(231,223,208,0.045)] hover:bg-white/10 text-xs font-medium font-medium rounded-lg transition border border-white/5 cursor-pointer">
-                          <IconUpload size={14} /> Upload
+                          <IconUpload className="intaglio-icon"/> Upload
                           <input
                             type="file"
                             accept=".cube"
@@ -690,7 +696,7 @@ export function EditorRightSidebar() {
                           onClick={() => setIsLUTCreatorOpen(true)}
                           className="flex items-center justify-center gap-2 py-3 bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 text-xs font-medium font-medium rounded-lg transition border border-violet-500/30"
                         >
-                          <IconPalette size={14} /> Create
+                          <IconPalette className="intaglio-icon"/> Create
                         </div>
                       </div>
                       <Slider
@@ -699,7 +705,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("lutStrength", v)}
-                        icon={<IconPalette size={14} />}
+                        icon={<IconPalette className="intaglio-icon"/>}
                       />
                     </ControlGroup>
 
@@ -710,7 +716,7 @@ export function EditorRightSidebar() {
                         min={-1}
                         max={1}
                         onChange={(v) => updateSetting("temperature", v)}
-                        icon={<IconPalette size={14} />}
+                        icon={<IconPalette className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Tint"
@@ -718,7 +724,7 @@ export function EditorRightSidebar() {
                         min={-1}
                         max={1}
                         onChange={(v) => updateSetting("tint", v)}
-                        icon={<IconPalette size={14} />}
+                        icon={<IconPalette className="intaglio-icon"/>}
                       />
                     </ControlGroup>
 
@@ -730,16 +736,55 @@ export function EditorRightSidebar() {
                         max={1}
                         onChange={(v) => updateSetting("tealOrange", v)}
                         accentColor="accent-orange-500"
-                        icon={<IconPalette size={14} />}
+                        icon={<IconPalette className="intaglio-icon"/>}
                       />
-                      <Slider
-                        label="Skin Protection"
-                        value={settings.skinProtect}
-                        min={0}
-                        max={1}
-                        onChange={(v) => updateSetting("skinProtect", v)}
-                        icon={<IconPalette size={14} />}
-                      />
+                    </ControlGroup>
+
+                    <ControlGroup title="AI & Trust">
+                      <div className="flex flex-col gap-2 mb-4">
+                        <label className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <IconSparkles className="intaglio-icon text-purple-400" />
+                            <div>
+                              <div className="text-xs font-medium text-white">Safe Skin Engine</div>
+                              <div className="text-[10px] text-white/50">OKLCH tone protection</div>
+                            </div>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={settings.safeSkinEnabled}
+                            onChange={(e) => updateSetting("safeSkinEnabled", e.target.checked)}
+                            className="w-4 h-4 accent-purple-500 rounded bg-white/10 border-white/20"
+                          />
+                        </label>
+                        
+                        <label className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <IconSun className="intaglio-icon text-amber-400" />
+                            <div>
+                              <div className="text-xs font-medium text-white">Protect Highlights</div>
+                              <div className="text-[10px] text-white/50">Prevent highlight clipping</div>
+                            </div>
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            checked={settings.protectHighlights}
+                            onChange={(e) => updateSetting("protectHighlights", e.target.checked)}
+                            className="w-4 h-4 accent-amber-500 rounded bg-white/10 border-white/20"
+                          />
+                        </label>
+                      </div>
+
+                      {!settings.safeSkinEnabled && (
+                        <Slider
+                          label="Manual Skin Protection"
+                          value={settings.skinProtect}
+                          min={0}
+                          max={1}
+                          onChange={(v) => updateSetting("skinProtect", v)}
+                          icon={<IconPalette className="intaglio-icon text-white/50"/>}
+                        />
+                      )}
                     </ControlGroup>
 
                     <ControlGroup title="HSL Selective">
@@ -775,7 +820,7 @@ export function EditorRightSidebar() {
                         min={-0.5}
                         max={0.5}
                         onChange={(v) => updateSetting("hueShift", v)}
-                        icon={<IconPalette size={14} />}
+                        icon={<IconPalette className="intaglio-icon"/>}
                       />
                     </ControlGroup>
                   </div>
@@ -783,294 +828,14 @@ export function EditorRightSidebar() {
 
                 {/* HSL Panel Tab */}
                 {activeTab === "hsl" && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <p className="text-[11px] font-medium text-gray-600 text-center mb-2">
-                      Per-Color Channel Adjustments
-                    </p>
-
-                    {/* Red Channel */}
-                    <ControlGroup
-                      title="Red"
-                      icon={
-                        <IconCircleFilled size={12} className="text-red-500" />
-                      }
-                    >
-                      <Slider
-                        label="Hue"
-                        value={settings.hslRedHue}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslRedHue", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Saturation"
-                        value={settings.hslRedSat}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslRedSat", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Luminance"
-                        value={settings.hslRedLum}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslRedLum", v)}
-                        icon={<IconSun size={14} />}
-                      />
-                    </ControlGroup>
-
-                    {/* Orange Channel */}
-                    <ControlGroup
-                      title="Orange"
-                      icon={
-                        <IconCircleFilled
-                          size={12}
-                          className="text-orange-500"
-                        />
-                      }
-                    >
-                      <Slider
-                        label="Hue"
-                        value={settings.hslOrangeHue}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslOrangeHue", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Saturation"
-                        value={settings.hslOrangeSat}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslOrangeSat", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Luminance"
-                        value={settings.hslOrangeLum}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslOrangeLum", v)}
-                        icon={<IconSun size={14} />}
-                      />
-                    </ControlGroup>
-
-                    {/* Yellow Channel */}
-                    <ControlGroup
-                      title="Yellow"
-                      icon={
-                        <IconCircleFilled
-                          size={12}
-                          className="text-yellow-500"
-                        />
-                      }
-                    >
-                      <Slider
-                        label="Hue"
-                        value={settings.hslYellowHue}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslYellowHue", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Saturation"
-                        value={settings.hslYellowSat}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslYellowSat", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Luminance"
-                        value={settings.hslYellowLum}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslYellowLum", v)}
-                        icon={<IconSun size={14} />}
-                      />
-                    </ControlGroup>
-
-                    {/* Green Channel */}
-                    <ControlGroup
-                      title="Green"
-                      icon={
-                        <IconCircleFilled
-                          size={12}
-                          className="text-green-500"
-                        />
-                      }
-                    >
-                      <Slider
-                        label="Hue"
-                        value={settings.hslGreenHue}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslGreenHue", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Saturation"
-                        value={settings.hslGreenSat}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslGreenSat", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Luminance"
-                        value={settings.hslGreenLum}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslGreenLum", v)}
-                        icon={<IconSun size={14} />}
-                      />
-                    </ControlGroup>
-
-                    {/* Aqua Channel */}
-                    <ControlGroup
-                      title="Aqua"
-                      icon={
-                        <IconCircleFilled size={12} className="text-cyan-400" />
-                      }
-                    >
-                      <Slider
-                        label="Hue"
-                        value={settings.hslAquaHue}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslAquaHue", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Saturation"
-                        value={settings.hslAquaSat}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslAquaSat", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Luminance"
-                        value={settings.hslAquaLum}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslAquaLum", v)}
-                        icon={<IconSun size={14} />}
-                      />
-                    </ControlGroup>
-
-                    {/* Blue Channel */}
-                    <ControlGroup
-                      title="Blue"
-                      icon={
-                        <IconCircleFilled size={12} className="text-blue-500" />
-                      }
-                    >
-                      <Slider
-                        label="Hue"
-                        value={settings.hslBlueHue}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslBlueHue", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Saturation"
-                        value={settings.hslBlueSat}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslBlueSat", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Luminance"
-                        value={settings.hslBlueLum}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslBlueLum", v)}
-                        icon={<IconSun size={14} />}
-                      />
-                    </ControlGroup>
-
-                    {/* Purple Channel */}
-                    <ControlGroup
-                      title="Purple"
-                      icon={
-                        <IconCircleFilled
-                          size={12}
-                          className="text-purple-500"
-                        />
-                      }
-                    >
-                      <Slider
-                        label="Hue"
-                        value={settings.hslPurpleHue}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslPurpleHue", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Saturation"
-                        value={settings.hslPurpleSat}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslPurpleSat", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Luminance"
-                        value={settings.hslPurpleLum}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslPurpleLum", v)}
-                        icon={<IconSun size={14} />}
-                      />
-                    </ControlGroup>
-
-                    {/* Magenta Channel */}
-                    <ControlGroup
-                      title="Magenta"
-                      icon={
-                        <IconCircleFilled size={12} className="text-pink-500" />
-                      }
-                    >
-                      <Slider
-                        label="Hue"
-                        value={settings.hslMagentaHue}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslMagentaHue", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Saturation"
-                        value={settings.hslMagentaSat}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslMagentaSat", v)}
-                        icon={<IconPalette size={14} />}
-                      />
-                      <Slider
-                        label="Luminance"
-                        value={settings.hslMagentaLum}
-                        min={-1}
-                        max={1}
-                        onChange={(v) => updateSetting("hslMagentaLum", v)}
-                        icon={<IconSun size={14} />}
-                      />
-                    </ControlGroup>
-                  </div>
+                  <ColorMixerUI settings={settings} updateSetting={updateSetting} />
                 )}
 
                 {/* Film Emulation Tab */}
                 {activeTab === "films" && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <ControlGroup title="Film Stock Emulation">
-                      <p className="text-[9px] font-mono tracking-widest text-[rgba(231,223,208,0.38)] mb-4 text-center">
+                      <p className="text-[9px] font-mono tracking-widest text-white/40 mb-4 text-center">
                         Authentic analog film simulation
                       </p>
 
@@ -1088,7 +853,7 @@ export function EditorRightSidebar() {
                             {/* Category header */}
                             <div className={`sticky top-0 z-10 py-1.5 px-1 flex items-center gap-2 border-b ${isIntaglio ? "border-[var(--intaglio-brass)] bg-[#0d0c0a]" : "border-white/5 bg-[#0a0a0a]"}`}>
                               {isIntaglio && <span className="w-1.5 h-1.5 bg-[var(--intaglio-brass)] rounded-full" />}
-                              <h4 className={`text-[11px] font-medium ${isIntaglio ? "text-[var(--intaglio-brass)] font-bold" : "text-[rgba(231,223,208,0.58)] font-bold"}`}>
+                              <h4 className={`text-[11px] font-medium ${isIntaglio ? "text-[var(--intaglio-brass)] font-bold" : "text-white/60 font-bold"}`}>
                                 {category}
                               </h4>
                               {isIntaglio && <span className="text-[7px] font-mono tracking-widest text-[var(--intaglio-brass)] opacity-60 ml-auto">EXCLUSIVE</span>}
@@ -1117,9 +882,9 @@ export function EditorRightSidebar() {
                                   {isNone ? (
                                     <div className="flex items-center gap-3">
                                       <div className="w-5 h-5 border border-white/5 bg-[#0a0908] flex items-center justify-center">
-                                        <span className="text-[8px] text-[rgba(231,223,208,0.3)]">✕</span>
+                                        <span className="text-[8px] text-white/30">✕</span>
                                       </div>
-                                      <span className="text-[10px] font-mono tracking-widest text-[rgba(231,223,208,0.5)]">NONE — ORIGINAL</span>
+                                      <span className="text-[10px] font-mono tracking-widest text-white/50">NONE — ORIGINAL</span>
                                     </div>
                                   ) : (
                                     <>
@@ -1161,7 +926,7 @@ export function EditorRightSidebar() {
                                                 ? "bg-blue-400"
                                                 : "bg-gray-400"
                                           }`} />
-                                          <span className="text-[7px] font-mono tracking-widest text-[rgba(231,223,208,0.3)] uppercase">
+                                          <span className="text-[7px] font-mono tracking-widest text-white/30 uppercase">
                                             {film.bestFor}
                                           </span>
                                         </div>
@@ -1187,10 +952,53 @@ export function EditorRightSidebar() {
                             onChange={(v) =>
                               updateSetting("filmEmulationStrength", v)
                             }
-                            icon={<IconAperture size={14} />}
+                            icon={<IconAperture className="intaglio-icon"/>}
                           />
                         </div>
                       )}
+                    </ControlGroup>
+
+                    <ControlGroup title="Film Density Physics">
+                      <Slider
+                        label="Toe Strength (Shadows)"
+                        value={settings.filmToeStrength}
+                        min={0}
+                        max={1}
+                        onChange={(v) => updateSetting("filmToeStrength", v)}
+                        icon={<IconSun className="intaglio-icon"/>}
+                      />
+                      <Slider
+                        label="Shoulder Strength (Highlights)"
+                        value={settings.filmShoulderStrength}
+                        min={0}
+                        max={1}
+                        onChange={(v) => updateSetting("filmShoulderStrength", v)}
+                        icon={<IconSun className="intaglio-icon"/>}
+                      />
+                      <Slider
+                        label="Film Gamma"
+                        value={settings.filmGamma}
+                        min={0.5}
+                        max={1.5}
+                        onChange={(v) => updateSetting("filmGamma", v)}
+                        icon={<IconContrast className="intaglio-icon"/>}
+                      />
+                      <Slider
+                        label="Color Crossover"
+                        value={settings.colorCrossover}
+                        min={0}
+                        max={1}
+                        onChange={(v) => updateSetting("colorCrossover", v)}
+                        icon={<IconPalette className="intaglio-icon"/>}
+                      />
+                      <Slider
+                        label="Luma Desaturation"
+                        value={settings.lumaDesat}
+                        min={0}
+                        max={1}
+                        onChange={(v) => updateSetting("lumaDesat", v)}
+                        icon={<IconPalette className="intaglio-icon"/>}
+                      />
                     </ControlGroup>
                   </div>
                 )}
@@ -1204,7 +1012,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("vignette", v)}
-                        icon={<IconEye size={14} />}
+                        icon={<IconEye className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Chromatic Aberration"
@@ -1213,7 +1021,7 @@ export function EditorRightSidebar() {
                         max={0.02}
                         step={0.001}
                         onChange={(v) => updateSetting("aberration", v)}
-                        icon={<IconAperture size={14} />}
+                        icon={<IconAperture className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Anamorphic Distortion"
@@ -1223,7 +1031,7 @@ export function EditorRightSidebar() {
                         onChange={(v) =>
                           updateSetting("anamorphicDistortion", v)
                         }
-                        icon={<IconEye size={14} />}
+                        icon={<IconEye className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Anamorphic Streaks"
@@ -1233,7 +1041,7 @@ export function EditorRightSidebar() {
                         onChange={(v) =>
                           updateSetting("anamorphicStreaks", v)
                         }
-                        icon={<IconBolt size={14} />}
+                        icon={<IconBolt className="intaglio-icon"/>}
                       />
                     </ControlGroup>
 
@@ -1247,7 +1055,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={2}
                         onChange={(v) => updateSetting("halation", v)}
-                        icon={<IconBolt size={14} />}
+                        icon={<IconBolt className="intaglio-icon"/>}
                         accentColor="accent-red-500"
                       />
                       <div className="flex gap-2">
@@ -1260,7 +1068,7 @@ export function EditorRightSidebar() {
                           onChange={(v: number) =>
                             updateSetting("halationThreshold", v)
                           }
-                          icon={<IconBolt size={12} />}
+                          icon={<IconBolt className="intaglio-icon"/>}
                         />
                         <Slider
                           label="Radius"
@@ -1270,7 +1078,7 @@ export function EditorRightSidebar() {
                           onChange={(v: number) =>
                             updateSetting("halationRadius", v)
                           }
-                          icon={<IconBolt size={12} />}
+                          icon={<IconBolt className="intaglio-icon"/>}
                         />
                       </div>
 
@@ -1285,7 +1093,7 @@ export function EditorRightSidebar() {
                         min={0}
                         max={1}
                         onChange={(v) => updateSetting("bloom", v)}
-                        icon={<IconBulb size={14} />}
+                        icon={<IconBulb className="intaglio-icon"/>}
                         accentColor="accent-blue-500"
                       />
                       <div className="flex gap-2">
@@ -1298,7 +1106,7 @@ export function EditorRightSidebar() {
                           onChange={(v: number) =>
                             updateSetting("bloomThreshold", v)
                           }
-                          icon={<IconBulb size={12} />}
+                          icon={<IconBulb className="intaglio-icon"/>}
                         />
                         <Slider
                           label="Radius"
@@ -1308,7 +1116,7 @@ export function EditorRightSidebar() {
                           onChange={(v: number) =>
                             updateSetting("bloomRadius", v)
                           }
-                          icon={<IconBulb size={12} />}
+                          icon={<IconBulb className="intaglio-icon"/>}
                         />
                       </div>
                     </ControlGroup>
@@ -1320,10 +1128,10 @@ export function EditorRightSidebar() {
                         min={0}
                         max={0.5}
                         onChange={(v) => updateSetting("grain", v)}
-                        icon={<IconPhoto size={14} />}
+                        icon={<IconPhoto className="intaglio-icon"/>}
                       />
                       <div className="flex items-center justify-between pt-2">
-                        <span className="text-[10px] font-mono tracking-widest font-medium text-[rgba(231,223,208,0.58)]">
+                        <span className="text-[10px] font-mono tracking-widest font-medium text-white/60">
                           Film Border
                         </span>
                         <div role="button"
@@ -1343,402 +1151,20 @@ export function EditorRightSidebar() {
 
                 {activeTab === "masking" && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    {/* BRUSH MASK - Lightroom Style */}
-                    <ControlGroup title="Brush Mask (Paint to Select)">
-                      <div className="flex gap-2 mb-4">
-                        <div role="button"
-                          onClick={() => {
-                            setBrushMaskActive(!brushMaskActive);
-                            setBrushErasing(false);
-                          }}
-                          className={`flex-1 py-3 text-[11px] font-medium font-medium rounded-lg transition border flex items-center justify-center gap-2 ${
-                            brushMaskActive && !brushErasing
-                              ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-400"
-                              : "bg-white/5 border-white/10 text-[rgba(231,223,208,0.38)] hover:text-[rgba(231,223,208,0.72)]"
-                          }`}
-                        >
-                          🖌️ Brush
-                        </div>
-                        <div role="button"
-                          onClick={() => {
-                            setBrushMaskActive(true);
-                            setBrushErasing(true);
-                          }}
-                          className={`flex-1 py-3 text-[11px] font-medium font-medium rounded-lg transition border flex items-center justify-center gap-2 ${
-                            brushMaskActive && brushErasing
-                              ? "bg-red-500/20 border-red-500/50 text-red-400"
-                              : "bg-white/5 border-white/10 text-[rgba(231,223,208,0.38)] hover:text-[rgba(231,223,208,0.72)]"
-                          }`}
-                        >
-                          🧹 Eraser
-                        </div>
-                      </div>
-
-                      {brushMaskActive && (
-                        <p className="text-[9px] font-mono tracking-widest text-cyan-400/80 italic mb-4 text-center">
-                          Paint on the image to create your mask
-                        </p>
-                      )}
-
-                      <Slider
-                        label="Brush Size"
-                        value={brushSize}
-                        min={0.1}
-                        max={1}
-                        onChange={(v) => setBrushSize(v)}
-                        icon={<IconAperture size={14} />}
-                      />
-                      <Slider
-                        label="Feather (Softness)"
-                        value={brushFeather}
-                        min={0}
-                        max={1}
-                        onChange={(v) => setBrushFeather(v)}
-                        icon={<IconAperture size={14} />}
-                      />
-
-                      <div role="button"
-                        onClick={() => {
-                          window.__brushMaskClear?.();
-                          setBrushMaskData("");
-                        }}
-                        className="w-full py-2 text-[11px] font-medium bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/20 transition mt-2"
-                      >
-                        Clear Mask
-                      </div>
-
-                      {brushMaskData && (
-                        <div className="pt-3 border-t border-white/5 mt-3">
-                          <p className="text-[11px] font-medium text-white/50 mb-3">
-                            Mask Adjustments
-                          </p>
-                          <Slider
-                            label="Exposure"
-                            value={brushMaskExposure}
-                            min={-1}
-                            max={1}
-                            onChange={(v) =>
-                              setBrushMaskExposure(v)
-                            }
-                            icon={<IconSun size={14} />}
-                          />
-                          <Slider
-                            label="Contrast"
-                            value={brushMaskContrast}
-                            min={-1}
-                            max={1}
-                            onChange={(v) =>
-                              setBrushMaskContrast(v)
-                            }
-                            icon={<IconContrast size={14} />}
-                          />
-                          <Slider
-                            label="Saturation"
-                            value={brushMaskSaturation}
-                            min={-1}
-                            max={1}
-                            onChange={(v) =>
-                              setBrushMaskSaturation(v)
-                            }
-                            icon={<IconPalette size={14} />}
-                          />
-                          <Slider
-                            label="Temperature"
-                            value={brushMaskTemperature}
-                            min={-1}
-                            max={1}
-                            onChange={(v) =>
-                              setBrushMaskTemperature(v)
-                            }
-                            icon={<IconSun size={14} />}
-                          />
-                          <Slider
-                            label="Clarity"
-                            value={brushMaskClarity}
-                            min={0}
-                            max={1}
-                            onChange={(v) =>
-                              setBrushMaskClarity(v)
-                            }
-                            icon={<IconBolt size={14} />}
-                          />
-                        </div>
-                      )}
-                    </ControlGroup>
-
-                    <div className="border-t border-white/5 pt-4">
-                      <p className="text-[11px] font-medium text-gray-600 mb-4 text-center">
-                        — Parametric Masks —
-                      </p>
-                    </div>
-
-                    <ControlGroup title="Radial Gradient Mask">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-mono tracking-widest font-medium text-[rgba(231,223,208,0.58)]">
-                          Enable
-                        </span>
-                        <div role="button"
-                          onClick={() =>
-                            updateSetting(
-                              "radialMaskEnabled",
-                              !settings.radialMaskEnabled
-                            )
-                          }
-                          className={`w-10 h-5 rounded-full relative transition ${settings.radialMaskEnabled ? "bg-amber-500" : "bg-gray-700"}`}
-                        >
-                          <div
-                            className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.radialMaskEnabled ? "left-6" : "left-1"}`}
-                          />
-                        </div>
-                      </div>
-                      <Slider
-                        label="Center X"
-                        value={settings.radialMaskX}
-                        min={0}
-                        max={1}
-                        onChange={(v) => updateSetting("radialMaskX", v)}
-                        icon={<IconAperture size={14} />}
-                      />
-                      <Slider
-                        label="Center Y"
-                        value={settings.radialMaskY}
-                        min={0}
-                        max={1}
-                        onChange={(v) => updateSetting("radialMaskY", v)}
-                        icon={<IconAperture size={14} />}
-                      />
-                      <Slider
-                        label="Radius"
-                        value={settings.radialMaskRadius}
-                        min={0.1}
-                        max={1}
-                        onChange={(v) =>
-                          updateSetting("radialMaskRadius", v)
-                        }
-                        icon={<IconAperture size={14} />}
-                      />
-                      <Slider
-                        label="Feather"
-                        value={settings.radialMaskFeather}
-                        min={0}
-                        max={0.5}
-                        onChange={(v) =>
-                          updateSetting("radialMaskFeather", v)
-                        }
-                        icon={<IconAperture size={14} />}
-                      />
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-[10px] font-mono tracking-widest font-medium text-[rgba(231,223,208,0.58)]">
-                          Invert Mask
-                        </span>
-                        <div role="button"
-                          onClick={() =>
-                            updateSetting(
-                              "radialMaskInvert",
-                              !settings.radialMaskInvert
-                            )
-                          }
-                          className={`w-10 h-5 rounded-full relative transition ${settings.radialMaskInvert ? "bg-amber-500" : "bg-gray-700"}`}
-                        >
-                          <div
-                            className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.radialMaskInvert ? "left-6" : "left-1"}`}
-                          />
-                        </div>
-                      </div>
-                      <div className="pt-2 border-t border-white/5 mt-2">
-                        <p className="text-[11px] font-medium text-white/50 mb-3">
-                          Mask Adjustments
-                        </p>
-                        <Slider
-                          label="Exposure"
-                          value={settings.radialMaskExposure}
-                          min={-1}
-                          max={1}
-                          onChange={(v) =>
-                            updateSetting("radialMaskExposure", v)
-                          }
-                          icon={<IconSun size={14} />}
-                        />
-                        <Slider
-                          label="Contrast"
-                          value={settings.radialMaskContrast}
-                          min={-1}
-                          max={1}
-                          onChange={(v) =>
-                            updateSetting("radialMaskContrast", v)
-                          }
-                          icon={<IconContrast size={14} />}
-                        />
-                        <Slider
-                          label="Saturation"
-                          value={settings.radialMaskSaturation}
-                          min={-1}
-                          max={1}
-                          onChange={(v) =>
-                            updateSetting("radialMaskSaturation", v)
-                          }
-                          icon={<IconPalette size={14} />}
-                        />
-                      </div>
-                    </ControlGroup>
-
-                    <ControlGroup title="Linear Gradient Mask">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-mono tracking-widest font-medium text-[rgba(231,223,208,0.58)]">
-                          Enable
-                        </span>
-                        <div role="button"
-                          onClick={() =>
-                            updateSetting(
-                              "linearMaskEnabled",
-                              !settings.linearMaskEnabled
-                            )
-                          }
-                          className={`w-10 h-5 rounded-full relative transition ${settings.linearMaskEnabled ? "bg-amber-500" : "bg-gray-700"}`}
-                        >
-                          <div
-                            className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.linearMaskEnabled ? "left-6" : "left-1"}`}
-                          />
-                        </div>
-                      </div>
-                      <Slider
-                        label="Angle"
-                        value={settings.linearMaskAngle}
-                        min={0}
-                        max={1}
-                        onChange={(v) =>
-                          updateSetting("linearMaskAngle", v)
-                        }
-                        icon={<IconRotateClockwise size={14} />}
-                      />
-                      <Slider
-                        label="Position"
-                        value={settings.linearMaskPosition}
-                        min={0}
-                        max={1}
-                        onChange={(v) =>
-                          updateSetting("linearMaskPosition", v)
-                        }
-                        icon={<IconAdjustmentsHorizontal size={14} />}
-                      />
-                      <Slider
-                        label="Feather"
-                        value={settings.linearMaskFeather}
-                        min={0}
-                        max={0.5}
-                        onChange={(v) =>
-                          updateSetting("linearMaskFeather", v)
-                        }
-                        icon={<IconAperture size={14} />}
-                      />
-                      <div className="pt-2 border-t border-white/5 mt-2">
-                        <p className="text-[11px] font-medium text-white/50 mb-3">
-                          Mask Adjustments
-                        </p>
-                        <Slider
-                          label="Exposure"
-                          value={settings.linearMaskExposure}
-                          min={-1}
-                          max={1}
-                          onChange={(v) =>
-                            updateSetting("linearMaskExposure", v)
-                          }
-                          icon={<IconSun size={14} />}
-                        />
-                        <Slider
-                          label="Contrast"
-                          value={settings.linearMaskContrast}
-                          min={-1}
-                          max={1}
-                          onChange={(v) =>
-                            updateSetting("linearMaskContrast", v)
-                          }
-                          icon={<IconContrast size={14} />}
-                        />
-                      </div>
-                    </ControlGroup>
-
-                    <ControlGroup title="Luminosity Mask">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-mono tracking-widest font-medium text-[rgba(231,223,208,0.58)]">
-                          Enable
-                        </span>
-                        <div role="button"
-                          onClick={() =>
-                            updateSetting(
-                              "luminosityMaskEnabled",
-                              !settings.luminosityMaskEnabled
-                            )
-                          }
-                          className={`w-10 h-5 rounded-full relative transition ${settings.luminosityMaskEnabled ? "bg-amber-500" : "bg-gray-700"}`}
-                        >
-                          <div
-                            className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.luminosityMaskEnabled ? "left-6" : "left-1"}`}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-between mb-3">
-                        <div role="button"
-                          onClick={() =>
-                            updateSetting("luminosityMaskTarget", 0.2)
-                          }
-                          className={`flex-1 py-2 mx-1 text-[11px] font-medium rounded ${settings.luminosityMaskTarget < 0.35 ? "bg-gray-800 border border-amber-500/50 text-amber-400" : "bg-gray-800/50 border border-white/5 text-[rgba(231,223,208,0.38)]"}`}
-                        >
-                          Shadows
-                        </div>
-                        <div role="button"
-                          onClick={() =>
-                            updateSetting("luminosityMaskTarget", 0.5)
-                          }
-                          className={`flex-1 py-2 mx-1 text-[11px] font-medium rounded ${settings.luminosityMaskTarget >= 0.35 && settings.luminosityMaskTarget <= 0.65 ? "bg-gray-600 border border-amber-500/50 text-amber-400" : "bg-gray-600/50 border border-white/5 text-[rgba(231,223,208,0.38)]"}`}
-                        >
-                          Mids
-                        </div>
-                        <div role="button"
-                          onClick={() =>
-                            updateSetting("luminosityMaskTarget", 0.8)
-                          }
-                          className={`flex-1 py-2 mx-1 text-[11px] font-medium rounded ${settings.luminosityMaskTarget > 0.65 ? "bg-gray-400 border border-amber-500/50 text-amber-900" : "bg-gray-400/50 border border-white/5 text-gray-600"}`}
-                        >
-                          Highlights
-                        </div>
-                      </div>
-                      <Slider
-                        label="Range"
-                        value={settings.luminosityMaskRange}
-                        min={0.1}
-                        max={0.5}
-                        onChange={(v) =>
-                          updateSetting("luminosityMaskRange", v)
-                        }
-                        icon={<IconAdjustmentsHorizontal size={14} />}
-                      />
-                      <div className="pt-2 border-t border-white/5 mt-2">
-                        <p className="text-[11px] font-medium text-white/50 mb-3">
-                          Mask Adjustments
-                        </p>
-                        <Slider
-                          label="Exposure"
-                          value={settings.luminosityMaskExposure}
-                          min={-1}
-                          max={1}
-                          onChange={(v) =>
-                            updateSetting("luminosityMaskExposure", v)
-                          }
-                          icon={<IconSun size={14} />}
-                        />
-                        <Slider
-                          label="Saturation"
-                          value={settings.luminosityMaskSaturation}
-                          min={-1}
-                          max={1}
-                          onChange={(v) =>
-                            updateSetting("luminosityMaskSaturation", v)
-                          }
-                          icon={<IconPalette size={14} />}
-                        />
-                      </div>
-                    </ControlGroup>
+                    <AdjustmentLayersPanel
+                      settings={settings}
+                      updateSetting={updateSetting}
+                      setBrushMaskActive={setBrushMaskActive}
+                      setBrushErasing={setBrushErasing}
+                      brushMaskActive={brushMaskActive}
+                      brushErasing={brushErasing}
+                      brushSize={brushSize}
+                      setBrushSize={setBrushSize}
+                      brushFeather={brushFeather}
+                      setBrushFeather={setBrushFeather}
+                      activeMaskId={activeMaskId}
+                      setActiveMaskId={setActiveMaskId}
+                    />
                   </div>
                 )}
 
@@ -1747,7 +1173,7 @@ export function EditorRightSidebar() {
                     <ControlGroup title="Culling">
                       <div>
                         <div className="mb-2 flex items-center justify-between">
-                          <span className="font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                          <span className="font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                             Rating
                           </span>
                           <span className="font-mono text-[11px] font-medium tracking-[0.28em] text-amber-300/70">
@@ -1779,7 +1205,7 @@ export function EditorRightSidebar() {
                       </div>
 
                       <div className="pt-4">
-                        <div className="mb-2 font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                        <div className="mb-2 font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                           Flag
                         </div>
                         <div className="grid grid-cols-3 gap-2">
@@ -1805,7 +1231,7 @@ export function EditorRightSidebar() {
                                     : flag === "rejected"
                                       ? "border-red-400/50 bg-red-400/10 text-red-200"
                                       : "border-white/30 bg-white/10 text-white"
-                                  : "border-white/5 bg-white/[0.03] text-[rgba(231,223,208,0.48)] hover:border-white/25 hover:text-white/70"
+                                  : "border-white/5 bg-white/[0.03] text-white/50 hover:border-white/25 hover:text-white/70"
                               }`}
                             >
                               {label}
@@ -1815,7 +1241,7 @@ export function EditorRightSidebar() {
                       </div>
 
                       <div className="pt-4">
-                        <div className="mb-2 font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                        <div className="mb-2 font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                           Color Label
                         </div>
                         <div className="grid grid-cols-6 gap-2">
@@ -1854,7 +1280,7 @@ export function EditorRightSidebar() {
                     <ControlGroup title="Metadata">
                       <div className="space-y-4">
                         <label className="block">
-                          <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                          <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                             Title
                           </span>
                           <input
@@ -1865,13 +1291,13 @@ export function EditorRightSidebar() {
                                 title: event.target.value,
                               }))
                             }
-                            className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-[rgba(231,223,208,0.3)] focus:border-[var(--intaglio-brass)] focus:bg-white/5"
+                            className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-white/30 focus:border-[var(--intaglio-brass)] focus:bg-white/5"
                             placeholder="Untitled"
                           />
                         </label>
 
                         <label className="block">
-                          <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                          <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                             Caption
                           </span>
                           <textarea
@@ -1883,14 +1309,14 @@ export function EditorRightSidebar() {
                               }))
                             }
                             rows={3}
-                            className="w-full resize-none border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest leading-relaxed text-[var(--intaglio-paper)] outline-none transition placeholder:text-[rgba(231,223,208,0.3)] focus:border-[var(--intaglio-brass)] focus:bg-white/5"
+                            className="w-full resize-none border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest leading-relaxed text-[var(--intaglio-paper)] outline-none transition placeholder:text-white/30 focus:border-[var(--intaglio-brass)] focus:bg-white/5"
                             placeholder="Delivery note or image caption"
                           />
                         </label>
 
                         <div className="grid grid-cols-1 gap-3">
                           <label className="block">
-                            <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                            <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                               Creator
                             </span>
                             <input
@@ -1901,13 +1327,13 @@ export function EditorRightSidebar() {
                                   creator: event.target.value,
                                 }))
                               }
-                              className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-[rgba(231,223,208,0.3)] focus:border-[var(--intaglio-brass)] focus:bg-white/5"
+                              className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-white/30 focus:border-[var(--intaglio-brass)] focus:bg-white/5"
                               placeholder="Creator or studio"
                             />
                           </label>
 
                           <label className="block">
-                            <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                            <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                               Copyright
                             </span>
                             <input
@@ -1918,14 +1344,14 @@ export function EditorRightSidebar() {
                                   copyright: event.target.value,
                                 }))
                               }
-                              className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-[rgba(231,223,208,0.3)] focus:border-[var(--intaglio-brass)] focus:bg-white/5"
+                              className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-white/30 focus:border-[var(--intaglio-brass)] focus:bg-white/5"
                               placeholder="All rights reserved"
                             />
                           </label>
                         </div>
 
                         <label className="block">
-                          <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                          <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                             Keywords
                           </span>
                           <input
@@ -1936,7 +1362,7 @@ export function EditorRightSidebar() {
                                 keywords: event.target.value,
                               }))
                             }
-                            className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-[rgba(231,223,208,0.3)] focus:border-[var(--intaglio-brass)] focus:bg-white/5"
+                            className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-white/30 focus:border-[var(--intaglio-brass)] focus:bg-white/5"
                             placeholder="portrait, editorial, delivery"
                           />
                         </label>
@@ -1945,7 +1371,7 @@ export function EditorRightSidebar() {
 
                     <ControlGroup title="Watermark">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono tracking-widest font-medium text-[rgba(231,223,208,0.58)]">
+                        <span className="text-[10px] font-mono tracking-widest font-medium text-white/60">
                           Enable delivery mark
                         </span>
                         <div role="button"
@@ -1965,7 +1391,7 @@ export function EditorRightSidebar() {
                       </div>
 
                       <label className="block pt-2">
-                        <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                        <span className="mb-2 block font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                           Text
                         </span>
                         <input
@@ -1976,13 +1402,13 @@ export function EditorRightSidebar() {
                               text: event.target.value,
                             }))
                           }
-                          className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-[rgba(231,223,208,0.3)] focus:border-[var(--intaglio-brass)] focus:bg-white/5"
+                          className="w-full border border-white/5 bg-[#0a0908] px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] outline-none transition placeholder:text-white/30 focus:border-[var(--intaglio-brass)] focus:bg-white/5"
                           placeholder="PROOF"
                         />
                       </label>
 
                       <div className="pt-2">
-                        <div className="mb-2 font-mono text-[11px] font-medium tracking-[0.28em] text-[rgba(231,223,208,0.48)]">
+                        <div className="mb-2 font-mono text-[11px] font-medium tracking-[0.28em] text-white/50">
                           Position
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -1998,7 +1424,7 @@ export function EditorRightSidebar() {
                               className={`border px-2 py-2.5 text-left font-mono text-[11px] font-medium tracking-[0.18em] transition ${
                                 watermark.position === position.id
                                   ? "border-amber-500/50 bg-amber-500/10 text-amber-200"
-                                  : "border-white/5 bg-white/[0.03] text-[rgba(231,223,208,0.48)] hover:border-white/25 hover:text-white/70"
+                                  : "border-white/5 bg-white/[0.03] text-white/50 hover:border-white/25 hover:text-white/70"
                               }`}
                             >
                               {position.label}
@@ -2020,7 +1446,7 @@ export function EditorRightSidebar() {
                               opacity: value,
                             }))
                           }
-                          icon={<IconEye size={14} />}
+                          icon={<IconEye className="intaglio-icon"/>}
                         />
                         <Slider
                           label="Size"
@@ -2034,7 +1460,7 @@ export function EditorRightSidebar() {
                               size: value,
                             }))
                           }
-                          icon={<IconTypography size={14} />}
+                          icon={<IconTypography className="intaglio-icon"/>}
                         />
                       </div>
                     </ControlGroup>
@@ -2058,7 +1484,7 @@ export function EditorRightSidebar() {
                         max={0.5}
                         step={0.01}
                         onChange={(v) => updateSetting("rotate", v)}
-                        icon={<IconRotateClockwise size={14} />}
+                        icon={<IconRotateClockwise className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Zoom"
@@ -2066,7 +1492,7 @@ export function EditorRightSidebar() {
                         min={1}
                         max={3}
                         onChange={(v) => updateSetting("zoom", v)}
-                        icon={<IconZoomIn size={14} />}
+                        icon={<IconZoomIn className="intaglio-icon"/>}
                       />
                     </ControlGroup>
 
@@ -2079,7 +1505,7 @@ export function EditorRightSidebar() {
                         onChange={(v) =>
                           updateSetting("lensDistortion", v)
                         }
-                        icon={<IconDeviceDesktop size={14} />}
+                        icon={<IconDeviceDesktop className="intaglio-icon"/>}
                         bipolar
                       />
                       <div className="grid grid-cols-2 gap-3">
@@ -2089,7 +1515,7 @@ export function EditorRightSidebar() {
                           min={-0.5}
                           max={0.5}
                           onChange={(v) => updateSetting("keystoneH", v)}
-                          icon={<IconPerspective size={14} />}
+                          icon={<IconPerspective className="intaglio-icon"/>}
                           bipolar
                         />
                         <Slider
@@ -2098,7 +1524,7 @@ export function EditorRightSidebar() {
                           min={-0.5}
                           max={0.5}
                           onChange={(v) => updateSetting("keystoneV", v)}
-                          icon={<IconPerspective size={14} />}
+                          icon={<IconPerspective className="intaglio-icon"/>}
                           bipolar
                         />
                       </div>
@@ -2115,7 +1541,7 @@ export function EditorRightSidebar() {
                           onChange={(v) =>
                             updateSetting("tiltShiftAmount", v)
                           }
-                          icon={<IconDroplet size={14} />}
+                          icon={<IconDroplet className="intaglio-icon"/>}
                         />
                         {settings.tiltShiftAmount > 0 && (
                           <>
@@ -2127,7 +1553,7 @@ export function EditorRightSidebar() {
                               onChange={(v) =>
                                 updateSetting("tiltShiftPosition", v)
                               }
-                              icon={<IconArrowsMaximize size={14} />}
+                              icon={<IconArrowsMaximize className="intaglio-icon"/>}
                             />
                             <Slider
                               label="Angle"
@@ -2138,7 +1564,7 @@ export function EditorRightSidebar() {
                               onChange={(v) =>
                                 updateSetting("tiltShiftAngle", v)
                               }
-                              icon={<IconRotateClockwise size={14} />}
+                              icon={<IconRotateClockwise className="intaglio-icon"/>}
                             />
                           </>
                         )}
@@ -2155,10 +1581,10 @@ export function EditorRightSidebar() {
                     onClick={() => setIsPresetModalOpen(true)}
                     className="flex cursor-pointer items-center justify-center gap-2 py-2 bg-white/5 hover:bg-[var(--intaglio-brass)] hover:text-[#0d0c0a] text-[11px] font-medium font-medium transition-colors border border-white/5 hover:border-[var(--intaglio-brass)] text-[var(--intaglio-paper)]"
                   >
-                    <IconDeviceFloppy size={12} /> Create .{FORMAT.recipeExtension}
+                    <IconDeviceFloppy className="intaglio-icon"/> Create .{FORMAT.recipeExtension}
                   </div>
-                  <label className="flex items-center justify-center gap-2 py-2 bg-transparent hover:bg-white/5 text-[11px] font-medium font-medium transition-colors border border-white/5 cursor-pointer text-[rgba(231,223,208,0.5)] hover:text-[var(--intaglio-paper)]">
-                    <IconFileCode size={12} /> Load .{FORMAT.recipeExtension}
+                  <label className="flex items-center justify-center gap-2 py-2 bg-transparent hover:bg-white/5 text-[11px] font-medium font-medium transition-colors border border-white/5 cursor-pointer text-white/50 hover:text-[var(--intaglio-paper)]">
+                    <IconFileCode className="intaglio-icon"/> Load .{FORMAT.recipeExtension}
                     <input
                       type="file"
                       accept={`.${FORMAT.recipeExtension},.nyv,.json`}
@@ -2171,13 +1597,13 @@ export function EditorRightSidebar() {
                 <div className="grid grid-cols-2 gap-2">
                   <div
                     onClick={handleCopySettings}
-                    className="flex cursor-pointer items-center justify-center gap-2 py-2 bg-transparent hover:bg-white/5 text-[11px] font-medium font-medium transition-colors border border-white/5 text-[rgba(231,223,208,0.5)] hover:text-[var(--intaglio-paper)]"
+                    className="flex cursor-pointer items-center justify-center gap-2 py-2 bg-transparent hover:bg-white/5 text-[11px] font-medium font-medium transition-colors border border-white/5 text-white/50 hover:text-[var(--intaglio-paper)]"
                   >
                     Copy
                   </div>
                   <div
                     onClick={handlePasteSettings}
-                    className={`flex cursor-pointer items-center justify-center gap-2 py-2 text-[11px] font-medium font-medium transition-colors border border-white/5 ${clipboard ? "bg-transparent hover:bg-white/5 text-[rgba(231,223,208,0.5)] hover:text-[var(--intaglio-paper)]" : "bg-[#0a0908] text-gray-700 cursor-not-allowed border-gray-800"}`}
+                    className={`flex cursor-pointer items-center justify-center gap-2 py-2 text-[11px] font-medium font-medium transition-colors border border-white/5 ${clipboard ? "bg-transparent hover:bg-white/5 text-white/50 hover:text-[var(--intaglio-paper)]" : "bg-[#0a0908] text-gray-700 cursor-not-allowed border-gray-800"}`}
                   >
                     Paste
                   </div>
@@ -2270,17 +1696,17 @@ export function EditorRightSidebar() {
               onClick={() => setIsHistogramHelpOpen(false)}
               className="absolute top-4 right-4 text-white/30 hover:text-white"
             >
-              <IconX size={18} />
+              <IconX className="intaglio-icon"/>
             </div>
             <h3 className="font-mono text-lg uppercase tracking-widest text-amber-500 mb-6 flex items-center gap-3">
-              <IconChartLine /> Reading the Histogram
+              <IconChartLine className="intaglio-icon"/> Reading the Histogram
             </h3>
             <div className="space-y-4 text-sm font-light text-[rgba(231,223,208,0.72)] leading-relaxed">
               <p>
                 The histogram shows the distribution of exposure in your image
                 from shadows (left) to highlights (right).
               </p>
-              <div className="grid grid-cols-3 gap-2 text-center text-[9px] font-mono tracking-widest font-mono uppercase tracking-wider text-white/40 my-4">
+              <div className="grid grid-cols-3 gap-2 text-center intaglio-label text-white/40 my-4">
                 <div className="bg-gradient-to-r from-black via-gray-900 to-transparent h-2 rounded" />
                 <div className="bg-gradient-to-r from-transparent via-gray-500 to-transparent h-2 rounded" />
                 <div className="bg-gradient-to-r from-transparent via-white to-white h-2 rounded" />
@@ -2307,7 +1733,7 @@ export function EditorRightSidebar() {
                 <h4 className="font-mono text-xs font-medium text-amber-500 mb-2">
                   In Plain English
                 </h4>
-                <p className="text-sm font-light text-[rgba(231,223,208,0.58)]">
+                <p className="text-sm font-light text-white/60">
                   Think of it as a mountain range. Use the &quot;mountains&quot;
                   to tell if your photo is too dark or too bright. You generally want
                   the mountains to be in the middle, not squashed against the
@@ -2319,180 +1745,7 @@ export function EditorRightSidebar() {
         </div>
       )}
 
-      {/* Export Modal */}
-      {isExportModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden border border-white/5 bg-[#151515] shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-white/5 p-6">
-              <div>
-                <div className="flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.28em] text-amber-300/70">
-                  <IconDownload size={15} /> Delivery
-                </div>
-                <h3 className="mt-2 text-xl font-light text-white">
-                  Export Image
-                </h3>
-              </div>
-              <div role="button"
-                onClick={() => setIsExportModalOpen(false)}
-                className="border border-white/5 bg-[var(--intaglio-panel-soft)] p-2 text-[rgba(231,223,208,0.48)] transition hover:border-white/25 hover:text-white"
-              >
-                <IconX size={18} />
-              </div>
-            </div>
 
-            <div className="custom-scrollbar space-y-6 overflow-y-auto p-6">
-              {/* Recipes */}
-              <div className="space-y-3">
-                <label className="text-[9px] font-mono tracking-widest font-mono uppercase tracking-widest text-white/40">
-                  Export Recipes
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {EXPORT_RECIPES.map((recipe) => (
-                    <div role="button"
-                      key={recipe.id}
-                      onClick={() => applyExportRecipe(recipe)}
-                      className={`border p-3 text-left transition-all ${activeExportRecipeId === recipe.id ? "border-amber-500/60 bg-amber-500/10" : "border-white/5 bg-[var(--intaglio-panel-soft)] hover:border-white/25"}`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-[10px] font-mono tracking-widest font-mono uppercase tracking-[0.22em] text-white/80">
-                          {recipe.name}
-                        </span>
-                        <span className="shrink-0 text-[9px] font-mono tracking-widest font-mono text-amber-400/80">
-                          {recipe.format.split("/")[1].toUpperCase()} •{" "}
-                          {recipe.scale}x
-                        </span>
-                      </div>
-                      <p className="mt-2 text-[10px] font-mono tracking-widest leading-5 text-[rgba(231,223,208,0.58)]">
-                        {recipe.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Format */}
-              <div className="space-y-3">
-                <label className="text-[9px] font-mono tracking-widest font-mono uppercase tracking-widest text-white/40">
-                  Format
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {(["image/jpeg", "image/png", "image/webp"] as const).map(
-                    (fmt) => (
-                      <div role="button"
-                        key={fmt}
-                        onClick={() => {
-                          setActiveExportRecipeId(null);
-                          setExportFormat(fmt);
-                        }}
-                        className={`border p-3 text-center transition-all ${exportFormat === fmt ? "border-white bg-white text-black" : "border-white/5 bg-[var(--intaglio-panel-soft)] text-white/60 hover:border-white/25"}`}
-                      >
-                        <div className="font-bold text-sm">
-                          {fmt
-                            .split("/")[1]
-                            .toUpperCase()
-                            .replace("JPEG", "JPG")}
-                        </div>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-
-              {/* Quality */}
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <label className="text-[9px] font-mono tracking-widest font-mono uppercase tracking-widest text-white/40">
-                    Quality
-                  </label>
-                  <span className="text-[9px] font-mono tracking-widest font-mono text-amber-500">
-                    {exportQuality}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="10"
-                  max="100"
-                  value={exportQuality}
-                  onChange={(e) => {
-                    setActiveExportRecipeId(null);
-                    setExportQuality(Number(e.target.value));
-                  }}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Scale */}
-              <div className="space-y-3">
-                <label className="text-[9px] font-mono tracking-widest font-mono uppercase tracking-widest text-white/40">
-                  Scale factor
-                </label>
-                <div className="flex gap-2">
-                  {[0.5, 1, 2, 4].map((scale) => (
-                    <div role="button"
-                      key={scale}
-                      onClick={() => {
-                        setActiveExportRecipeId(null);
-                        setExportScale(scale);
-                      }}
-                      className={`flex-1 border p-2 font-mono text-[10px] font-mono tracking-widest transition-all ${exportScale === scale ? "border-amber-400/60 bg-amber-400/15 text-amber-200" : "border-white/5 bg-[var(--intaglio-panel-soft)] text-white/50 hover:border-white/25"}`}
-                    >
-                      {scale}x
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {exportSafetyWarnings.length > 0 && (
-                <div className="space-y-3">
-                  <label className="text-[9px] font-mono tracking-widest font-mono uppercase tracking-widest text-white/40">
-                    Export Safety
-                  </label>
-                  <div className="space-y-2">
-                    {exportSafetyWarnings.map((warning: any) => (
-                      <div
-                        key={`${warning.title}-${warning.detail}`}
-                        className={`border p-3 ${
-                          warning.tone === "warn"
-                            ? "border-amber-500/25 bg-amber-500/[0.06]"
-                            : "border-cyan-500/20 bg-cyan-500/[0.04]"
-                        }`}
-                      >
-                        <div
-                          className={`font-mono text-[11px] font-medium tracking-[0.24em] ${
-                            warning.tone === "warn"
-                              ? "text-amber-300"
-                              : "text-cyan-300"
-                          }`}
-                        >
-                          {warning.title}
-                        </div>
-                        <p className="mt-1 text-[10px] font-mono tracking-widest leading-5 text-[rgba(231,223,208,0.58)]">
-                          {warning.detail}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-3 border-t border-white/5 bg-[var(--intaglio-panel-soft)] p-6">
-              <div role="button"
-                onClick={() => setIsExportModalOpen(false)}
-                className="flex-1 border border-white/5 bg-black/40 py-3 font-mono text-xs font-medium text-white/60 transition hover:border-white/25 hover:text-white"
-              >
-                Cancel
-              </div>
-              <div role="button"
-                onClick={handleExport}
-                className="flex-[2] border border-amber-400/40 bg-amber-400 py-3 font-mono text-[10px] font-mono tracking-widest font-bold uppercase tracking-widest text-black transition hover:bg-amber-300"
-              >
-                Export Image
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Edit Diff Modal */}
       {diffVirtualCopy && (
@@ -2509,9 +1762,9 @@ export function EditorRightSidebar() {
               </div>
               <div role="button"
                 onClick={() => setDiffVirtualCopyId(null)}
-                className="border border-white/5 bg-[var(--intaglio-panel-soft)] p-2 text-[rgba(231,223,208,0.48)] transition hover:border-white/25 hover:text-white"
+                className="border border-white/5 bg-[var(--intaglio-panel-soft)] p-2 text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                <IconX size={18} />
+                <IconX className="intaglio-icon"/>
               </div>
             </div>
 
@@ -2552,10 +1805,10 @@ export function EditorRightSidebar() {
                 </div>
               ) : (
                 <div className="border border-white/5 bg-[var(--intaglio-panel-soft)] p-8 text-center">
-                  <div className="font-mono text-[11px] font-medium tracking-[0.3em] text-[rgba(231,223,208,0.48)]">
+                  <div className="font-mono text-[11px] font-medium tracking-[0.3em] text-white/50">
                     No Differences
                   </div>
-                  <p className="mt-3 text-sm text-[rgba(231,223,208,0.58)]">
+                  <p className="mt-3 text-sm text-white/60">
                     The current recipe matches this virtual copy.
                   </p>
                 </div>

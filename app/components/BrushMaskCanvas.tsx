@@ -15,7 +15,8 @@ interface BrushMaskCanvasProps {
   brushFeather: number;
   isErasing: boolean;
   isActive: boolean;
-  onMaskUpdate: (maskDataUrl: string) => void;
+  onMaskUpdate: () => void;
+  onCanvasReady: (canvas: HTMLCanvasElement) => void;
   onClear: () => void;
 }
 
@@ -27,6 +28,7 @@ export default function BrushMaskCanvas({
   isErasing,
   isActive,
   onMaskUpdate,
+  onCanvasReady,
   onClear,
 }: BrushMaskCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,9 +42,15 @@ export default function BrushMaskCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, width, height);
-    onMaskUpdate("");
+    onMaskUpdate();
     onClear();
   }, [width, height, onMaskUpdate, onClear]);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      onCanvasReady(canvasRef.current);
+    }
+  }, [onCanvasReady]);
 
   // Expose clear function via window for parent to call
   useEffect(() => {
@@ -120,9 +128,8 @@ export default function BrushMaskCanvas({
         }
       }
 
-      // Update mask texture
-      const dataUrl = canvas.toDataURL("image/png");
-      onMaskUpdate(dataUrl);
+      // Notify parent that texture needs update
+      onMaskUpdate();
     },
     [brushSize, brushFeather, isErasing, width, height, onMaskUpdate]
   );

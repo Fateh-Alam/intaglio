@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from "react";
 import type { HistogramData } from "../../types/editor";
 
 export const getColorCastLabel = (data: HistogramData) => {
-  const { r, g, b } = data.average;
+  const [r, g, b] = data.meanRgb;
   const warmCool = r - b;
   const greenMagenta = g - (r + b) / 2;
 
@@ -55,7 +55,7 @@ const StatusChip = ({ label, value }: { label: string; value: string }) => (
 export const HistogramGraph = ({
   data,
 }: {
-  data: { r: number[]; g: number[]; b: number[] };
+  data: HistogramData | null;
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -69,10 +69,17 @@ export const HistogramGraph = ({
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // Find max value to normalize
-    const max = Math.max(...data.r, ...data.g, ...data.b);
+    const [rData, gData, bData] = data.rgb;
+    
+    // Find max value ignoring the extreme absolute black (0) and white (255) to prevent squashing
+    const max = Math.max(
+      ...rData.slice(1, 254),
+      ...gData.slice(1, 254),
+      ...bData.slice(1, 254)
+    ) * 1.1; // Add 10% headroom
 
-    ctx.globalCompositeOperation = "screen";
+    // Additive blending creates CMY and White where channels overlap, exactly like Lightroom
+    ctx.globalCompositeOperation = "lighter";
 
     const drawChannel = (channelData: number[], color: string) => {
       ctx.fillStyle = color;
@@ -80,16 +87,19 @@ export const HistogramGraph = ({
       ctx.moveTo(0, h);
       for (let i = 0; i < 256; i++) {
         const x = (i / 255) * w;
-        const y = h - (channelData[i] / max) * h;
+        // Linear scaling with capped max
+        const normalized = Math.min(channelData[i] / max, 1.0);
+        const y = h - normalized * h;
         ctx.lineTo(x, y);
       }
       ctx.lineTo(w, h);
       ctx.fill();
     };
 
-    drawChannel(data.r, "rgba(255, 0, 0, 0.5)");
-    drawChannel(data.g, "rgba(0, 255, 0, 0.5)");
-    drawChannel(data.b, "rgba(0, 0, 255, 0.5)");
+    // Lightroom colors
+    drawChannel(rData, "rgba(255, 0, 0, 0.8)");
+    drawChannel(gData, "rgba(0, 255, 0, 0.8)");
+    drawChannel(bData, "rgba(0, 0, 255, 0.8)");
   }, [data]);
 
   return (
@@ -97,7 +107,63 @@ export const HistogramGraph = ({
       ref={canvasRef}
       width={200}
       height={100}
-      className="w-[200px] h-[100px]"
+      className="w-full h-[120px]"
+    />
+  );
+};
+
+export const RgbParadeGraph = ({
+  data,
+}: {
+  data: HistogramData | null;
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !data) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const [rData, gData, bData] = data.rgb;
+    
+    const max = Math.max(
+      ...rData.slice(1, 254),
+      ...gData.slice(1, 254),
+      ...bData.slice(1, 254)
+    ) * 1.1;
+
+    const drawParadeChannel = (channelData: number[], color: string, offsetX: number, width: number) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(offsetX, h);
+      for (let i = 0; i < 256; i++) {
+        const x = offsetX + (i / 255) * width;
+        const normalized = Math.min(channelData[i] / max, 1.0);
+        const y = h - normalized * h;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(offsetX + width, h);
+      ctx.fill();
+    };
+
+    const thirdW = w / 3;
+    // Parade doesn't overlap, so we can use solid colors or lighter ones.
+    drawParadeChannel(rData, "rgba(255, 80, 80, 0.9)", 0, thirdW);
+    drawParadeChannel(gData, "rgba(80, 255, 80, 0.9)", thirdW, thirdW);
+    drawParadeChannel(bData, "rgba(80, 120, 255, 0.9)", thirdW * 2, thirdW);
+  }, [data]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={300}
+      height={100}
+      className="w-full h-[80px]"
     />
   );
 };

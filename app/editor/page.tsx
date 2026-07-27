@@ -16,6 +16,7 @@ import { DEFAULT_SETTINGS, DEFAULT_ASSET_METADATA } from "./pageTypes";
 import { EditorTopToolbar } from "./components/EditorTopToolbar";
 import { PresetsBottomBar } from "./components/PresetsBottomBar";
 import { EditorToolStrip } from "./components/EditorToolStrip";
+import { ExportModal } from "./components/ExportModal";
 
 function EditorLayout() {
   const editorState = useEditorState();
@@ -96,6 +97,8 @@ function EditorLayout() {
         onClose={() => setIsShortcutHelpOpen(false)}
         commands={appCommands}
       />
+
+      <ExportModal />
 
       <EditorTopToolbar />
       

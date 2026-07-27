@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RenderPass } from '../RenderPass';
 import { EditorSettings } from '../../../types/editor';
+import { OKLAB_GLSL_CHUNK } from '../shaders/oklabChunk';
 
 const vertexShader = `
 varying vec2 vUv;
@@ -21,21 +22,30 @@ uniform float uBlacks;
 uniform float uTemperature;
 uniform float uTint;
 
+uniform float uProtectHighlights;
+
 uniform float uVibrance;
 uniform float uDehaze;
 
+// Film Physics
+uniform float uFilmToeStrength;
+uniform float uFilmToeLength;
+uniform float uFilmShoulderStrength;
+uniform float uFilmShoulderLength;
+uniform float uFilmGamma;
+uniform float uColorCrossover;
+uniform float uLumaDesat;
+
 varying vec2 vUv;
 
-// Linearization
+${OKLAB_GLSL_CHUNK}
+
+// Linearization (sRGB decode — distinct from linearToSrgb in OKLAB chunk)
 vec3 srgbToLinear(vec3 c) {
   bvec3 cutoff = lessThanEqual(c, vec3(0.04045));
   vec3 lower = c / 12.92;
   vec3 higher = pow((c + 0.055) / 1.055, vec3(2.4));
   return mix(higher, lower, vec3(cutoff));
-}
-
-float luma709(vec3 linearRgb) {
-  return dot(linearRgb, vec3(0.2126, 0.7152, 0.0722));
 }
 
 vec3 applyExposure(vec3 color, float ev) {
@@ -55,6 +65,14 @@ vec3 applyHighlights(vec3 color, float amount) {
   float w = smoothstep(0.45, 1.0, y);
   float factor = exp2(-amount * w);
   return color * factor;
+}
+
+// §39.2 Protect Highlights
+vec3 protectHighlights(vec3 original, vec3 adjusted, float strength) {
+  if (strength == 0.0) return adjusted;
+  float y = luma709(original);
+  float m = smoothstep(0.75, 1.15, y) * strength;
+  return mix(adjusted, min(adjusted, original * 1.05), m);
 }
 
 vec3 applyShadows(vec3 color, float amount) {
@@ -79,13 +97,15 @@ vec3 applyBlacks(vec3 color, float blacks) {
   return color * exp2(blacks * 2.0 * w);
 }
 
-vec3 applyVibrance(vec3 color, float vibrance) {
-  float luma = luma709(color);
-  float maxC = max(color.r, max(color.g, color.b));
-  float minC = min(color.r, min(color.g, color.b));
-  float sat = (maxC - minC) / (maxC + 0.001);
-  float vibranceWeight = 1.0 - sat;
-  return mix(vec3(luma), color, 1.0 + vibrance * vibranceWeight);
+// §10.8 OKLAB-based Vibrance — operates on perceptual chroma,
+// boosting low-chroma colors more than already saturated ones.
+vec3 applyVibrance(vec3 color, float amount) {
+  vec3 lab = linearSrgbToOklab(max(color, vec3(0.0)));
+  vec3 lch = oklabToOklch(lab);
+  float chroma = lch.y;
+  float weight = 1.0 - smoothstep(0.02, 0.22, chroma);
+  lch.y *= 1.0 + amount * weight;
+  return oklabToLinearSrgb(oklchToOklab(lch));
 }
 
 vec3 applyDehaze(vec3 color, float amount) {
@@ -104,6 +124,30 @@ vec3 applyTint(vec3 color, float tint) {
   vec3 magenta = vec3(1.0 + tint * 0.05, 1.0 - tint * 0.08, 1.0 + tint * 0.05);
   vec3 green = vec3(1.0 + tint * 0.03, 1.0 + tint * 0.08, 1.0 + tint * 0.03);
   return tint >= 0.0 ? color * magenta : color * green;
+}
+
+// -- Film Physics --
+float filmCurve(float x, float toe, float shoulder, float gamma) {
+  x = max(x, 0.0);
+  float toePart = x / (x + max(toe, 0.001));
+  float shoulderPart = 1.0 - exp(-x * max(shoulder, 0.001));
+  float mixed = mix(toePart, shoulderPart, 0.5);
+  return pow(max(mixed, 0.0), gamma);
+}
+
+float filmSaturationByLuma(float y, float baseSat) {
+  float shadowDesat = smoothstep(0.0, 0.18, y);
+  float highlightDesat = 1.0 - smoothstep(0.75, 1.2, y) * 0.35;
+  return baseSat * shadowDesat * highlightDesat;
+}
+
+vec3 applyColorCrossover(vec3 color, float strength) {
+  if (strength == 0.0) return color;
+  float y = luma709(color);
+  vec3 shadows = vec3(-0.02, 0.01, 0.04);
+  vec3 highs = vec3(0.04, 0.01, -0.02);
+  vec3 shift = mix(shadows, highs, smoothstep(0.1, 0.9, y));
+  return color + shift * strength;
 }
 
 vec3 kelvinToRGB(float temp) {
@@ -133,7 +177,8 @@ void main() {
   vec4 texColor = texture2D(tDiffuse, vUv);
   
   // 1. Linearize Input
-  vec3 color = srgbToLinear(texColor.rgb);
+  vec3 originalColor = srgbToLinear(texColor.rgb);
+  vec3 color = originalColor;
   
   // 2. White Balance
   // Base D65 white point
@@ -163,6 +208,30 @@ void main() {
   // 8. Dehaze
   color = applyDehaze(color, uDehaze);
   
+  // 9. Film Physics
+  // Color Crossover
+  color = applyColorCrossover(color, uColorCrossover);
+  
+  // Luma-dependent Desaturation
+  if (uLumaDesat > 0.0) {
+    float y = luma709(color);
+    float satMod = filmSaturationByLuma(y, 1.0);
+    // Interpolate between full color and modified saturation based on strength
+    vec3 lumaColor = vec3(y);
+    vec3 desaturatedColor = mix(lumaColor, color, satMod);
+    color = mix(color, desaturatedColor, uLumaDesat);
+  }
+  
+  // Density Curve (Toe/Shoulder/Gamma)
+  if (uFilmToeStrength > 0.0 || uFilmShoulderStrength > 0.0 || uFilmGamma != 1.0) {
+    color.r = filmCurve(color.r, mix(0.001, uFilmToeLength, uFilmToeStrength), mix(0.001, uFilmShoulderLength, uFilmShoulderStrength), uFilmGamma);
+    color.g = filmCurve(color.g, mix(0.001, uFilmToeLength, uFilmToeStrength), mix(0.001, uFilmShoulderLength, uFilmShoulderStrength), uFilmGamma);
+    color.b = filmCurve(color.b, mix(0.001, uFilmToeLength, uFilmToeStrength), mix(0.001, uFilmShoulderLength, uFilmShoulderStrength), uFilmGamma);
+  }
+  
+  // 10. Protect Highlights (if enabled)
+  color = protectHighlights(originalColor, color, uProtectHighlights);
+  
   gl_FragColor = vec4(color, texColor.a);
 }
 `;
@@ -185,8 +254,16 @@ export class BaseDevelopPass extends RenderPass {
         uBlacks: { value: 0.0 },
         uTemperature: { value: 6500.0 },
         uTint: { value: 0.0 },
+        uProtectHighlights: { value: 0.0 },
         uVibrance: { value: 0.0 },
-        uDehaze: { value: 0.0 }
+        uDehaze: { value: 0.0 },
+        uFilmToeStrength: { value: 0.0 },
+        uFilmToeLength: { value: 0.1 },
+        uFilmShoulderStrength: { value: 0.0 },
+        uFilmShoulderLength: { value: 1.0 },
+        uFilmGamma: { value: 1.0 },
+        uColorCrossover: { value: 0.0 },
+        uLumaDesat: { value: 0.0 }
       }
     });
     this.fsQuad.material = this.material;
@@ -216,6 +293,18 @@ export class BaseDevelopPass extends RenderPass {
     this.material.uniforms.uTemperature.value = 1000000.0 / Math.max(targetMired, 1.0);
     
     this.material.uniforms.uTint.value = (settings.tint || 0.0);
+    this.material.uniforms.uProtectHighlights.value = settings.protectHighlights ? 1.0 : 0.0;
+    this.material.uniforms.uVibrance.value = (settings.vibrance || 0.0);
+    this.material.uniforms.uDehaze.value = (settings.dehaze || 0.0);
+    
+    // Film Physics
+    this.material.uniforms.uFilmToeStrength.value = settings.filmToeStrength || 0.0;
+    this.material.uniforms.uFilmToeLength.value = settings.filmToeLength || 0.1;
+    this.material.uniforms.uFilmShoulderStrength.value = settings.filmShoulderStrength || 0.0;
+    this.material.uniforms.uFilmShoulderLength.value = settings.filmShoulderLength || 1.0;
+    this.material.uniforms.uFilmGamma.value = settings.filmGamma || 1.0;
+    this.material.uniforms.uColorCrossover.value = settings.colorCrossover || 0.0;
+    this.material.uniforms.uLumaDesat.value = settings.lumaDesat || 0.0;
   }
 
   public render(

@@ -6,10 +6,14 @@ import * as THREE from "three";
 import type { EditorSettings } from "../types/editor";
 import { RenderGraph } from "../editor/render/RenderGraph";
 import { BaseDevelopPass } from "../editor/render/passes/BaseDevelopPass";
-import { SharpenPass } from "../editor/render/passes/SharpenPass";
-import { OpticalFXPass } from "../editor/render/passes/OpticalFXPass";
+import { LocalAdjustmentsPass } from "../editor/render/passes/LocalAdjustmentsPass";
+import { OklchMixerPass } from "../editor/render/passes/OklchMixerPass";
+import { ColorWheelsPass } from "../editor/render/passes/ColorWheelsPass";
 import { BloomPass } from "../editor/render/passes/BloomPass";
 import { HalationPass } from "../editor/render/passes/HalationPass";
+import { FilmEmulationPass } from "../editor/render/passes/FilmEmulationPass";
+import { OpticalFXPass } from "../editor/render/passes/OpticalFXPass";
+import { SharpenPass } from "../editor/render/passes/SharpenPass";
 import { DisplayTransformPass } from "../editor/render/passes/DisplayTransformPass";
 
 const finalDisplayVertexShader = `
@@ -52,22 +56,14 @@ export default function ImagePlane({
   imageUrl,
   settings,
   wiperPosition = 0.5,
-  brushMaskData,
-  brushMaskExposure,
-  brushMaskContrast,
-  brushMaskSaturation,
-  brushMaskTemperature,
-  brushMaskClarity,
+  brushCanvas,
+  brushCanvasDirty,
 }: {
   imageUrl: string;
   settings: EditorSettings;
   wiperPosition?: number;
-  brushMaskData?: string;
-  brushMaskExposure?: number;
-  brushMaskContrast?: number;
-  brushMaskSaturation?: number;
-  brushMaskTemperature?: number;
-  brushMaskClarity?: number;
+  brushCanvas?: HTMLCanvasElement | null;
+  brushCanvasDirty?: number;
 }) {
   const texture = useLoader(THREE.TextureLoader, imageUrl);
   const { size, viewport, gl } = useThree();
@@ -93,18 +89,30 @@ export default function ImagePlane({
   // Pro-Grade Render Graph Pipeline
   const { graph, finalTarget } = useMemo(() => {
     const graph = new RenderGraph();
-    const baseDevelop = new BaseDevelopPass();
-    const sharpen = new SharpenPass();
-    const optical = new OpticalFXPass();
-    const halation = new HalationPass();
-    const bloom = new BloomPass();
-    const displayTransform = new DisplayTransformPass();
 
+    // Pass instantiation — order matches spec §6.1 pipeline
+    const baseDevelop = new BaseDevelopPass();       // Exposure, WB, Contrast, Highlights/Shadows, Vibrance, Dehaze
+    const localAdjustments = new LocalAdjustmentsPass(); // Layer-based local adjustments with masks
+    const oklchMixer = new OklchMixerPass();         // 8-channel OKLCH color mixer + skin protection
+    const colorWheels = new ColorWheelsPass();       // Three-way color grading in OKLAB space
+    const filmEmulation = new FilmEmulationPass();   // Authentic analog film emulation
+    const halation = new HalationPass();             // Film halation (red channel diffusion)
+    const bloom = new BloomPass();                   // Soft glow from bright areas
+    const optical = new OpticalFXPass();             // God light, vignette, grain, aberration, anamorphic
+    const sharpen = new SharpenPass();               // Structure + sharpness (applied last before display)
+    const displayTransform = new DisplayTransformPass(); // Linear→sRGB + dithering
+
+    // Pipeline order per spec §6.1:
+    // BaseDevelop → LocalAdjustments → OklchMixer → ColorWheels → FilmEmulation → Halation → Bloom → OpticalFX → Sharpen → DisplayTransform
     graph.addPass(baseDevelop);
-    graph.addPass(sharpen);
-    graph.addPass(optical);
+    graph.addPass(localAdjustments);
+    graph.addPass(oklchMixer);
+    graph.addPass(colorWheels);
+    graph.addPass(filmEmulation);
     graph.addPass(halation);
     graph.addPass(bloom);
+    graph.addPass(optical);
+    graph.addPass(sharpen);
     graph.addPass(displayTransform);
 
     const finalTarget = new THREE.WebGLRenderTarget(1, 1, {
@@ -120,24 +128,78 @@ export default function ImagePlane({
     return { graph, finalTarget };
   }, []);
 
-  // Handle Resize
+  // Handle Resize & Proxy Resolution
   useEffect(() => {
     if (texture.image) {
-      // Use original image resolution for rendering
-      const width = texture.image.width;
-      const height = texture.image.height;
-      graph.setSize(width, height);
-      finalTarget.setSize(width, height);
+      // Proxy Rendering: Use the CSS pixel size of the canvas instead of world units.
+      const pixelRatio = gl.getPixelRatio();
+      
+      // The image occupies at most 90% of the canvas in either dimension
+      const cssWidth = size.width * 0.9;
+      const cssHeight = size.height * 0.9;
+      
+      // Calculate logical pixel size
+      const proxyWidth = Math.min(cssWidth * pixelRatio, 2560);
+      const proxyHeight = Math.min(cssHeight * pixelRatio, 2560);
+      
+      // Maintain exact aspect ratio
+      const imageAspect = texture.image.width / texture.image.height;
+      let targetWidth = proxyWidth;
+      let targetHeight = proxyWidth / imageAspect;
+      
+      if (targetHeight > proxyHeight) {
+        targetHeight = proxyHeight;
+        targetWidth = targetHeight * imageAspect;
+      }
+      
+      // Ensure we don't upscale a low-res image
+      targetWidth = Math.min(targetWidth, texture.image.width);
+      targetHeight = Math.min(targetHeight, texture.image.height);
+
+      graph.setSize(Math.floor(targetWidth), Math.floor(targetHeight));
+      finalTarget.setSize(Math.floor(targetWidth), Math.floor(targetHeight));
     }
-  }, [texture, graph, finalTarget]);
+  }, [texture, size, gl, graph, finalTarget]);
+
+  // Handle Brush Canvas updates
+  const brushTexture = useMemo(() => {
+    if (!brushCanvas) return null;
+    return new THREE.CanvasTexture(brushCanvas);
+  }, [brushCanvas]);
+
+  useEffect(() => {
+    if (brushTexture) {
+      brushTexture.needsUpdate = true;
+      // Also update the local adjustments pass with the texture
+      const localAdjustmentsPass = graph.getPasses().find(p => p instanceof LocalAdjustmentsPass) as LocalAdjustmentsPass;
+      if (localAdjustmentsPass) {
+        // We can expose a method on LocalAdjustmentsPass to set the brush mask
+        // But for now, since material is private, we will add a setter in LocalAdjustmentsPass
+        localAdjustmentsPass.setBrushMask(brushTexture);
+      }
+    }
+  }, [brushCanvasDirty, brushTexture, graph]);
 
   // Clean up
   useEffect(() => {
     return () => {
+      // Aggressive disposal when the entire plane unmounts
       graph.dispose();
       finalTarget.dispose();
+      if (materialRef.current) {
+        materialRef.current.dispose();
+      }
     };
   }, [graph, finalTarget]);
+
+  // Texture-swap aggressive cleanup
+  useEffect(() => {
+    return () => {
+      if (texture) {
+        texture.dispose();
+      }
+    };
+  }, [texture]);
 
   useFrame((state) => {
     // 1. Execute the Render Graph

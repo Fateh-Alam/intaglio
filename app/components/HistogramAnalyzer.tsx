@@ -1,6 +1,8 @@
 import { useThree, useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import type { HistogramData } from "../types/editor";
+import { computeHistogramMetrics } from "../utils/histogram";
+import { extractDominantColors } from "../utils/swatch";
 
 export default function HistogramAnalyzer({
   onUpdate,
@@ -39,50 +41,12 @@ export default function HistogramAnalyzer({
           tempCanvas.current.height
         );
         const data = imageData.data;
-
-        const r = new Array(256).fill(0);
-        const g = new Array(256).fill(0);
-        const b = new Array(256).fill(0);
-        const luma = new Array(256).fill(0);
-        let shadowClips = 0;
-        let highlightClips = 0;
-        let rTotal = 0;
-        let gTotal = 0;
-        let bTotal = 0;
-        const pixelCount = data.length / 4;
-
-        for (let i = 0; i < data.length; i += 4) {
-          const red = data[i];
-          const green = data[i + 1];
-          const blue = data[i + 2];
-          const luminance = Math.round(red * 0.2126 + green * 0.7152 + blue * 0.0722);
-
-          r[red]++;
-          g[green]++;
-          b[blue]++;
-          luma[luminance]++;
-          rTotal += red;
-          gTotal += green;
-          bTotal += blue;
-
-          if (luminance <= 2) shadowClips++;
-          if (luminance >= 253) highlightClips++;
-        }
-
+        const metrics = computeHistogramMetrics(data);
+        const palette = extractDominantColors(data, 5, 10);
+        
         onUpdate({
-          r,
-          g,
-          b,
-          luma,
-          clipping: {
-            shadows: shadowClips / pixelCount,
-            highlights: highlightClips / pixelCount,
-          },
-          average: {
-            r: rTotal / pixelCount,
-            g: gTotal / pixelCount,
-            b: bTotal / pixelCount,
-          },
+          ...metrics,
+          palette,
         });
       }
     }

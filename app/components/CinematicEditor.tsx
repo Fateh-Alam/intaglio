@@ -29,41 +29,39 @@ export default function CinematicEditor({
   imageUrl,
   onStatsUpdate,
   textOverlay,
+  setTextOverlay,
   watermark,
   brushMaskActive,
   brushSize,
   brushFeather,
   brushErasing,
-  brushMaskData,
-  brushMaskExposure = 0,
-  brushMaskContrast = 0,
-  brushMaskSaturation = 0,
-  brushMaskTemperature = 0,
-  brushMaskClarity = 0,
+  brushCanvas,
+  brushCanvasDirty,
+  onCanvasReady,
   performanceMode = "balanced",
   compositionGuide = "off",
   onBrushMaskUpdate,
   onBoundsChange,
+  wiperPosition = 0.5,
 }: {
   settings: EditorSettings;
   imageUrl: string;
   onStatsUpdate: (data: HistogramData) => void;
   textOverlay?: TextOverlaySettings;
+  setTextOverlay?: React.Dispatch<React.SetStateAction<TextOverlaySettings>>;
   watermark?: WatermarkSettings;
   brushMaskActive?: boolean;
   brushSize?: number;
   brushFeather?: number;
   brushErasing?: boolean;
-  brushMaskData?: string;
-  brushMaskExposure?: number;
-  brushMaskContrast?: number;
-  brushMaskSaturation?: number;
-  brushMaskTemperature?: number;
-  brushMaskClarity?: number;
+  brushCanvas?: HTMLCanvasElement | null;
+  brushCanvasDirty?: number;
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void;
   performanceMode?: PerformanceMode;
   compositionGuide?: CompositionGuide;
-  onBrushMaskUpdate?: (maskDataUrl: string) => void;
+  onBrushMaskUpdate?: () => void;
   onBoundsChange?: (bounds: ImageBounds) => void;
+  wiperPosition?: number;
 }) {
   const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null);
   const dpr = useMemo<[number, number]>(() => {
@@ -149,39 +147,21 @@ export default function CinematicEditor({
     return () => window.removeEventListener("resize", handleResize);
   }, [imageUrl, onBoundsChange]);
 
-  const handleMaskUpdate = useCallback(
-    (maskDataUrl: string) => {
-      if (onBrushMaskUpdate) {
-        onBrushMaskUpdate(maskDataUrl);
-      }
-    },
-    [onBrushMaskUpdate]
-  );
+  const handleMaskUpdate = useCallback(() => {
+    if (onBrushMaskUpdate) {
+      onBrushMaskUpdate();
+    }
+  }, [onBrushMaskUpdate]);
 
   const handleClear = useCallback(() => {
     // Clear handler
   }, []);
-
-  // Wiper position tracking
-  const [wiperPosition, setWiperPosition] = useState(0.5);
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (settings.wiperActive && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        setWiperPosition(Math.max(0, Math.min(1, x)));
-      }
-    },
-    [settings.wiperActive]
-  );
 
   return (
     <div
       id="cinematic-editor-container"
       ref={containerRef}
       className="w-full h-full relative bg-gray-900 overflow-hidden"
-      onMouseMove={handleMouseMove}
     >
       <Canvas
         id="main-editor-canvas"
@@ -193,16 +173,11 @@ export default function CinematicEditor({
       >
         <Suspense fallback={null}>
           <ImagePlane
-            key={imageUrl}
             imageUrl={imageUrl}
             settings={settings}
+            brushCanvas={brushCanvas}
+            brushCanvasDirty={brushCanvasDirty}
             wiperPosition={wiperPosition}
-            brushMaskData={brushMaskData}
-            brushMaskExposure={brushMaskExposure}
-            brushMaskContrast={brushMaskContrast}
-            brushMaskSaturation={brushMaskSaturation}
-            brushMaskTemperature={brushMaskTemperature}
-            brushMaskClarity={brushMaskClarity}
           />
           <HistogramAnalyzer onUpdate={onStatsUpdate} />
         </Suspense>
@@ -227,8 +202,13 @@ export default function CinematicEditor({
             brushFeather={brushFeather || 0.5}
             isErasing={brushErasing || false}
             isActive={brushMaskActive || false}
-            onMaskUpdate={handleMaskUpdate}
-            onClear={handleClear}
+            onMaskUpdate={() => {
+              if (onBrushMaskUpdate) onBrushMaskUpdate();
+            }}
+            onCanvasReady={(c) => {
+              if (onCanvasReady) onCanvasReady(c);
+            }}
+            onClear={() => {}}
           />
         </div>
       )}
@@ -254,7 +234,7 @@ export default function CinematicEditor({
       {imageBounds && textOverlay && (
         <div
           id="text-overlay-container"
-          className="absolute pointer-events-none"
+          className="absolute pointer-events-auto"
           style={{
             left: imageBounds.left,
             top: imageBounds.top,
@@ -262,7 +242,10 @@ export default function CinematicEditor({
             height: imageBounds.height,
           }}
         >
-          <CinematicTextOverlay settings={textOverlay} />
+          <CinematicTextOverlay 
+            settings={textOverlay} 
+            setSettings={setTextOverlay} 
+          />
         </div>
       )}
 

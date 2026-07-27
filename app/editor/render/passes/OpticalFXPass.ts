@@ -57,11 +57,12 @@ void main() {
   if (uAnamorphicStreaks > 0.0) {
     vec3 streak = vec3(0.0);
     float threshold = 0.7;
-    for(float i = -0.1; i < 0.1; i += 0.005) {
-      vec3 s = texture2D(tDiffuse, uv + vec2(i, 0.0)).rgb;
+    for(int i = -20; i < 20; i++) {
+      float offset = float(i) * 0.005;
+      vec3 s = texture2D(tDiffuse, uv + vec2(offset, 0.0)).rgb;
       float brightness = max(s.r, max(s.g, s.b));
       if(brightness > threshold) {
-        streak += s * (1.0 - abs(i * 10.0));
+        streak += s * (1.0 - abs(offset * 10.0));
       }
     }
     streak /= 20.0;
@@ -104,7 +105,19 @@ void main() {
   
   if (uGrainStrength > 0.0) {
     float noise = random(uv * uResolution + uTime);
-    color += (noise - 0.5) * uGrainStrength;
+    float luma = getLuma(color);
+    
+    // Film grain is typically most visible in midtones, present in shadows, 
+    // and less visible in dense highlights where the emulsion is fully exposed.
+    // This creates a characteristic film grain profile.
+    float grainWeight = 1.0 - smoothstep(0.7, 1.0, luma);
+    float shadowWeight = smoothstep(0.0, 0.1, luma) * 0.5 + 0.5; // Slightly less in pure blacks
+    
+    float lumaResponse = grainWeight * shadowWeight;
+    
+    // Non-linear response curve for grain density
+    float grainAmount = uGrainStrength * lumaResponse;
+    color += (noise - 0.5) * grainAmount;
   }
 
   if (uVignette > 0.0) {
@@ -195,9 +208,16 @@ export class OpticalFXPass extends RenderPass {
     const inputTexture = (readBuffer as THREE.WebGLRenderTarget).texture ?? readBuffer;
     this.material.uniforms.tDiffuse.value = inputTexture;
     
-    const img = inputTexture.image as any;
-    if (img) {
-      this.material.uniforms.uResolution.value.set(img.width, img.height);
+    if ((readBuffer as THREE.WebGLRenderTarget).width !== undefined) {
+      this.material.uniforms.uResolution.value.set(
+        (readBuffer as THREE.WebGLRenderTarget).width,
+        (readBuffer as THREE.WebGLRenderTarget).height
+      );
+    } else {
+      const img = inputTexture.image as any;
+      if (img && img.width) {
+        this.material.uniforms.uResolution.value.set(img.width, img.height);
+      }
     }
 
     if (writeBuffer) renderer.setRenderTarget(writeBuffer);

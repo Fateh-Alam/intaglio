@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { motion, PanInfo } from "framer-motion";
 
 /**
  * CinematicTextOverlay: Renders the film-emulation text over the image.
@@ -35,10 +36,29 @@ export interface TextOverlaySettings {
   dateText: string;
   locationText: string;
 
+  // Billing Block
+  billingBlockEnabled: boolean;
+  billingBlockText: string;
+
+  // Positioning
+  subtitleX: number;
+  subtitleY: number;
+  dateX: number;
+  dateY: number;
+  billingX: number;
+  billingY: number;
+
   // Common
   fontSize: number;
   letterSpacing: number;
+  lineHeight: number;
   opacity: number;
+  textAlign: "left" | "center" | "right" | "justify";
+  
+  // Custom Shadow Physics
+  shadowColor: string;
+  shadowBlur: number;
+  shadowDistance: number;
 
   // Custom Font & Typography
   customFontEnabled: boolean;
@@ -62,9 +82,22 @@ export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
     })
     .toUpperCase(),
   locationText: "",
+  billingBlockEnabled: false,
+  billingBlockText: "DIRECTED BY JONATHAN NOLAN  WRITTEN BY CHRISTOPHER NOLAN  PRODUCED BY EMMA THOMAS\nDIRECTOR OF PHOTOGRAPHY HOYTE VAN HOYTEMA  MUSIC BY HANS ZIMMER",
+  subtitleX: 0,
+  subtitleY: 30, // Percentage from bottom
+  dateX: 0,
+  dateY: 10,
+  billingX: 0,
+  billingY: 5,
   fontSize: 1,
   letterSpacing: 0,
+  lineHeight: 1.2,
   opacity: 1,
+  textAlign: "center",
+  shadowColor: "rgba(0,0,0,0.8)",
+  shadowBlur: 20,
+  shadowDistance: 4,
   customFontEnabled: false,
   customFontName: "Inter",
   customFontWeight: "400",
@@ -350,41 +383,28 @@ export const FILM_STYLES = {
 
 export default function CinematicTextOverlay({
   settings,
+  setSettings,
 }: {
   settings: TextOverlaySettings;
+  setSettings?: React.Dispatch<React.SetStateAction<TextOverlaySettings>>;
 }) {
-  const {
-    customFontEnabled,
-    customFontName,
-    customFontWeight,
-    customFontStyle,
-  } = settings;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedElement, setSelectedElement] = useState<"subtitle" | "date" | "billing" | null>(null);
 
   // Dynamically load Google Font
   useEffect(() => {
+    if (!settings) return;
+    const { customFontEnabled, customFontName, customFontWeight, customFontStyle } = settings;
     if (customFontEnabled && customFontName) {
       const fontName = customFontName.trim();
       if (!fontName) return;
 
-      // Construct Google Fonts URL with specific weight and style
-      // Example: Family:ital,wght@0,400;0,700;1,400;1,700
-      // For simplicity, we'll request the specific weight selected, plus italic if needed.
-      // But standard Google Fonts API usually works best if we request a range or the specific combo.
-
       const weight = customFontWeight || "400";
       const isItalic = customFontStyle === "italic";
-
-      // Requesting the specific variant
-      // axis tag: ital,wght
-      // values: 0,400 .. 1,400
       const axisParam = isItalic ? `1,${weight}` : `0,${weight}`;
 
       const link = document.createElement("link");
-      link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(
-        /\s+/g,
-        "+"
-      )}:ital,wght@${axisParam}&display=swap`;
-
+      link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, "+")}:ital,wght@${axisParam}&display=swap`;
       link.crossOrigin = "anonymous";
       link.rel = "stylesheet";
       document.head.appendChild(link);
@@ -394,14 +414,14 @@ export default function CinematicTextOverlay({
       };
     }
   }, [
-    customFontEnabled,
-    customFontName,
-    customFontWeight,
-    customFontStyle,
+    settings?.customFontEnabled,
+    settings?.customFontName,
+    settings?.customFontWeight,
+    settings?.customFontStyle,
   ]);
 
   if (!settings) return null;
-  if (!settings.subtitleEnabled && !settings.dateEnabled) return null;
+  if (!settings.subtitleEnabled && !settings.dateEnabled && !settings.billingBlockEnabled) return null;
 
   const style = FILM_STYLES[settings.subtitleStyle];
   const baseFontSize = settings.fontSize;
@@ -431,60 +451,200 @@ export default function CinematicTextOverlay({
         color: style.titleColor,
       };
 
+
+  // Drag Handlers
+  const handleDragEnd = (element: "subtitle" | "date" | "billing", info: PanInfo) => {
+    if (!setSettings) return;
+    setSettings((prev) => ({
+      ...prev,
+      [`${element}X`]: prev[`${element}X` as keyof TextOverlaySettings] as number + info.offset.x,
+      [`${element}Y`]: prev[`${element}Y` as keyof TextOverlaySettings] as number + info.offset.y,
+    }));
+  };
+
   return (
     <div
-      className="absolute inset-0 pointer-events-none z-10 overflow-hidden select-none"
+      ref={containerRef}
+      className="absolute inset-0 z-10 overflow-hidden select-none"
       style={{ opacity: settings.opacity }}
+      onPointerDown={() => setSelectedElement(null)}
     >
       {/* Cinematic gradient - bottom fade */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-[35%]"
+        className="absolute bottom-0 left-0 right-0 h-[35%] pointer-events-none"
         style={{ background: style.gradient }}
       />
 
-      {/* Content Container */}
-      <div className="absolute bottom-0 left-0 right-0 pb-[5%] px-[6%] text-center">
-        {/* Date/Location - Film Metadata */}
-        {settings.dateEnabled &&
-          (settings.dateText || settings.locationText) && (
-            <div className="mb-3">
-              <span
-                style={{
-                  fontFamily: style.metaFont,
-                  fontSize: `${baseFontSize * 0.55}rem`,
-                  color: style.metaColor,
-                  letterSpacing: style.metaTracking,
-                  textTransform: "uppercase",
-                  textShadow: style.metaShadow,
-                  fontWeight: 400,
-                }}
-              >
-                {settings.dateText}
-                {settings.dateText && settings.locationText && (
-                  <span style={{ opacity: 0.4, margin: "0 0.8em" }}>—</span>
-                )}
-                {settings.locationText}
-              </span>
-            </div>
+      {/* Date/Location - Film Metadata */}
+      {settings.dateEnabled && (settings.dateText || settings.locationText) && (
+        <motion.div 
+          drag
+          dragMomentum={false}
+          onDragEnd={(_, info) => handleDragEnd("date", info)}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            setSelectedElement("date");
+          }}
+          className={`absolute cursor-move ${
+            selectedElement === "date" 
+              ? "ring-1 ring-white/50 ring-dashed bg-white/5" 
+              : "hover:ring-1 hover:ring-white/20"
+          }`}
+          animate={{ x: settings.dateX, y: settings.dateY }}
+          style={{ 
+            left: '50%', top: '20%', translateX: '-50%', translateY: '-50%',
+            textAlign: settings.textAlign || 'center',
+            padding: '8px'
+          }}
+        >
+          {selectedElement === "date" && (
+            <>
+              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white" />
+              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white" />
+              <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white" />
+              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white" />
+            </>
           )}
+          <span
+            style={{
+              fontFamily: style.metaFont,
+              fontSize: `${baseFontSize * 0.55}rem`,
+              color: style.metaColor,
+              letterSpacing: style.metaTracking,
+              textTransform: "uppercase",
+              textShadow: style.metaShadow,
+              fontWeight: 500,
+              mixBlendMode: "screen",
+              opacity: 0.9,
+            }}
+          >
+            {settings.dateText}
+            {settings.dateText && settings.locationText && (
+              <span style={{ opacity: 0.4, margin: "0 0.8em" }}>—</span>
+            )}
+            {settings.locationText}
+          </span>
+        </motion.div>
+      )}
 
-        {/* Main Title/Subtitle */}
-        {settings.subtitleEnabled && settings.subtitleText && (
-          <div>
-            <span
-              style={{
-                fontFamily: titleFontFamily,
-                fontSize: `${baseFontSize * 2.2}rem`,
-                lineHeight: 1.1,
-                display: "inline-block",
-                ...titleStyle, // Spread the computed styles
-              }}
-            >
-              {settings.subtitleText}
-            </span>
+      {/* Main Title/Subtitle */}
+      {settings.subtitleEnabled && settings.subtitleText && (
+        <motion.div
+          drag
+          dragMomentum={false}
+          onDragEnd={(_, info) => handleDragEnd("subtitle", info)}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            setSelectedElement("subtitle");
+          }}
+          className={`absolute cursor-move w-full flex justify-center ${
+            selectedElement === "subtitle" 
+              ? "ring-1 ring-white/50 ring-dashed bg-white/5" 
+              : "hover:ring-1 hover:ring-white/20"
+          }`}
+          animate={{ x: settings.subtitleX, y: settings.subtitleY }}
+          style={{ 
+            left: 0, bottom: '25%', 
+            textAlign: settings.textAlign || 'center',
+            padding: '16px 0'
+          }}
+        >
+          {selectedElement === "subtitle" && (
+            <>
+              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-white" />
+              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-white" />
+              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-white" />
+              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-white" />
+            </>
+          )}
+          <span
+            style={{
+              fontFamily: titleFontFamily,
+              fontSize: `${baseFontSize * 2.2}rem`,
+              lineHeight: settings.lineHeight || 1.1,
+              display: "inline-block",
+              mixBlendMode: "screen",
+              ...titleStyle,
+              ...(settings.customFontEnabled && {
+                textShadow: `${settings.shadowDistance}px ${settings.shadowDistance}px ${settings.shadowBlur}px ${settings.shadowColor}`
+              })
+            }}
+          >
+            {settings.subtitleText.split('\n').map((line, i) => (
+              <React.Fragment key={i}>
+                {line}
+                <br />
+              </React.Fragment>
+            ))}
+          </span>
+        </motion.div>
+      )}
+
+      {/* Billing Block */}
+      {settings.billingBlockEnabled && settings.billingBlockText && (
+        <motion.div
+          drag
+          dragMomentum={false}
+          onDragEnd={(_, info) => handleDragEnd("billing", info)}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            setSelectedElement("billing");
+          }}
+          className={`absolute cursor-move w-full flex justify-center ${
+            selectedElement === "billing" 
+              ? "ring-1 ring-white/50 ring-dashed bg-white/5" 
+              : "hover:ring-1 hover:ring-white/20"
+          }`}
+          animate={{ x: settings.billingX, y: settings.billingY }}
+          style={{ bottom: '10%', padding: '16px 0' }}
+        >
+          {selectedElement === "billing" && (
+            <>
+              <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-white" />
+              <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-white" />
+              <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-white" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white" />
+            </>
+          )}
+          <div
+            style={{
+              fontFamily: "'Univers', 'Steelfish', 'Oswald', 'Bebas Neue', sans-serif",
+              fontSize: `${baseFontSize * 0.45}rem`,
+              color: style.metaColor,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              textShadow: style.metaShadow,
+              textAlign: "center",
+              transform: "scaleY(1.8) scaleX(0.85)", // Squish it vertically like classic billing blocks
+              lineHeight: 1.1,
+              maxWidth: "85%",
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: "0.4em 1em",
+              mixBlendMode: "screen",
+              opacity: 0.85,
+            }}
+          >
+            {settings.billingBlockText.split('\n').map((line, lineIdx) => (
+              <div key={lineIdx} className="w-full flex justify-center flex-wrap gap-x-4 gap-y-2">
+                {line.split('  ').map((segment, segIdx) => {
+                  const match = segment.match(/^(.*? BY|.*? OF .*?|STARRING)(.*)$/i);
+                  if (match) {
+                    return (
+                      <span key={segIdx} className="flex items-end gap-1">
+                        <span style={{ fontSize: '0.55em', opacity: 0.85, paddingBottom: '0.25em', fontWeight: 400 }}>{match[1].trim()}</span>
+                        <span style={{ fontWeight: 700, fontSize: '1.2em' }}>{match[2].trim()}</span>
+                      </span>
+                    );
+                  }
+                  return <span key={segIdx} style={{ fontWeight: 700 }}>{segment.trim()}</span>;
+                })}
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </motion.div>
+      )}
 
       {/* Subtle film grain texture overlay */}
       <div

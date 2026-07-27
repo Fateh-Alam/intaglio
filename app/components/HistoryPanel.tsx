@@ -74,7 +74,7 @@ export default function HistoryPanel({
       {/* Header */}
       <div className="p-4 border-b border-white/5 flex items-center justify-between">
         <h3 className="text-xs font-mono uppercase tracking-widest text-white/80 flex items-center gap-2">
-          <IconClock size={14} className="text-amber-500" />
+          <IconClock className="intaglio-icon text-amber-500"/>
           Edit History
         </h3>
         <div role="button" tabIndex={0}
@@ -97,7 +97,7 @@ export default function HistoryPanel({
           }`}
           title="Undo (Ctrl+Z)"
         >
-          <IconArrowBackUp size={14} />
+          <IconArrowBackUp className="intaglio-icon"/>
           <span className="text-[10px] font-mono uppercase">Undo</span>
         </div>
         <div role="button" tabIndex={0}
@@ -111,7 +111,7 @@ export default function HistoryPanel({
           title="Redo (Ctrl+Y)"
         >
           <span className="text-[10px] font-mono uppercase">Redo</span>
-          <IconArrowForwardUp size={14} />
+          <IconArrowForwardUp className="intaglio-icon"/>
         </div>
       </div>
 
@@ -143,7 +143,7 @@ export default function HistoryPanel({
                   onClick={() => onRestoreBranch && onRestoreBranch(branch.id)}
                   className="flex items-center gap-2 text-xs text-gray-300 hover:text-white transition flex-1 text-left"
                 >
-                  <IconGitBranch size={12} className="text-cyan-500" />
+                  <IconGitBranch className="intaglio-icon text-cyan-500"/>
                   <span className="truncate">{branch.name}</span>
                 </div>
                 <div role="button" tabIndex={0}
@@ -156,7 +156,7 @@ export default function HistoryPanel({
                   onClick={() => onDeleteBranch && onDeleteBranch(branch.id)}
                   className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-400 transition"
                 >
-                  <IconX size={12} />
+                  <IconX className="intaglio-icon"/>
                 </div>
               </div>
             ))}
@@ -171,7 +171,7 @@ export default function HistoryPanel({
             onClick={onCreateBranch}
             className="w-full py-2 flex items-center justify-center gap-2 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-mono uppercase hover:bg-cyan-500/20 transition"
           >
-            <IconGitBranch size={14} />
+            <IconGitBranch className="intaglio-icon"/>
             Create Virtual Copy
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function HistoryPanel({
 
                 {isActive && (
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <IconRestore size={12} className="text-amber-500/70" />
+                    <IconRestore className="intaglio-icon text-amber-500/70"/>
                   </div>
                 )}
               </div>

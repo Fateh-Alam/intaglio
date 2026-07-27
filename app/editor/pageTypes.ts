@@ -17,11 +17,11 @@ export const DEFAULT_SETTINGS: EditorSettings = {
 
   // Grading
   tealOrange: 0.0,
-  temperature: 0.0,
-  tint: 0.0,
-
-  // Features
-  skinProtect: 0.0,
+  temperature: 0,
+  tint: 0,
+  skinProtect: 0,
+  safeSkinEnabled: false,
+  protectHighlights: false,
   grain: 0.0,
   vignette: 0.0,
   sharpness: 0.0,
@@ -29,8 +29,17 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   aberration: 0.0,
 
   // Pro
-  structure: 0.0,
+  structure: 0,
   filmBorder: false,
+  filmToeStrength: 0,
+  filmToeLength: 0.1,
+  filmShoulderStrength: 0,
+  filmShoulderLength: 1,
+  filmGamma: 1,
+  filmBlackLift: 0,
+  filmWhiteRolloff: 0,
+  colorCrossover: 0,
+  lumaDesat: 0,
 
   // Tone Curve
   toneCurveTexture: null,
@@ -110,31 +119,13 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   rotate: 0.0,
   zoom: 1.0,
 
-  // Masking - Radial Gradient
-  radialMaskEnabled: false,
-  radialMaskX: 0.5,
-  radialMaskY: 0.5,
-  radialMaskRadius: 0.5,
-  radialMaskFeather: 0.3,
-  radialMaskInvert: false,
-  radialMaskExposure: 0.0,
-  radialMaskContrast: 0.0,
-  radialMaskSaturation: 0.0,
+  // Recipe
+  appliedRecipeId: null,
+  recipeIntensity: 1.0,
 
-  // Masking - Linear Gradient
-  linearMaskEnabled: false,
-  linearMaskAngle: 0.0,
-  linearMaskPosition: 0.5,
-  linearMaskFeather: 0.3,
-  linearMaskExposure: 0.0,
-  linearMaskContrast: 0.0,
-
-  // Masking - Luminosity
-  luminosityMaskEnabled: false,
-  luminosityMaskTarget: 0.5, // 0=shadows, 0.5=mids, 1=highlights
-  luminosityMaskRange: 0.3,
-  luminosityMaskExposure: 0.0,
-  luminosityMaskSaturation: 0.0,
+  // Mask System
+  adjustmentLayers: [],
+  masks: [],
 
   // HSL Panel - 8 Color Channels (Hue, Saturation, Luminance)
   hslRedHue: 0.0,
@@ -177,7 +168,10 @@ export type ExportRecipeId =
   | "web-hero"
   | "client-proof"
   | "social-webp"
-  | "archive-png";
+  | "archive-png"
+  | "ig-feed"
+  | "ig-square"
+  | "ig-story";
 
 export interface ExportRecipe {
   id: ExportRecipeId;
@@ -306,27 +300,51 @@ export const WATERMARK_POSITIONS: { id: WatermarkPosition; label: string }[] = [
 export const EXPORT_RECIPES: ExportRecipe[] = [
   {
     id: "portfolio",
-    name: "Portfolio JPG",
-    description: "High quality delivery for portfolio and archive previews.",
+    name: "Portfolio HQ",
+    description: "Maximum quality JPEG for personal portfolios and high-end delivery.",
     format: "image/jpeg",
     quality: 95,
-    scale: 2,
+    scale: 1,
   },
   {
     id: "web-hero",
-    name: "Website Hero",
-    description: "Clean WebP output for large web placements.",
+    name: "Web Hero",
+    description: "WebP format for fast-loading website hero headers and banners.",
     format: "image/webp",
-    quality: 88,
+    quality: 85,
+    scale: 0.5,
+  },
+  {
+    id: "ig-feed",
+    name: "IG Feed (Portrait)",
+    description: "Optimized for Instagram Feed (4:5). Exports as high-quality JPEG.",
+    format: "image/jpeg",
+    quality: 90,
+    scale: 1,
+  },
+  {
+    id: "ig-square",
+    name: "IG Square",
+    description: "Optimized for Instagram Square (1:1).",
+    format: "image/jpeg",
+    quality: 90,
+    scale: 1,
+  },
+  {
+    id: "ig-story",
+    name: "IG Story",
+    description: "Optimized for Instagram Stories (9:16).",
+    format: "image/jpeg",
+    quality: 90,
     scale: 1,
   },
   {
     id: "client-proof",
     name: "Client Proof",
-    description: "Balanced JPEG proof with modest file size.",
+    description: "Low-res, compressed JPEG. Automatically enables the watermark overlay.",
     format: "image/jpeg",
-    quality: 82,
-    scale: 1,
+    quality: 60,
+    scale: 0.5,
   },
   {
     id: "social-webp",
@@ -338,8 +356,8 @@ export const EXPORT_RECIPES: ExportRecipe[] = [
   },
   {
     id: "archive-png",
-    name: "Archive PNG",
-    description: "Lossless PNG export for design handoff.",
+    name: "Archive Lossless",
+    description: "Massive, uncompressed PNG for archival or secondary grading in Photoshop.",
     format: "image/png",
     quality: 100,
     scale: 4,

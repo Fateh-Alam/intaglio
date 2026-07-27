@@ -36,6 +36,14 @@ class FullScreenQuad {
     renderer.render(this.mesh, this.camera);
   }
 
+  setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number) {
+    this.camera.setViewOffset(fullWidth, fullHeight, x, y, width, height);
+  }
+
+  clearViewOffset() {
+    this.camera.clearViewOffset();
+  }
+
   dispose() {
     this.geometry.dispose();
   }
@@ -73,5 +81,13 @@ export abstract class RenderPass {
 
   public dispose() {
     this.fsQuad.dispose();
+  }
+
+  public setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number) {
+    this.fsQuad.setViewOffset(fullWidth, fullHeight, x, y, width, height);
+  }
+
+  public clearViewOffset() {
+    this.fsQuad.clearViewOffset();
   }
 }

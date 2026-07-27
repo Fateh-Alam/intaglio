@@ -12,9 +12,15 @@ import {
   IconX,
   IconSpacingHorizontal,
   IconEye,
+  IconAlignCenter,
+  IconAlignLeft,
+  IconAlignRight,
+  IconArrowAutofitHeight,
+  IconShadow,
 } from "@tabler/icons-react";
 import Toggle from "./Toggle";
 import CustomSelect from "./CustomSelect";
+import FontSelector from "./FontSelector";
 import { TextOverlaySettings } from "./CinematicTextOverlay";
 import ControlGroup from "./ControlGroup";
 import Slider from "./Slider";
@@ -79,7 +85,7 @@ export default function CinematicTextControls({
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                <IconMovie size={14} className="inline mr-2" />
+                <IconMovie className="intaglio-icon inline mr-2"/>
                 Title
               </label>
               <Toggle
@@ -109,7 +115,7 @@ export default function CinematicTextControls({
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                <IconMapPin size={14} className="inline mr-2" />
+                <IconMapPin className="intaglio-icon inline mr-2"/>
                 Location/Date
               </label>
               <Toggle
@@ -144,7 +150,37 @@ export default function CinematicTextControls({
                   locationText: e.target.value,
                 }))
               }
-              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition uppercase"
+              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition uppercase mb-2"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
+                <IconMovie className="intaglio-icon inline mr-2"/>
+                Billing Block
+              </label>
+              <Toggle
+                checked={textOverlay.billingBlockEnabled}
+                onChange={(checked) =>
+                  setTextOverlay((prev) => ({
+                    ...prev,
+                    billingBlockEnabled: checked,
+                  }))
+                }
+              />
+            </div>
+            <textarea
+              placeholder="CREDITS TEXT..."
+              value={textOverlay.billingBlockText}
+              rows={4}
+              onChange={(e) =>
+                setTextOverlay((prev) => ({
+                  ...prev,
+                  billingBlockText: e.target.value,
+                }))
+              }
+              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition uppercase resize-none"
             />
           </div>
         </div>
@@ -308,53 +344,20 @@ export default function CinematicTextControls({
             {/* Font Family */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 z-10">
-                <IconTypography size={14} />
+                <IconTypography className="intaglio-icon"/>
               </div>
-              <CustomSelect
-                value={
-                  POPULAR_FONTS.includes(textOverlay.customFontName)
-                    ? textOverlay.customFontName
-                    : "custom"
-                }
-                options={[
-                  { value: "custom", label: "Type Custom Name..." },
-                  ...POPULAR_FONTS.map((font) => ({
-                    value: font,
-                    label: font,
-                  })),
-                ]}
+              <FontSelector
+                value={textOverlay.customFontName}
+                fonts={POPULAR_FONTS}
                 onChange={(val) => {
-                  if (val !== "custom") {
-                    setTextOverlay((prev) => ({
-                      ...prev,
-                      customFontName: val,
-                    }));
-                  } else {
-                    setTextOverlay((prev) => ({
-                      ...prev,
-                      customFontName: "",
-                    }));
-                  }
+                  setTextOverlay((prev) => ({
+                    ...prev,
+                    customFontName: val,
+                  }));
                 }}
                 className="pl-7" // Extra padding for the icon
               />
             </div>
-            {/* Fallback input */}
-            {(!POPULAR_FONTS.includes(textOverlay.customFontName) ||
-              textOverlay.customFontName === "") && (
-              <input
-                type="text"
-                placeholder="Type Google Font..."
-                value={textOverlay.customFontName}
-                onChange={(e) =>
-                  setTextOverlay((prev) => ({
-                    ...prev,
-                    customFontName: e.target.value,
-                  }))
-                }
-                className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
-              />
-            )}
 
             {/* Weight & Style */}
             <div className="grid grid-cols-2 gap-2">
@@ -391,25 +394,25 @@ export default function CinematicTextControls({
                     : "bg-black/30 border-white/10 text-gray-400 hover:text-gray-200"
                 }`}
               >
-                <IconItalic size={14} /> Italic
+                <IconItalic className="intaglio-icon"/> Italic
               </div>
             </div>
 
             {/* Transform Row */}
             <div className="flex bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none p-1 gap-1">
               {[
-                { id: "none", icon: <IconX size={14} /> },
+                { id: "none", icon: <IconX className="intaglio-icon"/> },
                 {
                   id: "uppercase",
-                  icon: <IconLetterCaseUpper size={14} />,
+                  icon: <IconLetterCaseUpper className="intaglio-icon"/>,
                 },
                 {
                   id: "lowercase",
-                  icon: <IconLetterCaseLower size={14} />,
+                  icon: <IconLetterCaseLower className="intaglio-icon"/>,
                 },
                 {
                   id: "capitalize",
-                  icon: <IconLetterCase size={14} />,
+                  icon: <IconLetterCase className="intaglio-icon"/>,
                 },
               ].map((opt) => (
                 <div role="button" tabIndex={0}
@@ -468,7 +471,7 @@ export default function CinematicTextControls({
               fontSize: v,
             }))
           }
-          icon={<IconTypography size={14} />}
+          icon={<IconTypography className="intaglio-icon"/>}
         />
 
         <Slider
@@ -483,7 +486,7 @@ export default function CinematicTextControls({
               letterSpacing: v,
             }))
           }
-          icon={<IconSpacingHorizontal size={14} />}
+          icon={<IconSpacingHorizontal className="intaglio-icon"/>}
         />
 
         <div className="pt-2"></div>
@@ -498,8 +501,94 @@ export default function CinematicTextControls({
               opacity: v,
             }))
           }
-          icon={<IconEye size={14} />}
+          icon={<IconEye className="intaglio-icon"/>}
         />
+
+        {textOverlay.customFontEnabled && (
+          <>
+            <div className="pt-4 border-t border-[var(--intaglio-line)] mt-4">
+              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-2 block">
+                Advanced Layout
+              </label>
+              
+              <div className="flex bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none p-1 gap-1 mb-4">
+                {[
+                  { id: "left", icon: <IconAlignLeft className="intaglio-icon"/> },
+                  { id: "center", icon: <IconAlignCenter className="intaglio-icon"/> },
+                  { id: "right", icon: <IconAlignRight className="intaglio-icon"/> },
+                ].map((opt) => (
+                  <div role="button" tabIndex={0}
+                    key={opt.id}
+                    onClick={() =>
+                      setTextOverlay((prev) => ({
+                        ...prev,
+                        textAlign: opt.id as TextOverlaySettings["textAlign"],
+                      }))
+                    }
+                    className={`flex-1 py-1.5 flex items-center justify-center rounded transition ${
+                      textOverlay.textAlign === opt.id
+                        ? "bg-white/20 text-white shadow-sm"
+                        : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                    }`}
+                  >
+                    {opt.icon}
+                  </div>
+                ))}
+              </div>
+
+              <Slider
+                label="Line Height"
+                value={textOverlay.lineHeight || 1.2}
+                min={0.5}
+                max={2.5}
+                step={0.05}
+                onChange={(v) =>
+                  setTextOverlay((prev) => ({ ...prev, lineHeight: v }))
+                }
+                icon={<IconArrowAutofitHeight className="intaglio-icon"/>}
+              />
+            </div>
+
+            <div className="pt-4 border-t border-[var(--intaglio-line)] mt-4">
+              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
+                <IconShadow className="intaglio-icon"/> Drop Shadow
+              </label>
+              
+              <input
+                type="text"
+                placeholder="Shadow Color (e.g., rgba(0,0,0,0.8))"
+                value={textOverlay.shadowColor || "rgba(0,0,0,0.8)"}
+                onChange={(e) =>
+                  setTextOverlay((prev) => ({ ...prev, shadowColor: e.target.value }))
+                }
+                className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition mb-3"
+              />
+
+              <Slider
+                label="Blur Radius"
+                value={textOverlay.shadowBlur || 20}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) =>
+                  setTextOverlay((prev) => ({ ...prev, shadowBlur: v }))
+                }
+                icon={<IconShadow className="intaglio-icon"/>}
+              />
+              <Slider
+                label="Distance"
+                value={textOverlay.shadowDistance || 4}
+                min={-50}
+                max={50}
+                step={1}
+                onChange={(v) =>
+                  setTextOverlay((prev) => ({ ...prev, shadowDistance: v }))
+                }
+                icon={<IconShadow className="intaglio-icon"/>}
+              />
+            </div>
+          </>
+        )}
       </ControlGroup>
     </div>
   );
