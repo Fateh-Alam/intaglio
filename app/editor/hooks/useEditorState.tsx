@@ -2,7 +2,7 @@ import { VirtualCopy, ExportFormat, ExportRecipeId, ExportSafetyWarning, createH
 import type { EditorSettings, EditorSettingKey, EditorSettingValue, CompositionGuide, HistogramData, ImageBounds, PerformanceMode, SerializableEditorSettings, WatermarkSettings, AssetMetadataSettings, AppCommand, GridOverlayMode } from "../../types/editor";
 
 
-import React, { createContext, useContext, useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, { createContext, useContext, useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
 import { DEFAULT_TEXT_OVERLAY, TextOverlaySettings } from "../../components/CinematicTextOverlay";
 import { applyRecipe } from "../../lib/recipeEngine";
 import { PRESETS } from "../../lib/presets";
@@ -42,6 +42,29 @@ import {
 
 
 import { HistoryState } from "../../components/HistoryPanel";
+
+const MAX_HISTORY_ENTRIES = 500;
+
+type HistoryTimeline = { entries: HistoryState[]; index: number };
+
+const cloneSettingsForHistory = (
+  settingsToClone: EditorSettings
+): EditorSettings => ({
+  ...settingsToClone,
+  curvePoints: cloneJson(settingsToClone.curvePoints),
+  colorGrading: cloneJson(settingsToClone.colorGrading),
+});
+
+const appendHistoryEntry = (
+  state: HistoryTimeline,
+  entrySettings: EditorSettings,
+  actionName: string,
+) => {
+  const entries = state.entries.slice(0, state.index + 1);
+  entries.push(createHistoryState(cloneSettingsForHistory(entrySettings), actionName));
+  const trimmed = entries.length > MAX_HISTORY_ENTRIES ? entries.slice(entries.length - MAX_HISTORY_ENTRIES) : entries;
+  return { entries: trimmed, index: trimmed.length - 1 };
+};
 
 function useEditorStateController() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -98,17 +121,21 @@ function useEditorStateController() {
     }
   };
 
-  // History State
-  const [history, setHistory] = useState<HistoryState[]>(() => [
-    {
-      id: "init",
-      timestamp: Date.now(),
-      action: "Initial State",
-      settings: DEFAULT_SETTINGS,
-    },
-  ]);
-  const [historyIndex, setHistoryIndex] = useState(0);
+  // History: one state object so entries and index can never disagree. Snapshots
+  // are immutable and structurally shared, so long histories stay cheap.
+  const [historyState, setHistoryState] = useState<HistoryTimeline>(() => ({
+    entries: [{ id: "init", timestamp: Date.now(), action: "Initial State", settings: DEFAULT_SETTINGS }],
+    index: 0,
+  }));
+  const history = historyState.entries;
+  const historyIndex = historyState.index;
+  const historyRef = useRef(historyState);
+  useLayoutEffect(() => {
+    historyRef.current = historyState;
+  }, [historyState]);
   const historyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Continuous edits (slider drags) are coalesced into one entry after a pause.
+  const pendingHistoryRef = useRef<{ settings: EditorSettings; label: string } | null>(null);
 
   // Snapshots State (image)
   const [snapshots, setSnapshots] = useState<
@@ -336,82 +363,87 @@ function useEditorStateController() {
 
   const rawSource = rawSourceEntry && rawSourceEntry.imageUrl === imageSrc ? rawSourceEntry.buffer : null;
 
-  const cloneSettingsForHistory = (
-    settingsToClone: EditorSettings
-  ): EditorSettings => ({
-    ...settingsToClone,
-    curvePoints: cloneJson(settingsToClone.curvePoints),
-    colorGrading: cloneJson(settingsToClone.colorGrading),
-  });
+  const addToHistory = useCallback((newSettings: EditorSettings, actionName: string) => {
+    if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
+    pendingHistoryRef.current = null;
+    setHistoryState((state) => appendHistoryEntry(state, newSettings, actionName));
+  }, []);
 
-  const addToHistory = (newSettings: EditorSettings, actionName: string) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    const newState = createHistoryState(
-      cloneSettingsForHistory(newSettings),
-      actionName
-    );
-    if (newHistory.length >= 50) newHistory.shift();
-    setHistory([...newHistory, newState]);
-    setHistoryIndex((prev) => (newHistory.length >= 50 ? prev : prev + 1));
-  };
+  const flushPendingHistory = useCallback(() => {
+    if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
+    const pending = pendingHistoryRef.current;
+    pendingHistoryRef.current = null;
+    if (pending) setHistoryState((state) => appendHistoryEntry(state, pending.settings, pending.label));
+  }, []);
 
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setSettings(history[newIndex].settings);
-    }
-  };
+  // A drag (slider, wheel, curve point) is one undo step: while a pointer is
+  // down, edits coalesce; releasing commits immediately. Keyboard edits settle
+  // after a short pause instead.
+  const pointerDownRef = useRef(false);
+  useEffect(() => {
+    const down = () => { pointerDownRef.current = true; };
+    const up = () => {
+      pointerDownRef.current = false;
+      flushPendingHistory();
+    };
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", up, true);
+    return () => {
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", up, true);
+    };
+  }, [flushPendingHistory]);
 
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setSettings(history[newIndex].settings);
-    }
-  };
+  const scheduleHistoryEntry = useCallback((newSettings: EditorSettings, actionName: string) => {
+    pendingHistoryRef.current = { settings: newSettings, label: actionName };
+    if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
+    if (pointerDownRef.current) return;
+    historyTimeoutRef.current = setTimeout(flushPendingHistory, 500);
+  }, [flushPendingHistory]);
 
-  const handleJumpToHistory = (index: number) => {
-    setHistoryIndex(index);
-    setSettings(history[index].settings);
-  };
+  /** Moves through history; an edit still waiting to be recorded is committed first. */
+  const navigateHistory = useCallback((target: (state: HistoryTimeline) => number) => {
+    if (historyTimeoutRef.current) clearTimeout(historyTimeoutRef.current);
+    let state = historyRef.current;
+    const pending = pendingHistoryRef.current;
+    pendingHistoryRef.current = null;
+    if (pending) state = appendHistoryEntry(state, pending.settings, pending.label);
+    const index = Math.max(0, Math.min(state.entries.length - 1, target(state)));
+    const next = { entries: state.entries, index };
+    historyRef.current = next;
+    setHistoryState(next);
+    if (index !== state.index || pending) setSettings(state.entries[index].settings);
+  }, []);
+
+  const handleUndo = useCallback(() => navigateHistory((state) => state.index - 1), [navigateHistory]);
+  const handleRedo = useCallback(() => navigateHistory((state) => state.index + 1), [navigateHistory]);
+  const handleJumpToHistory = useCallback((index: number) => navigateHistory(() => index), [navigateHistory]);
 
   const handleClearHistory = () => {
-    if (history.length === 0) return;
-    const currentState = history[historyIndex];
-    setHistory([currentState]);
-    setHistoryIndex(0);
+    setHistoryState((state) => ({ entries: [state.entries[state.index]], index: 0 }));
   };
 
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const key = e.key.toLowerCase();
+      if ((e.metaKey || e.ctrlKey) && key === "z") {
         e.preventDefault();
-        if (e.shiftKey) {
-          if (historyIndex < history.length - 1) {
-            const newIndex = historyIndex + 1;
-            setHistoryIndex(newIndex);
-            setSettings(history[newIndex].settings);
-          }
-        } else if (historyIndex > 0) {
-          const newIndex = historyIndex - 1;
-          setHistoryIndex(newIndex);
-          setSettings(history[newIndex].settings);
-        }
+        if (e.shiftKey) handleRedo();
+        else handleUndo();
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "y") {
+      if ((e.metaKey || e.ctrlKey) && key === "y") {
         e.preventDefault();
-        if (historyIndex < history.length - 1) {
-          const newIndex = historyIndex + 1;
-          setHistoryIndex(newIndex);
-          setSettings(history[newIndex].settings);
-        }
+        handleRedo();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [history, historyIndex]);
+  }, [handleUndo, handleRedo]);
 
   const [brushMaskActive, setBrushMaskActive] = useState(false);
   const [brushSize, setBrushSize] = useState(0.3);
@@ -450,21 +482,33 @@ function useEditorStateController() {
     setSettings((prev) => {
       const newSettings = { ...prev, [key]: newVal } as EditorSettings;
 
-      // Debounce history update
-      if (historyTimeoutRef.current) {
-        clearTimeout(historyTimeoutRef.current);
-      }
-
-      historyTimeoutRef.current = setTimeout(() => {
-        // Find a human readable name for the action
-        // Simplistic approach: "Change [Key]"
-        const label = key
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (str) => str.toUpperCase());
-        addToHistory(newSettings, `Change ${label}`);
-      }, 500); // 500ms debounce
+      const label = key
+        .replace(/([A-Z])/g, " $1")
+        .replace(/^./, (str) => str.toUpperCase());
+      scheduleHistoryEntry(newSettings, `Change ${label}`);
 
       return newSettings;
+    });
+  };
+
+  /** Applies several settings as one edit (one undo step). */
+  const updateSettings = (patch: Partial<EditorSettings>, label: string) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      scheduleHistoryEntry(next, label);
+      return next;
+    });
+  };
+
+  /** Applies params to one adjustment plate as one edit. */
+  const updatePlateParams = (plateId: string, patch: Partial<EditorSettings>, label: string) => {
+    setSettings((prev) => {
+      const next = {
+        ...prev,
+        adjustmentLayers: prev.adjustmentLayers.map((layer) => layer.id === plateId ? { ...layer, params: { ...layer.params, ...patch } } : layer),
+      };
+      scheduleHistoryEntry(next, label);
+      return next;
     });
   };
 
@@ -662,11 +706,10 @@ function useEditorStateController() {
     
     setSettings(prev => {
       const newSettings = applyRecipe(prev, recipe, intensity);
-      // We don't add to history on slider drag, so we leave history out of this internal updater, 
-      // or we handle history carefully
+      scheduleHistoryEntry(newSettings, `Apply ${recipe.name}`);
       return newSettings;
     });
-  }, []);
+  }, [scheduleHistoryEntry]);
 
   // Get serializable settings (exclude textures and non-JSON-safe values)
   const getSerializableSettings = useCallback(
@@ -967,8 +1010,9 @@ function useEditorStateController() {
     setActiveVirtualCopyId(document.activeVirtualCopyId);
     setSettingsSnapshots(restoredCopies);
     setDiffVirtualCopyId(null);
-    setHistory(restoredHistory.length > 0 ? restoredHistory : [createHistoryState(restoredSettings, "Restore Intaglio Archive")]);
-    setHistoryIndex(restoredHistory.length > 0 ? Math.min(document.historyIndex, restoredHistory.length - 1) : 0);
+    setHistoryState(restoredHistory.length > 0
+      ? { entries: restoredHistory, index: Math.min(document.historyIndex, restoredHistory.length - 1) }
+      : { entries: [createHistoryState(restoredSettings, "Restore Intaglio Archive")], index: 0 });
     setRawProgress(null);
   }, [hydratePortableAssets]);
 
@@ -993,12 +1037,8 @@ function useEditorStateController() {
     input.click();
   }, [restoreProjectSession]);
 
-  const handleCreateVirtualCopy = () => {
-    const name = prompt(
-      "Name this virtual copy:",
-      `Look ${settingsSnapshots.length + 1}`
-    );
-    if (!name) return;
+  const handleCreateVirtualCopy = (requestedName?: string) => {
+    const name = requestedName?.trim() || `Version ${settingsSnapshots.length + 1}`;
 
     const nextCopy: VirtualCopy = {
       id: createLocalId(),
@@ -1231,37 +1271,12 @@ function useEditorStateController() {
       run: handleSaveProjectSession,
     },
     {
-      id: "toggle-before-after",
-      title: "Toggle Before / After",
-      section: "Compare",
-      shortcut: "C",
-      disabled: !imageSrc,
-      keywords: ["before", "after", "compare"],
-      run: () => updateSetting("wiperActive", !settings.wiperActive),
-    },
-    {
       id: "create-virtual-copy",
       title: "Create Virtual Copy",
       section: "Workflow",
       disabled: !imageSrc,
       keywords: ["version", "copy", "look"],
-      run: handleCreateVirtualCopy,
-    },
-    ...settingsSnapshots.map((copy) => ({
-      id: `diff-virtual-copy-${copy.id}`,
-      title: `Compare Diff: ${copy.name}`,
-      section: "Workflow",
-      disabled: !imageSrc,
-      keywords: ["diff", "compare", "virtual", copy.name],
-      run: () => setDiffVirtualCopyId(copy.id),
-    })),
-    {
-      id: "open-metadata",
-      title: "Open Metadata",
-      section: "Culling",
-      disabled: !imageSrc,
-      keywords: ["rating", "flag", "watermark", "rights"],
-      run: () => handleTabChange("metadata"),
+      run: () => handleCreateVirtualCopy(),
     },
     {
       id: "rate-five",
@@ -1371,15 +1386,6 @@ function useEditorStateController() {
       run: () => setCompositionGuide(guide.id),
     })),
     {
-      id: "toggle-focus-mode",
-      title: isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode",
-      section: "Workspace",
-      shortcut: "F",
-      disabled: !imageSrc,
-      keywords: ["focus", "fullscreen", "minimal", "workspace"],
-      run: () => setIsFocusMode((prev) => !prev),
-    },
-    {
       id: "create-preset",
       title: `Create .${FORMAT.recipeExtension} Print Recipe`,
       section: "Recipes",
@@ -1404,48 +1410,6 @@ function useEditorStateController() {
       disabled: !imageSrc && !clipboard,
       keywords: ["recipe", "paste"],
       run: handlePasteSettings,
-    },
-    {
-      id: "open-history",
-      title: "Open History",
-      section: "Workflow",
-      shortcut: "H",
-      disabled: !imageSrc,
-      run: () => handleTabChange("history"),
-    },
-    {
-      id: "open-curves",
-      title: "Open Tone Curve Lab",
-      section: "Develop",
-      shortcut: "T",
-      disabled: !imageSrc,
-      keywords: ["curve", "tone"],
-      run: () => handleTabChange("curves"),
-    },
-    {
-      id: "open-hsl",
-      title: "Open HSL Mixer",
-      section: "Develop",
-      disabled: !imageSrc,
-      keywords: ["color", "mixer"],
-      run: () => handleTabChange("hsl"),
-    },
-    {
-      id: "open-mask",
-      title: "Open Masking",
-      section: "Local Adjustments",
-      shortcut: "M",
-      disabled: !imageSrc,
-      keywords: ["brush", "gradient", "range"],
-      run: () => handleTabChange("masking"),
-    },
-    {
-      id: "open-film",
-      title: "Open Film Lab",
-      section: "Looks",
-      disabled: !imageSrc,
-      keywords: ["grain", "halation", "bloom"],
-      run: () => handleTabChange("films"),
     },
     {
       id: "open-reference",
@@ -1557,35 +1521,7 @@ function useEditorStateController() {
         return;
       }
 
-      if (key === "c") {
-        event.preventDefault();
-        setSettings((prev) => ({ ...prev, wiperActive: !prev.wiperActive }));
-        return;
-      }
-
-      if (key === "f") {
-        event.preventDefault();
-        setIsFocusMode((prev) => !prev);
-        return;
-      }
-
-      if (key === "h") {
-        event.preventDefault();
-        setActiveTab("history");
-        setIsMobileMenuOpen(false);
-      }
-
-      if (key === "t") {
-        event.preventDefault();
-        setActiveTab("curves");
-        setIsMobileMenuOpen(false);
-      }
-
-      if (key === "m") {
-        event.preventDefault();
-        setActiveTab("masking");
-        setIsMobileMenuOpen(false);
-      }
+      // View shortcuts (compare, panels, clipping) live in the editor shell.
     };
 
     window.addEventListener("keydown", handleGlobalShortcuts);
@@ -1613,12 +1549,13 @@ function useEditorStateController() {
     imageInfo, setImageInfo,
     documentAssets, setDocumentAssets,
     histogram, setHistogram,
+    sourceCameraMetadata,
     activeTab, setActiveTab,
     handleTabChange,
     handleTutorialClose,
     showTutorial,
-    history, setHistory,
-    historyIndex, setHistoryIndex,
+    history,
+    historyIndex,
     snapshots, setSnapshots,
     settingsSnapshots, setSettingsSnapshots,
     activeVirtualCopyId, setActiveVirtualCopyId,
@@ -1656,6 +1593,8 @@ function useEditorStateController() {
     rawSource,
     cancelRawDecode: () => rawAbortRef.current?.abort(),
     updateSetting,
+    updateSettings,
+    updatePlateParams,
     handleUndo,
     handleRedo,
     gridOverlayMode, setGridOverlayMode,

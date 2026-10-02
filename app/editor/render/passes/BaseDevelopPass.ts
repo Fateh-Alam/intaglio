@@ -25,6 +25,7 @@ uniform float uTint;
 uniform float uProtectHighlights;
 
 uniform float uVibrance;
+uniform float uSaturation;
 uniform float uDehaze;
 
 // Film Physics
@@ -98,6 +99,14 @@ vec3 applyVibrance(vec3 color, float amount) {
   float weight = 1.0 - smoothstep(0.02, 0.22, chroma);
   lch.y *= 1.0 + amount * weight;
   return oklabToLinearSrgb(oklchToOklab(lch));
+}
+
+// Uniform OKLCh chroma scale: changes colorfulness without shifting hue or lightness.
+vec3 applySaturation(vec3 color, float amount) {
+  if (amount == 0.0) return color;
+  vec3 lab = linearSrgbToOklab(max(color, vec3(0.0)));
+  lab.yz *= max(0.0, 1.0 + amount);
+  return oklabToLinearSrgb(lab);
 }
 
 vec3 applyDehaze(vec3 color, float amount) {
@@ -197,6 +206,7 @@ void main() {
   
   // 7. Vibrance
   color = applyVibrance(color, uVibrance);
+  color = applySaturation(color, uSaturation);
   
   // 8. Dehaze
   color = applyDehaze(color, uDehaze);
@@ -249,6 +259,7 @@ export class BaseDevelopPass extends RenderPass {
         uTint: { value: 0.0 },
         uProtectHighlights: { value: 0.0 },
         uVibrance: { value: 0.0 },
+        uSaturation: { value: 0.0 },
         uDehaze: { value: 0.0 },
         uFilmToeStrength: { value: 0.0 },
         uFilmToeLength: { value: 0.1 },
@@ -288,6 +299,7 @@ export class BaseDevelopPass extends RenderPass {
     this.material.uniforms.uTint.value = (settings.tint || 0.0);
     this.material.uniforms.uProtectHighlights.value = settings.protectHighlights ? 1.0 : 0.0;
     this.material.uniforms.uVibrance.value = (settings.vibrance || 0.0);
+    this.material.uniforms.uSaturation.value = (settings.saturation || 0.0);
     this.material.uniforms.uDehaze.value = (settings.dehaze || 0.0);
     
     // Film Physics

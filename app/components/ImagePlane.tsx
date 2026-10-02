@@ -36,34 +36,33 @@ const finalDisplayVertexShader = `
   }
 `;
 
+// View-only display stage: before/after compare and clipping warnings are
+// drawn here, after the render graph, so they can never reach an export.
 const finalDisplayFragmentShader = `
   uniform sampler2D uTexture;
   uniform sampler2D uOriginalTexture;
-  uniform float uMouseX;
-  uniform float uCompareEnabled;
+  uniform float uSplit;
+  uniform float uClipping;
   varying vec2 vUv;
 
   void main() {
-    vec4 color = texture2D(uTexture, vUv);
-    
-    if (uCompareEnabled > 0.5 && uMouseX < 1.0) {
-      float wiper = step(vUv.x, uMouseX);
-      vec4 source = texture2D(uOriginalTexture, vUv);
-      
-      vec4 finalColor = mix(source, color, wiper);
-      float line = step(abs(vUv.x - uMouseX), 0.002);
-      finalColor = mix(finalColor, vec4(1.0), line);
-      gl_FragColor = finalColor;
-    } else {
-      gl_FragColor = color;
+    vec4 after = texture2D(uTexture, vUv);
+    bool showBefore = uSplit >= 1.5 || (uSplit >= 0.0 && vUv.x < uSplit);
+    vec4 color = showBefore ? texture2D(uOriginalTexture, vUv) : after;
+    if (uClipping > 0.5 && !showBefore) {
+      float brightest = max(after.r, max(after.g, after.b));
+      if (brightest >= 0.994) color.rgb = vec3(1.0, 0.2, 0.16);
+      else if (brightest <= 0.006) color.rgb = vec3(0.12, 0.38, 1.0);
     }
+    gl_FragColor = color;
   }
 `;
 
 export default function ImagePlane({
   imageUrl,
   settings,
-  wiperPosition = 0.5,
+  split = -1,
+  showClipping = false,
   brushCanvas,
   brushCanvasDirty,
   rawSource,
@@ -71,7 +70,9 @@ export default function ImagePlane({
 }: {
   imageUrl: string;
   settings: EditorSettings;
-  wiperPosition?: number;
+  /** −1 off, 0…1 split position (before on the left), 2 full before. */
+  split?: number;
+  showClipping?: boolean;
   brushCanvas?: HTMLCanvasElement | null;
   brushCanvasDirty?: number;
   rawSource?: LinearSourceBuffer | null;
@@ -102,6 +103,15 @@ export default function ImagePlane({
     }
     return new THREE.Vector3(w, h, 1);
   }, [viewport, aspect]);
+
+  // Created once: three.js caches uniform objects per compiled program, so a
+  // fresh object on each render would leave the GPU reading stale values.
+  const displayUniforms = useMemo(() => ({
+    uTexture: { value: null as THREE.Texture | null },
+    uOriginalTexture: { value: null as THREE.Texture | null },
+    uSplit: { value: -1 },
+    uClipping: { value: 0 },
+  }), []);
 
   // Pro-Grade Render Graph Pipeline
   const { intaglioRenderer, finalTarget } = useMemo(() => {
@@ -189,7 +199,7 @@ export default function ImagePlane({
   // The canvas renders on demand; request a frame whenever an input changes.
   useEffect(() => {
     invalidate();
-  }, [invalidate, settings, wiperPosition, brushTexture, texture, finalTarget]);
+  }, [invalidate, settings, split, showClipping, brushTexture, texture, finalTarget]);
 
   // Histogram/palette stats come from the rendered image itself (not the
   // letterboxed canvas), read back once rendering settles.
@@ -251,13 +261,8 @@ export default function ImagePlane({
     if (materialRef.current) {
       materialRef.current.uniforms.uTexture.value = finalTarget.texture;
       materialRef.current.uniforms.uOriginalTexture.value = settings.compareTexture ?? previewTexture;
-      materialRef.current.uniforms.uCompareEnabled.value = settings.compareEnabled ? 1.0 : 0.0;
-      
-      if (settings.wiperActive) {
-        materialRef.current.uniforms.uMouseX.value = wiperPosition;
-      } else {
-        materialRef.current.uniforms.uMouseX.value = 1.0;
-      }
+      materialRef.current.uniforms.uSplit.value = split;
+      materialRef.current.uniforms.uClipping.value = showClipping ? 1.0 : 0.0;
     }
   });
 
@@ -268,12 +273,7 @@ export default function ImagePlane({
         ref={materialRef}
         vertexShader={finalDisplayVertexShader}
         fragmentShader={finalDisplayFragmentShader}
-        uniforms={{
-          uTexture: { value: null },
-          uOriginalTexture: { value: settings.compareTexture ?? previewTexture },
-          uMouseX: { value: 1.0 },
-          uCompareEnabled: { value: settings.compareEnabled ? 1.0 : 0.0 }
-        }}
+        uniforms={displayUniforms}
         transparent={true}
       />
     </mesh>

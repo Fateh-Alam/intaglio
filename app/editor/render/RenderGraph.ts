@@ -3,6 +3,7 @@ import type { EditorSettings } from "../../types/editor";
 import { RenderPass, type RenderInput, textureFromRenderInput } from "./RenderPass";
 import { PingPongTarget } from "./PingPongTarget";
 import { MaskBlendPass } from "./passes/MaskBlendPass";
+import { plateRenderSettings } from "./plateParams";
 
 export interface RenderRuntimeResources {
   brushMaskTexture?: THREE.Texture | null;
@@ -63,16 +64,7 @@ export class RenderGraph {
 
     for (const plate of settings.adjustmentLayers) {
       const stableBase = this.copy(renderer, accumulator, this.plateAccumulationTarget.read);
-      const neutralPlateSettings: EditorSettings = {
-        ...settings,
-        brightness: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0,
-        vibrance: 0, temperature: 0, tint: 0, dehaze: 0, structure: 0, sharpness: 0,
-        tealOrange: 0, targetHue: 0, hueShift: 0,
-        lutTexture: null, lutStrength: 0,
-        curvePoints: { master: [{ x: 0, y: 0 }, { x: 1, y: 1 }], red: [{ x: 0, y: 0 }, { x: 1, y: 1 }], green: [{ x: 0, y: 0 }, { x: 1, y: 1 }], blue: [{ x: 0, y: 0 }, { x: 1, y: 1 }] },
-        colorGrading: { shadows: { h: 0, s: 0, l: 0 }, midtones: { h: 0, s: 0, l: 0 }, highlights: { h: 0, s: 0, l: 0 }, balance: 0 },
-      };
-      const plateSettings: EditorSettings = { ...neutralPlateSettings, ...plate.params };
+      const plateSettings = plateRenderSettings(settings, plate.params);
       const graded = this.runPasses(renderer, this.platePasses, plateSettings, stableBase);
       if (this.maskBlendPass) {
         this.maskBlendPass.updateForPlate(plate, settings.masks, runtime.brushMaskTexture ?? null);

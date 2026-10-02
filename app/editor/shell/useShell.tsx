@@ -1,0 +1,97 @@
+"use client";
+
+import React, { createContext, useContext, useMemo, useState } from "react";
+import { readPreference, writePreference } from "../../ui/storage";
+import type { EditorSettings } from "../../types/editor";
+
+export type LeftTab = "looks" | "history" | "versions" | "info";
+export type RightMode = "develop" | "masks" | "text";
+export type Surround = "black" | "dark" | "medium";
+export type CompareMode = "off" | "split" | "before";
+
+export const SURROUND_COLORS: Record<Surround, string> = {
+  black: "#050505",
+  dark: "#141415",
+  medium: "#3a3a3c",
+};
+
+interface ShellState {
+  leftOpen: boolean;
+  setLeftOpen: (open: boolean) => void;
+  leftTab: LeftTab;
+  setLeftTab: (tab: LeftTab) => void;
+  /** Opens the left panel on a tab, or closes it if that tab is already showing. */
+  toggleLeft: (tab: LeftTab) => void;
+  rightMode: RightMode;
+  setRightMode: (mode: RightMode) => void;
+  panelsHidden: boolean;
+  setPanelsHidden: (hidden: boolean) => void;
+  showClipping: boolean;
+  setShowClipping: (show: boolean) => void;
+  surround: Surround;
+  setSurround: (surround: Surround) => void;
+  compare: CompareMode;
+  setCompare: (mode: CompareMode) => void;
+  splitPosition: number;
+  setSplitPosition: (position: number) => void;
+  /** Temporary settings shown while hovering a look or history step; never saved. */
+  preview: EditorSettings | null;
+  setPreview: (settings: EditorSettings | null) => void;
+}
+
+const ShellContext = createContext<ShellState | null>(null);
+
+const SURROUND_KEY = "intaglio.ui.surround";
+
+/** View-only UI state for the editor shell. Never affects rendered pixels or exports. */
+export function ShellProvider({ children }: { children: React.ReactNode }) {
+  const [leftOpen, setLeftOpen] = useState(false);
+  const [leftTab, setLeftTab] = useState<LeftTab>("looks");
+  const [rightMode, setRightMode] = useState<RightMode>("develop");
+  const [panelsHidden, setPanelsHidden] = useState(false);
+  const [showClipping, setShowClipping] = useState(false);
+  const [surround, setSurroundState] = useState<Surround>(() =>
+    readPreference<Surround>(SURROUND_KEY, "dark", (value): value is Surround => typeof value === "string" && value in SURROUND_COLORS));
+  const [compare, setCompare] = useState<CompareMode>("off");
+  const [splitPosition, setSplitPosition] = useState(0.5);
+  const [preview, setPreview] = useState<EditorSettings | null>(null);
+
+  const value = useMemo<ShellState>(() => ({
+    leftOpen,
+    setLeftOpen,
+    leftTab,
+    setLeftTab,
+    toggleLeft: (tab) => {
+      if (leftOpen && leftTab === tab) setLeftOpen(false);
+      else {
+        setLeftTab(tab);
+        setLeftOpen(true);
+      }
+    },
+    rightMode,
+    setRightMode,
+    panelsHidden,
+    setPanelsHidden,
+    showClipping,
+    setShowClipping,
+    surround,
+    setSurround: (next) => {
+      setSurroundState(next);
+      writePreference(SURROUND_KEY, next);
+    },
+    compare,
+    setCompare,
+    splitPosition,
+    setSplitPosition,
+    preview,
+    setPreview,
+  }), [leftOpen, leftTab, rightMode, panelsHidden, showClipping, surround, compare, splitPosition, preview]);
+
+  return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
+}
+
+export function useShell(): ShellState {
+  const value = useContext(ShellContext);
+  if (!value) throw new Error("useShell must be used inside ShellProvider.");
+  return value;
+}

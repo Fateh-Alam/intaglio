@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   whites: 0.0,
   blacks: 0.0,
   vibrance: 0.0,
+  saturation: 0.0,
 
   // Grading
   tealOrange: 0.0,

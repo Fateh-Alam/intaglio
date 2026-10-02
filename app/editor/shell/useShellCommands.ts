@@ -1,0 +1,29 @@
+"use client";
+
+import type { AppCommand } from "../../types/editor";
+import { useShell, type LeftTab } from "./useShell";
+
+/** View commands for the ⌘K palette; they mirror the shell's keyboard shortcuts. */
+export function useShellCommands(): AppCommand[] {
+  const shell = useShell();
+  const openLeft = (tab: LeftTab) => () => {
+    shell.setLeftTab(tab);
+    shell.setLeftOpen(true);
+  };
+  return [
+    { id: "view-before", title: "Show Before", section: "View", shortcut: "\\", keywords: ["compare", "original"], run: () => shell.setCompare(shell.compare === "before" ? "off" : "before") },
+    { id: "view-split", title: "Before / After Split", section: "View", shortcut: "Y", keywords: ["compare", "wipe"], run: () => shell.setCompare(shell.compare === "split" ? "off" : "split") },
+    { id: "view-clipping", title: shell.showClipping ? "Hide Clipping" : "Show Clipping", section: "View", shortcut: "J", keywords: ["highlights", "shadows", "blown"], run: () => shell.setShowClipping(!shell.showClipping) },
+    { id: "view-panels", title: shell.panelsHidden ? "Show Panels" : "Hide Panels", section: "View", shortcut: "Tab", keywords: ["focus", "fullscreen"], run: () => shell.setPanelsHidden(!shell.panelsHidden) },
+    { id: "view-surround-black", title: "Background: Black", section: "View", keywords: ["surround"], run: () => shell.setSurround("black") },
+    { id: "view-surround-dark", title: "Background: Dark Grey", section: "View", keywords: ["surround"], run: () => shell.setSurround("dark") },
+    { id: "view-surround-medium", title: "Background: Medium Grey", section: "View", keywords: ["surround"], run: () => shell.setSurround("medium") },
+    { id: "panel-edit", title: "Edit Whole Photo", section: "Develop", shortcut: "E", keywords: ["basic", "tone", "curve", "mixer", "grading"], run: () => shell.setRightMode("develop") },
+    { id: "panel-masks", title: "Masks", section: "Local Adjustments", shortcut: "M", keywords: ["brush", "gradient", "radial", "local"], run: () => shell.setRightMode("masks") },
+    { id: "panel-text", title: "Text & Watermark", section: "Output", shortcut: "T", keywords: ["title", "caption", "watermark"], run: () => shell.setRightMode("text") },
+    { id: "panel-looks", title: "Browse Looks", section: "Looks", shortcut: "L", keywords: ["film", "preset", "recipe", "profile"], run: openLeft("looks") },
+    { id: "panel-history", title: "History", section: "Workflow", keywords: ["undo", "steps"], run: openLeft("history") },
+    { id: "panel-versions", title: "Versions & Snapshots", section: "Workflow", keywords: ["virtual copy", "snapshot", "compare"], run: openLeft("versions") },
+    { id: "panel-info", title: "Rating & Info", section: "Workflow", keywords: ["metadata", "stars", "flag", "keywords"], run: openLeft("info") },
+  ];
+}

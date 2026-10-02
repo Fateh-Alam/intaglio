@@ -42,7 +42,8 @@ export default function CinematicEditor({
   onBrushMaskUpdate,
   onBrushStrokeComplete,
   onBoundsChange,
-  wiperPosition = 0.5,
+  split = -1,
+  showClipping = false,
   rawSource = null,
 }: {
   settings: EditorSettings;
@@ -63,7 +64,8 @@ export default function CinematicEditor({
   onBrushMaskUpdate?: () => void;
   onBrushStrokeComplete?: (stroke: import("../types/editor").BrushStroke) => void;
   onBoundsChange?: (bounds: ImageBounds) => void;
-  wiperPosition?: number;
+  split?: number;
+  showClipping?: boolean;
   rawSource?: LinearSourceBuffer | null;
 }) {
   const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null);
@@ -75,86 +77,52 @@ export default function CinematicEditor({
 
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  // Calculate image bounds when image loads
+  // Image bounds drive every DOM overlay (brush, guides, compare). Recompute
+  // whenever the container changes size, not only on window resize, so side
+  // panels opening or closing keep overlays aligned with the WebGL photo.
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
-      const container = containerRef.current;
-      if (!container) return;
-
+    const container = containerRef.current;
+    if (!container) return;
+    let aspect: number | null = null;
+    let cancelled = false;
+    const measure = () => {
+      if (!aspect || cancelled) return;
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
-      const imgAspect = img.width / img.height;
-
-      const maxWidth = containerWidth * 0.9;
-      const maxHeight = containerHeight * 0.9;
-
-      let displayWidth = maxWidth;
-      let displayHeight = displayWidth / imgAspect;
-
-      if (displayHeight > maxHeight) {
-        displayHeight = maxHeight;
-        displayWidth = displayHeight * imgAspect;
+      let displayWidth = containerWidth * 0.9;
+      let displayHeight = displayWidth / aspect;
+      if (displayHeight > containerHeight * 0.9) {
+        displayHeight = containerHeight * 0.9;
+        displayWidth = displayHeight * aspect;
       }
-
       const bounds = {
         width: displayWidth,
         height: displayHeight,
         left: (containerWidth - displayWidth) / 2,
         top: (containerHeight - displayHeight) / 2,
       };
-
       setImageBounds(bounds);
       onBoundsChange?.(bounds);
     };
-    img.src = imageUrl;
-  }, [imageUrl, onBoundsChange]);
-
-  // Update bounds on resize
-  useEffect(() => {
-    const handleResize = () => {
-      const img = new Image();
-      img.onload = () => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        const imgAspect = img.width / img.height;
-
-        const maxWidth = containerWidth * 0.9;
-        const maxHeight = containerHeight * 0.9;
-
-        let displayWidth = maxWidth;
-        let displayHeight = displayWidth / imgAspect;
-
-        if (displayHeight > maxHeight) {
-          displayHeight = maxHeight;
-          displayWidth = displayHeight * imgAspect;
-        }
-
-        const bounds = {
-          width: displayWidth,
-          height: displayHeight,
-          left: (containerWidth - displayWidth) / 2,
-          top: (containerHeight - displayHeight) / 2,
-        };
-
-        setImageBounds(bounds);
-        onBoundsChange?.(bounds);
-      };
-      img.src = imageUrl;
+    const img = new Image();
+    img.onload = () => {
+      aspect = img.width / img.height;
+      measure();
     };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    img.src = imageUrl;
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
   }, [imageUrl, onBoundsChange]);
 
   return (
     <div
       id="cinematic-editor-container"
       ref={containerRef}
-      className="w-full h-full relative bg-gray-900 overflow-hidden"
+      className="relative h-full w-full overflow-hidden"
     >
       <Canvas
         id="main-editor-canvas"
@@ -163,7 +131,6 @@ export default function CinematicEditor({
         dpr={dpr}
         gl={{ preserveDrawingBuffer: true }}
         camera={{ position: [0, 0, 5], fov: 50 }}
-        style={{ cursor: settings.wiperActive ? "ew-resize" : "default" }}
       >
         <Suspense fallback={null}>
           <ImagePlane
@@ -171,7 +138,8 @@ export default function CinematicEditor({
             settings={settings}
             brushCanvas={brushCanvas}
             brushCanvasDirty={brushCanvasDirty}
-            wiperPosition={wiperPosition}
+            split={split}
+            showClipping={showClipping}
             rawSource={rawSource}
             onStatsUpdate={onStatsUpdate}
           />

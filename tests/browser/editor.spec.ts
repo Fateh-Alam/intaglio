@@ -2,15 +2,17 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
 
-test("editor shell opens a sample and exposes graph, proof, batch, and export workflows", async ({ page }) => {
+test("editor shell opens a sample and exposes develop, proof, batch, and export workflows", async ({ page }) => {
   await page.goto("/editor");
   await expect(page.getByText("Open Photograph")).toBeVisible();
   await page.getByText("Sample Photograph", { exact: true }).click();
-  await expect(page.getByTitle("Local Batch Export")).toBeVisible();
-  await page.getByTitle("Local Batch Export").click();
+  await expect(page.getByRole("slider", { name: "Exposure" })).toBeVisible();
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "Batch export…" }).click();
   await expect(page.getByText("Local batch export")).toBeVisible();
   await page.getByLabel("Close batch export").click();
-  await page.getByText("Proof Sheets").click();
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "Proof sheet…" }).click();
   await expect(page.getByText("Select Variation")).toBeVisible();
 });
 
@@ -27,7 +29,8 @@ test("manifest exposes current portable project handler and install icons", asyn
 test("editor creates a portable V2 ZIP recipe rather than disguised JSON", async ({ page }) => {
   await page.goto("/editor");
   await page.getByText("Sample Photograph", { exact: true }).click();
-  await page.getByText("Create .int", { exact: true }).click();
+  await page.getByRole("button", { name: "File" }).click();
+  await page.getByRole("menuitem", { name: "Save look as .int…" }).click();
   await page.getByLabel("Recipe Name").fill("Portable Fixture");
   await page.getByText("Next: Select Settings").click();
   await page.getByText("Next", { exact: true }).click();

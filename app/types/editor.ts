@@ -150,6 +150,7 @@ export interface EditorSettings {
   whites: number;
   blacks: number;
   vibrance: number;
+  saturation: number;
   tealOrange: number;
   temperature: number;
   tint: number;
