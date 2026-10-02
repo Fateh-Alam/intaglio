@@ -14,7 +14,7 @@ We will not out-feature Lightroom, Capture One, Photoshop, Resolve and darktable
 |---|---|---|
 | **Color science** | Lightroom: closed, display-referred sliders. Resolve: superb, but built for video. | Scene-referred, spectral-capable, OKLab-native pipeline with Resolve-class grading tools *for stills*. |
 | **LUT workflow** | Lightroom can't author LUTs. Photoshop's are clumsy. Resolve is video-only. | Author, sculpt, analyze, decompose, and export LUTs as a first-class workflow. |
-| **Determinism** | Nobody guarantees identical output across machines. | Byte-reproducible recipes; preview = export = batch = CLI, enforced by tests. |
+| **Determinism** | Nobody guarantees identical output across machines. | Byte-reproducible recipes; preview = export = batch, enforced by tests. |
 | **Privacy** | Cloud-first (Adobe), account walls. | Local-only. Photos never leave the machine. No account required. |
 | **Reach** | Desktop-only or web-lite. | Same engine on web, macOS, and Windows. Open a link, start grading. |
 | **Price of entry** | Subscriptions. | A free web tier that is genuinely pro; desktop for power. |
@@ -27,7 +27,19 @@ We will not out-feature Lightroom, Capture One, Photoshop, Resolve and darktable
 3. **Every control is honest.** If a slider is visible, it has a tested, documented effect.
 4. **Non-destructive and inspectable.** Every edit is a node; every node can be soloed, bypassed, and diffed.
 5. **Fast is a feature.** < 16 ms slider response on a 24 MP proxy, always.
-6. **Classical algorithms, deterministic results.** See §11 for the AI decision.
+6. **No AI, ever.** Classical algorithms, deterministic results (decided 2026-10-03, see §11).
+7. **Pro power, Lightroom simplicity.** The most advanced tool on the market must feel as approachable as Lightroom. See the ease-of-use contract below.
+8. **Breathtaking design.** The interface must be the most beautiful, considered product design in the category: calm, precise, photo-first, fast. Design quality is a release gate, not polish.
+
+### Ease-of-use contract (every feature must pass)
+1. **Familiar first.** The default right panel follows Lightroom's mental model and order: Basic → Tone Curve → Color Mixer → Color Grading → Detail → Optics → Geometry → Effects → Calibration. Advanced surfaces (Nodes, LUT Studio, Scopes, Film Lab) are opt-in workspaces and never stand in the way.
+2. **Plain language.** Every control is labeled in photographer words ("Highlights", "Skin tones", "Make sky bluer"), with the technical term and a one-line explanation on hover.
+3. **One click to power.** Every advanced capability has a single obvious entry point ("Match look from a photo…", "Save look as LUT…", "Fix skin tones").
+4. **Good by default.** Color management, profiles and view transforms are automatic and correct with zero setup; experts can override.
+5. **Progressive disclosure.** Simple sliders up front; a "More" chevron reveals precision controls. Double-click any slider to reset it. Everything is undoable.
+6. **Direct manipulation.** Drag on the photo itself to adjust curves, colors and masks (targeted adjustment), not just numbers.
+7. **Lightroom-compatible muscle memory** where it makes sense: `\` before/after, `R` crop, `K` brush, `J` clipping, `Cmd/Ctrl+Z`, double-click to reset.
+8. **Honest feedback.** Every slow operation shows progress; every failure says what happened and how to fix it.
 
 ---
 
@@ -87,7 +99,7 @@ These were shipping defects; all are now covered by unit tests and/or the render
                      │ viewport-first rendering · background full-res    │
                      └─────────────────────────┬─────────────────────────┘
           ┌──────────────────┬─────────────────┼─────────────────┬────────────────────┐
-     Preview/Loupe      Proof sheets      Export/Batch        Intaglio CLI       Desktop native I/O
+     Preview/Loupe        Proof sheets         Export/Batch          Desktop native I/O
 ```
 
 ### Engine strategy: one engine, three shells
@@ -225,7 +237,6 @@ These were shipping defects; all are now covered by unit tests and/or the render
 - [ ] **Virtual copies, snapshots, look branches** (§2), and history scrubbing as a timeline.
 - [ ] **Export presets:** multiple simultaneous outputs (web 2048px sRGB + print TIFF 16-bit ProPhoto + Instagram 1080×1350), with filename templates, metadata stripping/keeping, watermark (exists), output sharpening per medium, and **file size targets** ("under 2 MB").
 - [ ] **Formats out:** JPEG (MozJPEG, exists), PNG 8/16, WebP, **AVIF 10/12-bit**, **JPEG XL**, **TIFF 16-bit/float**, **Ultra HDR gain-map JPEG**, DNG (linear) for round-tripping.
-- [ ] **Intaglio CLI** *(desktop/Node)*: `intaglio render ./shoot --recipe teal-night.int --out ./web` renders headless through the same engine with identical pixels. Studios and agencies script it. Built on headless WebGPU (Dawn) or native wgpu.
 - [ ] **Hot folders** (desktop): watch a folder, apply a recipe, write proofs. A practical alternative to tethering.
 - [ ] **Instagram-native output** (existing strength): carousel builder (exists), seamless panorama carousels, feed-grid preview, and safe-zone overlays.
 
@@ -261,15 +272,15 @@ Tauri fits because our render-contract tests already cover exactly the two engin
 1. **Shell (2–3 weeks):** static-export the editor (`output: "export"` for the editor routes; marketing pages stay on Cloudflare), Tauri window, native menus, app icon, code signing and notarization (Apple), MSIX/NSIS signing (Windows), and auto-update.
 2. **Native I/O:** replace `alert/confirm/prompt` (13 sites) with in-app dialogs; replace `<a download>` (6 sites) with native Save dialogs; drag-and-drop from Finder/Explorer; file associations (`.int`, `.intaglio`, RAW "Open With"); recent files.
 3. **Native compute:** Rust RAW decode (multi-threaded), lcms2 with the display ICC profile, lensfun, SQLite catalog on real disk (no OPFS quota), and file watching for hot folders.
-4. **Desktop-only power:** HDR/EDR display output on macOS, second-monitor client view, controller support, CLI install, and (optionally, if you change the boundary) tethering via gphoto2/vendor SDKs.
+4. **Desktop-only power:** HDR/EDR display output on macOS, second-monitor client view, and controller support.
 
 **Rule:** the desktop app is a superset, never a fork. Every document opens in all three and renders identical pixels (gated by the same render contract run inside each webview).
 
 ---
 
-## 11. Decision: AI
+## 11. Decision: no AI (final)
 
-The current product promise is **non-AI and deterministic**. This roadmap honors that: every algorithm above is classical, documented, and reproducible. The places where competitors use neural networks map to classical alternatives:
+**Decided 2026-10-03: Intaglio contains no AI or machine-learning models, on any platform, opt-in or otherwise.** Every algorithm is classical, documented, and reproducible. Where competitors use neural networks, we ship a classical alternative and make it excellent:
 
 | Competitor AI feature | Intaglio classical answer |
 |---|---|
@@ -278,8 +289,6 @@ The current product promise is **non-AI and deterministic**. This roadmap honors
 | Generative remove | PatchMatch completion + Poisson blending |
 | Auto-tone | Deterministic statistics-based auto (documented formula), constraint grading |
 | Super resolution | Multi-frame burst super-resolution, pixel-shift merge |
-
-**Optional later decision:** offer *on-device, opt-in* models (e.g. subject masks via WebGPU, never uploaded) as a separately labeled module. This would put masking on par with Lightroom but changes the brand claim. **Owner: you.** Nothing in Phases 0–3 depends on this choice.
 
 ---
 
@@ -312,7 +321,7 @@ Heal/clone/content-aware fill, frequency separation, linear-light dodge & burn, 
 **Exit:** sensor-dust cleanup and portrait retouch can be done without leaving Intaglio.
 
 ### Phase 6 — Library and workflow (8–10 wk)
-Catalog, culling, sync, XMP and Lightroom import, export presets, CLI, hot folders.
+Catalog, culling, sync, XMP and Lightroom import, export presets, hot folders.
 **Exit:** a 2,000-image wedding can be culled, graded, and exported in Intaglio alone.
 
 ### Phase 7 — Moonshots (ongoing)
@@ -338,4 +347,4 @@ Spectral darkroom and film-stock library; Color Space Sculptor; Look DNA; constr
 | Memory on 100 MP RAW in the browser | Tile everything; half-float proxies; native decode on desktop; explicit memory budget and graceful downgrade. |
 | Scope explosion | Phases have exit criteria; nothing ships without its gate. Moonshots stay in Phase 7. |
 | Licensing | LibRaw (LGPL/CDDL) and lensfun (LGPL library, CC-BY-SA database) need dynamic linking/attribution. lcms2 (MIT), OCIO (BSD), libjxl (BSD), libavif (BSD), libultrahdr (Apache) are permissive. Review before each integration. |
-| Brand claim vs. AI demand | The §11 decision is explicit and owned; the classical alternatives are strong enough to compete on. |
+| Users asking for AI features | The no-AI decision is final; each AI feature competitors ship has a classical answer in §11 that we must make excellent. |
