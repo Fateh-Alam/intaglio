@@ -1,6 +1,6 @@
 import React from "react";
 import type { HistogramData } from "../../types/editor";
-import { IconCopy, IconDownload } from "@tabler/icons-react";
+import { IconDownload } from "@tabler/icons-react";
 
 export function PaletteHeist({
   histogram,
@@ -21,7 +21,7 @@ export function PaletteHeist({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "nyvarra_palette.txt";
+    a.download = "intaglio-palette.txt";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

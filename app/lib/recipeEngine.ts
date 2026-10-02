@@ -1,5 +1,5 @@
 import { EditorSettings } from "../types/editor";
-import { NyvarraRecipe } from "../types/recipe";
+import { IntaglioRecipe } from "../types/recipe";
 import { DEFAULT_SETTINGS } from "../editor/pageTypes";
 
 export const RECIPE_LIMITS: Partial<Record<keyof EditorSettings, [number, number]>> = {
@@ -19,7 +19,7 @@ export const RECIPE_LIMITS: Partial<Record<keyof EditorSettings, [number, number
  */
 export const applyRecipe = (
   currentSettings: EditorSettings,
-  recipe: NyvarraRecipe,
+  recipe: IntaglioRecipe,
   intensity: number
 ): EditorSettings => {
   const newSettings = { ...currentSettings };
@@ -41,13 +41,13 @@ export const applyRecipe = (
       finalVal = Math.max(limits[0], Math.min(limits[1], finalVal));
     }
     
-    (newSettings as any)[key] = finalVal;
+    Object.assign(newSettings, { [key]: finalVal });
   };
 
   // Helper to apply a boolean value based on intensity threshold
   const applyBoolean = (key: keyof EditorSettings, recipeVal: boolean | undefined, threshold = 0.5) => {
       if (recipeVal === undefined) return;
-      (newSettings as any)[key] = intensity > threshold ? recipeVal : DEFAULT_SETTINGS[key];
+      Object.assign(newSettings, { [key]: intensity > threshold ? recipeVal : DEFAULT_SETTINGS[key] });
   };
   
   // 1. Base Development
@@ -113,7 +113,7 @@ export const applyRecipe = (
        } else if (typeof value === 'boolean') {
            applyBoolean(key as keyof EditorSettings, value);
        } else {
-           (newSettings as any)[key] = value;
+           Object.assign(newSettings, { [key]: value });
        }
     }
   }

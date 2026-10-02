@@ -4,32 +4,31 @@ const checks = [
   {
     path: "/",
     includes: [
-      "Ormond",
-      "Made for photographs that deserve patience",
+      "Intaglio",
+      "LOCAL PROCESSING. MEASURABLE OUTPUT.",
       "Open Darkroom",
-      "Amico meo carissimo",
-      ".ormond",
+      "Your photographs and edits remain local",
     ],
   },
   {
     path: "/editor",
-    includes: ["Ormond", "Session Desk", "Open Photograph", "Open Archive"],
+    includes: ["Intaglio", "Open Photograph", "Open Archive"],
   },
   {
     path: "/presets",
-    includes: ["Ormond Collections", "Print Recipes", "Morning Newspaper"],
+    includes: ["Intaglio Collections", "Print Recipes", "Intaglio Poster Mode"],
   },
   {
     path: "/changelog",
-    includes: ["Release Journal", "The Ormond Rebuild", ".ormond"],
+    includes: ["Release Journal", "Intaglio", ".intaglio"],
   },
   {
     path: "/manifest.webmanifest",
-    includes: ["Ormond", "standalone", "file_handlers", ".ormond"],
+    includes: ["Intaglio", "standalone", "file_handlers", ".intaglio"],
   },
   {
-    path: "/sw.js",
-    includes: ["ormond-darkroom-v1", "APP_SHELL", "/archive-file.svg"],
+    path: "/serwist/sw.js",
+    includes: ["intaglio", "libraw.wasm", "/offline"],
   },
   {
     path: "/archive-file.svg",

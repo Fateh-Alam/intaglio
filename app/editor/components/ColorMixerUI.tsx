@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { EditorSettings, EditorSettingKey } from '../../types/editor';
+import { EditorSettings, EditorSettingKey, EditorSettingValue } from '../../types/editor';
 import Slider from '../../components/Slider';
 import ControlGroup from '../../components/ControlGroup';
 import { IconPalette, IconSun, IconCircleFilled } from '@tabler/icons-react';
 
 interface ColorMixerUIProps {
   settings: EditorSettings;
-  updateSetting: (key: EditorSettingKey, value: any) => void;
+  updateSetting: (key: EditorSettingKey, value: EditorSettingValue) => void;
 }
 
 const CHANNELS = [

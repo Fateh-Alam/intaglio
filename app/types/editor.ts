@@ -128,16 +128,7 @@ export type AdjustmentLayer = {
   maskIds: string[];
   opacity: number;
   blendMode: "normal"; // Extendable later
-  params: {
-    exposure: number;
-    contrast: number;
-    highlights: number;
-    shadows: number;
-    temperature: number;
-    tint: number;
-    saturation: number;
-    clarity: number;
-  };
+  params: Partial<EditorSettings>;
 };
 
 // -------------------------
@@ -146,6 +137,9 @@ export type FilmEmulation = string;
 
 export interface LutUserData {
   lutSize?: number;
+  domainMin?: [number, number, number];
+  domainMax?: [number, number, number];
+  title?: string;
 }
 
 export interface EditorSettings {
@@ -178,7 +172,6 @@ export interface EditorSettings {
   filmWhiteRolloff: number;
   colorCrossover: number;
   lumaDesat: number;
-  toneCurveTexture: THREE.DataTexture | null;
   curvePoints: CurvePoints;
   colorGrading: ColorGradingSettings;
   compareEnabled: boolean;
@@ -196,7 +189,7 @@ export interface EditorSettings {
   tiltShiftAmount: number;
   tiltShiftPosition: number;
   tiltShiftAngle: number;
-  lutTexture: THREE.DataTexture | null;
+  lutTexture: THREE.Data3DTexture | null;
   lutStrength: number;
   falseColor: boolean;
   anamorphicDistortion: number;
@@ -253,7 +246,7 @@ export type EditorSettingKey = keyof EditorSettings;
 export type EditorSettingValue = EditorSettings[EditorSettingKey];
 export type SerializableEditorSettings = Omit<
   EditorSettings,
-  "toneCurveTexture" | "compareTexture" | "lutTexture"
+  "compareTexture" | "lutTexture"
 >;
 
 export type PerformanceMode = "draft" | "balanced" | "quality";

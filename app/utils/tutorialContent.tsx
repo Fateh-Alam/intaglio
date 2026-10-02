@@ -202,7 +202,7 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
     title: "False Color",
     subtitle: "Exposure Analysis",
     description:
-      "A professional tool that maps brightness levels to colors, helping you identify underexposed, overexposed, and properly lit areas at a glance. Essential for correct exposure in video production.",
+      "A professional tool that maps brightness levels to colors, helping you identify underexposed, overexposed, and properly exposed regions in a still photograph.",
     tips: [
       "Purple/Blue = Underexposed (too dark)",
       "Green/Olive = Correct skin tone exposure",
@@ -222,9 +222,7 @@ const STORAGE_KEY = STORAGE_KEYS.tutorialsSeen;
 export function getSeenTutorials(): Record<string, boolean> {
   if (typeof window === "undefined") return {};
   try {
-    const stored =
-      localStorage.getItem(STORAGE_KEY) ??
-      localStorage.getItem(STORAGE_KEYS.legacyTutorialsSeen);
+    const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : {};
   } catch {
     return {};

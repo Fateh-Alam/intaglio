@@ -4,15 +4,15 @@ import React, {
   Suspense,
   useState,
   useEffect,
-  useCallback,
   useMemo,
 } from "react";
 import { Canvas } from "@react-three/fiber";
 import ImagePlane from "./ImagePlane";
-import HistogramAnalyzer from "./HistogramAnalyzer";
+import type { LinearSourceBuffer } from "../editor/render/sourceTexture";
 import CinematicTextOverlay, {
   TextOverlaySettings,
 } from "./CinematicTextOverlay";
+import RenderedOverlayCanvas from "./RenderedOverlayCanvas";
 import BrushMaskCanvas from "./BrushMaskCanvas";
 import type {
   CompositionGuide,
@@ -20,7 +20,6 @@ import type {
   HistogramData,
   ImageBounds,
   PerformanceMode,
-  WatermarkPosition,
   WatermarkSettings,
 } from "../types/editor";
 
@@ -41,8 +40,10 @@ export default function CinematicEditor({
   performanceMode = "balanced",
   compositionGuide = "off",
   onBrushMaskUpdate,
+  onBrushStrokeComplete,
   onBoundsChange,
   wiperPosition = 0.5,
+  rawSource = null,
 }: {
   settings: EditorSettings;
   imageUrl: string;
@@ -60,8 +61,10 @@ export default function CinematicEditor({
   performanceMode?: PerformanceMode;
   compositionGuide?: CompositionGuide;
   onBrushMaskUpdate?: () => void;
+  onBrushStrokeComplete?: (stroke: import("../types/editor").BrushStroke) => void;
   onBoundsChange?: (bounds: ImageBounds) => void;
   wiperPosition?: number;
+  rawSource?: LinearSourceBuffer | null;
 }) {
   const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null);
   const dpr = useMemo<[number, number]>(() => {
@@ -147,16 +150,6 @@ export default function CinematicEditor({
     return () => window.removeEventListener("resize", handleResize);
   }, [imageUrl, onBoundsChange]);
 
-  const handleMaskUpdate = useCallback(() => {
-    if (onBrushMaskUpdate) {
-      onBrushMaskUpdate();
-    }
-  }, [onBrushMaskUpdate]);
-
-  const handleClear = useCallback(() => {
-    // Clear handler
-  }, []);
-
   return (
     <div
       id="cinematic-editor-container"
@@ -166,6 +159,7 @@ export default function CinematicEditor({
       <Canvas
         id="main-editor-canvas"
         flat
+        frameloop="demand"
         dpr={dpr}
         gl={{ preserveDrawingBuffer: true }}
         camera={{ position: [0, 0, 5], fov: 50 }}
@@ -178,8 +172,9 @@ export default function CinematicEditor({
             brushCanvas={brushCanvas}
             brushCanvasDirty={brushCanvasDirty}
             wiperPosition={wiperPosition}
+            rawSource={rawSource}
+            onStatsUpdate={onStatsUpdate}
           />
-          <HistogramAnalyzer onUpdate={onStatsUpdate} />
         </Suspense>
       </Canvas>
 
@@ -209,6 +204,7 @@ export default function CinematicEditor({
               if (onCanvasReady) onCanvasReady(c);
             }}
             onClear={() => {}}
+            onStrokeComplete={onBrushStrokeComplete}
           />
         </div>
       )}
@@ -242,53 +238,12 @@ export default function CinematicEditor({
             height: imageBounds.height,
           }}
         >
-          <CinematicTextOverlay 
-            settings={textOverlay} 
-            setSettings={setTextOverlay} 
-          />
+          <RenderedOverlayCanvas text={textOverlay} watermark={watermark ?? { enabled: false, text: "", position: "bottom-right", opacity: 0, size: 0 }} />
+          <div className="absolute inset-0 opacity-0 focus-within:opacity-100 hover:opacity-100">
+            <CinematicTextOverlay settings={textOverlay} setSettings={setTextOverlay} />
+          </div>
         </div>
       )}
-
-      {imageBounds && watermark?.enabled && watermark.text.trim() && (
-        <div
-          id="watermark-overlay-container"
-          className="absolute pointer-events-none"
-          style={{
-            left: imageBounds.left,
-            top: imageBounds.top,
-            width: imageBounds.width,
-            height: imageBounds.height,
-          }}
-        >
-          <WatermarkOverlay settings={watermark} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function WatermarkOverlay({ settings }: { settings: WatermarkSettings }) {
-  const positionStyles: Record<WatermarkPosition, React.CSSProperties> = {
-    "top-left": { top: "4%", left: "4%" },
-    "top-right": { top: "4%", right: "4%" },
-    "bottom-left": { bottom: "4%", left: "4%" },
-    "bottom-right": { bottom: "4%", right: "4%" },
-    center: { top: "50%", left: "50%", transform: "translate(-50%, -50%)" },
-  };
-
-  return (
-    <div
-      className="absolute select-none whitespace-nowrap font-mono font-semibold uppercase text-white"
-      style={{
-        ...positionStyles[settings.position],
-        opacity: settings.opacity,
-        fontSize: `${Math.round(13 + settings.size * 44)}px`,
-        letterSpacing: "0.08em",
-        textShadow:
-          "0 2px 18px rgba(0,0,0,0.92), 0 0 2px rgba(255,255,255,0.35)",
-      }}
-    >
-      {settings.text}
     </div>
   );
 }

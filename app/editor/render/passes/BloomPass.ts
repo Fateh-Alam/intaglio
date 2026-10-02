@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RenderPass } from '../RenderPass';
+import { dimensionsFromRenderInput, RenderPass } from '../RenderPass';
 import { EditorSettings } from '../../../types/editor';
 import { PRO_RENDER_TARGET_OPTIONS } from '../PingPongTarget';
 
@@ -165,9 +165,9 @@ export class BloomPass extends RenderPass {
       width = Math.max(1, Math.floor((readBuffer as THREE.WebGLRenderTarget).width / 4));
       height = Math.max(1, Math.floor((readBuffer as THREE.WebGLRenderTarget).height / 4));
     } else {
-      const img = inputTexture.image as any;
-      width = img && img.width ? Math.max(1, Math.floor(img.width / 4)) : 256;
-      height = img && img.height ? Math.max(1, Math.floor(img.height / 4)) : 256;
+      const dimensions = dimensionsFromRenderInput(readBuffer);
+      width = Math.max(1, Math.floor(dimensions.width / 4));
+      height = Math.max(1, Math.floor(dimensions.height / 4));
     }
     
     if (this.renderTargetBright.width !== width || this.renderTargetBright.height !== height) {

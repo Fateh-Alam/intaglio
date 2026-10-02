@@ -78,7 +78,7 @@ export type RecipeSwatchDefinition = {
   colorPalette?: string[];
 };
 
-export type NyvarraRecipe = {
+export type IntaglioRecipe = {
   id: string;
   name: string;
   subtitle?: string;

@@ -10,7 +10,7 @@ export function GridOverlay({
 }) {
   if (mode === "none" || !bounds) return null;
 
-  let overlayStyle: React.CSSProperties = {
+  const overlayStyle: React.CSSProperties = {
     position: "absolute",
     pointerEvents: "none",
     border: "2px solid rgba(255, 255, 255, 0.4)",

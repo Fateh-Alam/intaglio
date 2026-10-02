@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSerwist } from "@serwist/turbopack";
 
 const nextConfig: NextConfig = {
   turbopack: {
@@ -6,6 +7,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);
 
 import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());

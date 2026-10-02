@@ -1,6 +1,18 @@
 import * as THREE from 'three';
 import { EditorSettings } from '../../types/editor';
 
+export type RenderInput = THREE.Texture | THREE.WebGLRenderTarget;
+
+export function textureFromRenderInput(input: RenderInput): THREE.Texture {
+  return input instanceof THREE.WebGLRenderTarget ? input.texture : input;
+}
+
+export function dimensionsFromRenderInput(input: RenderInput, fallback = 256): { width: number; height: number } {
+  if (input instanceof THREE.WebGLRenderTarget) return { width: input.width, height: input.height };
+  const image = input.image as { width?: number; height?: number } | undefined;
+  return { width: image?.width ?? fallback, height: image?.height ?? fallback };
+}
+
 /**
  * A simple fullscreen quad geometry for running fragment shaders.
  */
@@ -75,7 +87,7 @@ export abstract class RenderPass {
    */
   public abstract render(
     renderer: THREE.WebGLRenderer,
-    readBuffer: THREE.WebGLRenderTarget,
+    readBuffer: RenderInput,
     writeBuffer: THREE.WebGLRenderTarget | null
   ): void;
 
@@ -84,10 +96,21 @@ export abstract class RenderPass {
   }
 
   public setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number) {
-    this.fsQuad.setViewOffset(fullWidth, fullHeight, x, y, width, height);
+    void fullWidth; void fullHeight; void x; void y; void width; void height;
   }
 
-  public clearViewOffset() {
-    this.fsQuad.clearViewOffset();
+  public clearViewOffset() {}
+
+  /** Source passes receive the decoded source texture before each graph run. */
+  public setSource(texture: THREE.Texture) {
+    void texture;
   }
+}
+
+export type SourceEncoding = 'srgb' | 'linear';
+
+/** Encoding of a source texture's values; image files default to sRGB-encoded. */
+export function sourceEncodingOf(texture: THREE.Texture): SourceEncoding {
+  if (texture.colorSpace === THREE.SRGBColorSpace) return 'linear'; // GPU decodes on sample
+  return (texture.userData as { intaglioEncoding?: SourceEncoding }).intaglioEncoding === 'linear' ? 'linear' : 'srgb';
 }

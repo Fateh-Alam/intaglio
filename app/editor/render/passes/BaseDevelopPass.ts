@@ -40,14 +40,6 @@ varying vec2 vUv;
 
 ${OKLAB_GLSL_CHUNK}
 
-// Linearization (sRGB decode — distinct from linearToSrgb in OKLAB chunk)
-vec3 srgbToLinear(vec3 c) {
-  bvec3 cutoff = lessThanEqual(c, vec3(0.04045));
-  vec3 lower = c / 12.92;
-  vec3 higher = pow((c + 0.055) / 1.055, vec3(2.4));
-  return mix(higher, lower, vec3(cutoff));
-}
-
 vec3 applyExposure(vec3 color, float ev) {
   return color * exp2(ev);
 }
@@ -176,8 +168,9 @@ vec3 kelvinToRGB(float temp) {
 void main() {
   vec4 texColor = texture2D(tDiffuse, vUv);
   
-  // 1. Linearize Input
-  vec3 originalColor = srgbToLinear(texColor.rgb);
+  // 1. Input is already linear (InputTransformPass runs once per graph, so
+  // adjustment plates re-running this pass do not decode twice).
+  vec3 originalColor = texColor.rgb;
   vec3 color = originalColor;
   
   // 2. White Balance

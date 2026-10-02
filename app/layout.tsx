@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { SerwistProvider } from "@serwist/turbopack/react";
 import {
   Geist,
   Geist_Mono,
   Bebas_Neue,
   Inter,
 } from "next/font/google";
-import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 import { BRAND } from "./lib/brand";
+import SerwistUpdatePrompt from "./components/SerwistUpdatePrompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -93,8 +94,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${inter.variable} antialiased`}
       >
-        <ServiceWorkerRegister />
-        {children}
+        <SerwistProvider
+          swUrl="/serwist/sw.js"
+          register={process.env.NODE_ENV === "production"}
+          cacheOnNavigation
+          reloadOnOnline={false}
+        >
+          <SerwistUpdatePrompt />
+          {children}
+        </SerwistProvider>
       </body>
     </html>
   );

@@ -60,8 +60,8 @@ export function IconWrapper({
           // Force standard Tabler Icon props if possible to ensure 1.5 stroke and size
           // We apply the CSS to handle the rest.
           // We apply the CSS to handle the rest.
-          const childProps = child.props as any;
-          return React.cloneElement(child as React.ReactElement<any>, {
+          const childProps = child.props as { size?: number; stroke?: number };
+          return React.cloneElement(child as React.ReactElement<{ size?: number; stroke?: number }>, {
             size: childProps.size || 24,
             stroke: childProps.stroke || 1.5,
           });

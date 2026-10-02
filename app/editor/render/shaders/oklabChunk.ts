@@ -1,5 +1,5 @@
 /**
- * Shared OKLAB / OKLCH GLSL functions for the Nyvarra Studio render pipeline.
+ * Shared OKLAB / OKLCH GLSL functions for the Intaglio render pipeline.
  * Based on Bjorn Ottosson's OKLAB perceptually uniform color space.
  *
  * These functions operate in LINEAR sRGB space. Ensure your shader input

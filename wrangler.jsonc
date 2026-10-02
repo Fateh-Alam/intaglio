@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "nyvarra-studio",
+  "name": "intaglio",
   "compatibility_date": "2026-07-08",
   "compatibility_flags": [
     "nodejs_compat"
@@ -13,13 +13,13 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "nyvarra-studio"
+      "service": "intaglio"
     }
   ],
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "nyvarra-studio-opennext-cache"
+      "bucket_name": "intaglio-opennext-cache"
     }
   ],
   "images": {

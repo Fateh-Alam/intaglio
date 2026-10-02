@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import type { CubeLutData } from "./lutParser";
 
 // Helper to get image data from a URL with optional ROI (normalized 0-1)
 interface ROI {
@@ -86,51 +86,43 @@ function createMapping(sourceCDF: number[], refCDF: number[]): number[] {
   return mapping;
 }
 
-// Generate a 2D LUT texture (WebGL 1 compatible)
-export async function generatePaletteHeist2DLUT(
+const PALETTE_MATCH_LUT_SIZE = 33;
+
+const sampleMapping = (mapping: number[], unit: number): number => {
+  const position = unit * 255;
+  const lower = Math.floor(position);
+  const upper = Math.min(255, lower + 1);
+  return mapping[lower] + (mapping[upper] - mapping[lower]) * (position - lower);
+};
+
+// Histogram-match each channel of the source to the reference and bake the
+// result into a display-encoded 3D LUT, the same form as an imported .cube.
+export async function generatePaletteMatchLut(
   sourceUrl: string,
   refUrl: string,
   sourceROI?: ROI,
   refROI?: ROI
-): Promise<THREE.DataTexture> {
+): Promise<CubeLutData> {
   const [sourceData, refData] = await Promise.all([
     getImageData(sourceUrl, sourceROI),
     getImageData(refUrl, refROI),
   ]);
 
-  const sourceR = getCDF(sourceData, 0);
-  const sourceG = getCDF(sourceData, 1);
-  const sourceB = getCDF(sourceData, 2);
+  const mapR = createMapping(getCDF(sourceData, 0), getCDF(refData, 0));
+  const mapG = createMapping(getCDF(sourceData, 1), getCDF(refData, 1));
+  const mapB = createMapping(getCDF(sourceData, 2), getCDF(refData, 2));
 
-  const refR = getCDF(refData, 0);
-  const refG = getCDF(refData, 1);
-  const refB = getCDF(refData, 2);
-
-  const mapR = createMapping(sourceR, refR);
-  const mapG = createMapping(sourceG, refG);
-  const mapB = createMapping(sourceB, refB);
-
-  // Create a 2D LUT texture (256x256)
-  // We'll store R in the red channel, G in green, B in blue
-  const size = 256;
-  const data = new Uint8Array(size * size * 4);
-
-  for (let i = 0; i < size; i++) {
-    for (let j = 0; j < size; j++) {
-      const index = (i * size + j) * 4;
-      data[index] = Math.floor(mapR[i] * 255); // R
-      data[index + 1] = Math.floor(mapG[i] * 255); // G
-      data[index + 2] = Math.floor(mapB[i] * 255); // B
-      data[index + 3] = 255; // A
+  const size = PALETTE_MATCH_LUT_SIZE;
+  const values = new Float32Array(size * size * size * 3);
+  let index = 0;
+  for (let b = 0; b < size; b++) {
+    for (let g = 0; g < size; g++) {
+      for (let r = 0; r < size; r++) {
+        values[index++] = sampleMapping(mapR, r / (size - 1));
+        values[index++] = sampleMapping(mapG, g / (size - 1));
+        values[index++] = sampleMapping(mapB, b / (size - 1));
+      }
     }
   }
-
-  const texture = new THREE.DataTexture(data, size, size);
-  texture.format = THREE.RGBAFormat;
-  texture.type = THREE.UnsignedByteType;
-  texture.minFilter = THREE.LinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.needsUpdate = true;
-
-  return texture;
+  return { size, values, domainMin: [0, 0, 0], domainMax: [1, 1, 1], title: "Palette Match" };
 }

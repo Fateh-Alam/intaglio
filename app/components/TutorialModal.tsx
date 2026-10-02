@@ -153,7 +153,7 @@ export default function TutorialModal({
                     </span>
                   </div>
                   <p className="text-[13px] text-gray-400 leading-relaxed italic font-serif">
-                    "{content.plainEnglish}"
+                    &ldquo;{content.plainEnglish}&rdquo;
                   </p>
                 </div>
               )}

@@ -11,28 +11,19 @@ export const BRAND = {
 export const FORMAT = {
   recipeExtension: "int",
   archiveExtension: "intaglio",
-  legacyRecipeExtensions: ["orm", "nyv", "json"],
-  legacyArchiveExtensions: ["ormond", "nyvlt", "nyvproj"],
   recipeName: "Print Recipe",
   archiveName: "Intaglio Archive",
-  legacyRecipeName: "Legacy Recipe",
-  legacyArchiveName: "Legacy Session",
   appId: "intaglio-darkroom",
-  legacyAppIds: ["ormond-darkroom", "nyvarra-studio"],
-  version: "1.0",
+  version: "2.0.0",
+  recipeMimeType: "application/x-intaglio-recipe",
   archiveMimeType: "application/x-intaglio-archive",
-  legacyArchiveMimeType: "application/x-ormond-archive",
 } as const;
 
 export const STORAGE_KEYS = {
   presetPreview: "intaglio_preset_preview",
-  legacyPresetPreview: "ormond_preset_preview",
   presetFavorites: "intaglio_preset_favorites",
-  legacyPresetFavorites: "ormond_preset_favorites",
   importedPresets: "intaglio_imported_presets",
-  legacyImportedPresets: "ormond_imported_presets",
   tutorialsSeen: "intaglio_tutorials_seen",
-  legacyTutorialsSeen: "ormond_tutorials_seen",
 } as const;
 
 export const ROUTE_LABELS = {

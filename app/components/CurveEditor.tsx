@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import { solveCatmullRom } from "../utils/spline";
+import { sampleMonotoneCurve } from "../utils/spline";
 
 interface Point {
   x: number;
@@ -25,7 +25,7 @@ export default function CurveEditor({
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   // Generate lookup table for visualization
-  const lut = useMemo(() => solveCatmullRom(points), [points]);
+  const lut = useMemo(() => sampleMonotoneCurve(points), [points]);
 
   const transformToCanvas = (p: Point, w: number, h: number) => ({
     x: p.x * w,

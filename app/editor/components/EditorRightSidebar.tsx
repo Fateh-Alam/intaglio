@@ -10,106 +10,75 @@ import TutorialModal from "../../components/TutorialModal";
 import PresetCreatorModal from "../../components/PresetCreatorModal";
 import ReferenceViewer from "../../components/ReferenceViewer";
 import LUTCreatorModal from "../../components/LUTCreatorModal";
-import * as THREE from "three";
-import VideoGradingPanel from "../../components/VideoGradingPanel";
-import AdjustmentLayersPanel from "./AdjustmentLayersPanel";
+import PlateStackPanel from "./PlateStackPanel";
 import ColorMixerUI from "./ColorMixerUI";
+import ProcessEnginePanel from "./ProcessEnginePanel";
+import AdvancedGraphPanel from "./AdvancedGraphPanel";
+import type {
+  EditorSettings,
+  AdjustmentLayer,
+  CurvePoints
+} from "../../types/editor";
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { COLOR_LABELS, WATERMARK_POSITIONS, DEFAULT_ASSET_METADATA, DEFAULT_WATERMARK, getImageFileInfo, EXPORT_RECIPES } from "../pageTypes";
+import { COLOR_LABELS, WATERMARK_POSITIONS } from "../pageTypes";
 import { getEditorModuleLabel } from '../pageTypes';
 import { TutorialTrigger } from '../../components/TutorialModal';
 import { useEditorState } from '../hooks/useEditorState';
-import { IconUpload, IconMovie, IconPhoto, IconEye, IconDeviceFloppy, IconDownload, IconAdjustmentsHorizontal, IconHistory, IconLayersIntersect, IconInfoCircle, IconX, IconCircle, IconChartLine, IconTypography, IconArrowsMaximize, IconSparkles, IconCamera, IconRotateClockwise, IconZoomIn, IconSun, IconContrast, IconPalette, IconAperture, IconBolt, IconBulb, IconMapPin, IconDeviceDesktop, IconPerspective, IconDroplet, IconChevronRight, IconFileCode, IconCircles, IconMoon, IconCircleFilled, IconChevronLeft } from "@tabler/icons-react";
+import { IconUpload, IconMovie, IconPhoto, IconEye, IconDeviceFloppy, IconAdjustmentsHorizontal, IconHistory, IconLayersIntersect, IconInfoCircle, IconX, IconCircle, IconChartLine, IconTypography, IconArrowsMaximize, IconSparkles, IconCamera, IconRotateClockwise, IconZoomIn, IconSun, IconContrast, IconPalette, IconAperture, IconBolt, IconBulb, IconMapPin, IconDeviceDesktop, IconPerspective, IconDroplet, IconChevronRight, IconFileCode, IconCircles, IconMoon, IconChevronLeft, IconTemperature, IconCheck } from "@tabler/icons-react";
 import Slider from "../../components/Slider";
 import ControlGroup from "../../components/ControlGroup";
 
 export function EditorRightSidebar() {
   const editorState = useEditorState();
-  const [activeMaskId, setActiveMaskId] = React.useState<string | null>(null);
   const {
-    settings, setSettings,
+    settings,
     textOverlay, setTextOverlay,
     assetMetadata, setAssetMetadata,
     watermark, setWatermark,
-    clipboard, setClipboard,
-    imageSrc, setImageSrc,
-    imageName, setImageName,
-    imageInfo, setImageInfo,
-    histogram, setHistogram,
-    activeTab, setActiveTab,
+    clipboard,
+    imageSrc,
+    activeTab,
+    activePlateId, setActivePlateId,
+    gradeGraph, setGradeGraph,
     handleTabChange,
     handleTutorialClose,
     showTutorial,
-    history, setHistory,
-    historyIndex, setHistoryIndex,
-    snapshots, setSnapshots,
-    settingsSnapshots, setSettingsSnapshots,
-    activeVirtualCopyId, setActiveVirtualCopyId,
-    diffVirtualCopyId, setDiffVirtualCopyId,
-    seenTutorials, setSeenTutorials,
-    activeTutorial, setActiveTutorial,
-    isMobileMenuOpen, setIsMobileMenuOpen,
-    isLeftSidebarOpen, setIsLeftSidebarOpen,
+    history,
+    historyIndex,
+    snapshots,
+    settingsSnapshots,
+    activeVirtualCopyId,
+    setDiffVirtualCopyId,
+    activeTutorial,
+    setIsMobileMenuOpen,
     isRightSidebarOpen, setIsRightSidebarOpen,
-    isLookIntensityOpen, setIsLookIntensityOpen,
-    isFocusMode, setIsFocusMode,
+    isFocusMode,
     isHistogramHelpOpen, setIsHistogramHelpOpen,
-    isExportModalOpen, setIsExportModalOpen,
-    showMobileWarning, setShowMobileWarning,
     isMobileControlsExpanded, setIsMobileControlsExpanded,
     isPresetModalOpen, setIsPresetModalOpen,
     isReferenceOpen, setIsReferenceOpen,
     isLUTCreatorOpen, setIsLUTCreatorOpen,
     roiMode, setRoiMode,
     sourceROI, setSourceROI,
-    matchROI, setMatchROI,
-    brushMaskActive, setBrushMaskActive,
-    brushSize, setBrushSize,
-    brushFeather, setBrushFeather,
-    brushErasing, setBrushErasing,
-    brushMaskData, setBrushMaskData,
-    brushMaskExposure, setBrushMaskExposure,
-    brushMaskContrast, setBrushMaskContrast,
-    brushMaskSaturation, setBrushMaskSaturation,
-    brushMaskTemperature, setBrushMaskTemperature,
-    brushMaskClarity, setBrushMaskClarity,
-    isVideoGradingOpen, setIsVideoGradingOpen,
-    videoSrc, setVideoSrc,
     updateSetting,
-    updateSettings,
+    handleApplyRecipe,
     handleUndo,
     handleRedo,
-    addToHistory,
-    toneCurveTexture,
-    handleSaveProjectSession,
-    openImagePicker,
-    openProjectPicker,
-    isCommandBarOpen, setIsCommandBarOpen,
-    isShortcutHelpOpen, setIsShortcutHelpOpen,
-    handleCommand,
-    compositionGuide, setCompositionGuide,
-    performanceMode, setPerformanceMode,
-    imageBounds, setImageBounds,
-    handleUpload,
+    handleSaveRecipe,
     handlePaletteHeist,
     handleLutUpload,
-    handleExport,
+    handleApplyGeneratedLut,
+    handleFontUpload,
     handleCompareSnapshot,
+    handleDeleteSnapshot,
     handleDeleteVirtualCopy,
     handleTakeSnapshot,
     handleRestoreVirtualCopy,
     handleJumpToHistory,
     handleClearHistory,
     handleLoadPreset,
-    fileInputRef,
-    lutInputRef,
-    appCommands,
-    compareEnabled,
-    compareSplit,
-    setCompareSplit,
-    exportSafetyWarnings,
     activeCurveChannel,
     setActiveCurveChannel,
     editDiffs,
@@ -118,17 +87,51 @@ export function EditorRightSidebar() {
     handleCreateVirtualCopy,
     handleCopySettings,
     handlePasteSettings,
-    applyExportRecipe,
-    activeExportRecipeId,
-    setActiveExportRecipeId,
-    setExportFormat,
-    exportFormat,
-    exportQuality,
-    setExportQuality,
-    setExportScale,
-    exportScale,
     diffVirtualCopy
   } = editorState;
+
+  const getDevValue = <K extends keyof EditorSettings>(key: K, fallback: EditorSettings[K] = 0 as EditorSettings[K]): EditorSettings[K] => {
+    if (activePlateId === "base") {
+      return settings[key] || fallback;
+    }
+    const layer = settings.adjustmentLayers?.find((l: AdjustmentLayer) => l.id === activePlateId);
+    if (!layer || !layer.params) return fallback;
+
+    if (key in layer.params) {
+      return layer.params[key] ?? fallback;
+    }
+
+    // Fallback to base settings for properties that aren't defined in the plate
+    return settings[key] ?? fallback;
+  };
+
+  const updateDevValue = <K extends keyof EditorSettings>(key: K, value: EditorSettings[K]) => {
+    if (activePlateId === "base") {
+      updateSetting(key, value);
+    } else {
+      const layerIndex = settings.adjustmentLayers?.findIndex((l: AdjustmentLayer) => l.id === activePlateId) ?? -1;
+      if (layerIndex >= 0 && settings.adjustmentLayers) {
+        const newLayers = [...settings.adjustmentLayers];
+        newLayers[layerIndex] = {
+          ...newLayers[layerIndex],
+          params: {
+            ...newLayers[layerIndex].params,
+            [key]: value
+          }
+        };
+        updateSetting("adjustmentLayers", newLayers);
+      }
+    }
+  };
+
+  // Helper for components that need the entire settings object for the plate (e.g. ColorMixerUI)
+  const getPlateSettings = (): EditorSettings => {
+    if (activePlateId === "base") return settings;
+    const layer = settings.adjustmentLayers?.find((l: AdjustmentLayer) => l.id === activePlateId);
+    if (!layer || !layer.params) return settings;
+    return { ...settings, ...layer.params };
+  };
+
   return (
     <>
       {/* RIGHT SIDEBAR - CONTROLS */}
@@ -172,6 +175,7 @@ export function EditorRightSidebar() {
               >
                 {[
                   { id: "basic", icon: <IconSun className="intaglio-icon"/> },
+                  { id: "graph", icon: <IconCircles className="intaglio-icon"/> },
                   { id: "color", icon: <IconPalette className="intaglio-icon"/> },
                   { id: "curves", icon: <IconChartLine className="intaglio-icon"/> },
                   { id: "grading", icon: <IconCircles className="intaglio-icon"/> },
@@ -246,8 +250,25 @@ export function EditorRightSidebar() {
 
               {/* Scrollable Controls */}
               <div
-                className={`flex-1 overflow-y-auto custom-scrollbar ${activeTab === "history" ? "" : "px-5 py-4 space-y-6"}`}
+                className={`flex-1 overflow-y-auto custom-scrollbar ${activeTab === "history" || activeTab === "process" ? "" : "px-5 py-4 space-y-6"}`}
               >
+                {/* 1. PROCESS ENGINE */}
+                {activeTab === "process" && (
+                  <div className="px-5 py-4">
+                    <ProcessEnginePanel
+                      onApplyProcess={(recipe) => handleApplyRecipe(recipe.id)}
+                      activeProcessId={undefined /* we can track active process later if needed */}
+                    />
+                  </div>
+                )}
+
+                {activeTab === "graph" && (
+                  <div className="px-5 py-4">
+                    <AdvancedGraphPanel graph={gradeGraph} onGraphChange={setGradeGraph} settings={settings} updateSetting={updateSetting} />
+                  </div>
+                )}
+
+                {/* 2. DEVELOPMENT */}
                 {activeTab === "history" && (
                   <HistoryPanel
                     history={history}
@@ -277,7 +298,7 @@ export function EditorRightSidebar() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 mt-4">
-                        {snapshots.map((snap: any) => (
+                        {snapshots.map((snap) => (
                           <div
                             key={snap.id}
                             className="relative group rounded overflow-hidden border border-white/5 bg-black"
@@ -299,12 +320,7 @@ export function EditorRightSidebar() {
                                 <IconAdjustmentsHorizontal className="intaglio-icon"/>
                               </div>
                               <div role="button"
-                                onClick={() => {
-                                  setSnapshots((prev: any) =>
-                                    prev.filter((s: any) => s.id !== snap.id)
-                                  );
-                                  // Disable compare if deleting current?
-                                }}
+                                onClick={() => handleDeleteSnapshot(snap.id)}
                                 className="p-1.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/40"
                                 title="Delete"
                               >
@@ -360,13 +376,13 @@ export function EditorRightSidebar() {
                       </div>
 
                       <CurveEditor
-                        points={settings.curvePoints[activeCurveChannel]}
+                        points={getPlateSettings().curvePoints[activeCurveChannel as keyof CurvePoints]}
                         onChange={(newPoints) => {
                           const newCurvePoints = {
-                            ...settings.curvePoints,
-                            [activeCurveChannel]: newPoints,
+                            ...getPlateSettings().curvePoints,
+                            [activeCurveChannel as keyof CurvePoints]: newPoints,
                           };
-                          updateSetting("curvePoints", newCurvePoints);
+                          updateDevValue("curvePoints", newCurvePoints);
                         }}
                         color={
                           activeCurveChannel === "master"
@@ -442,74 +458,74 @@ export function EditorRightSidebar() {
                     <ControlGroup title="Light">
                       <Slider
                         label="Exposure (EV)"
-                        value={settings.brightness}
+                        value={getDevValue("brightness", 0)}
                         min={-5}
                         max={5}
                         step={0.05}
-                        onChange={(v) => updateSetting("brightness", v)}
+                        onChange={(v) => updateDevValue("brightness", v)}
                         icon={<IconSun className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
                         label="Contrast"
-                        value={settings.contrast}
+                        value={getDevValue("contrast", 0)}
                         min={-1}
                         max={1}
-                        onChange={(v) => updateSetting("contrast", v)}
+                        onChange={(v) => updateDevValue("contrast", v)}
                         icon={<IconContrast className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
                         label="Highlights"
-                        value={settings.highlights || 0}
+                        value={getDevValue("highlights", 0)}
                         min={-1}
                         max={1}
-                        onChange={(v) => updateSetting("highlights", v)}
+                        onChange={(v) => updateDevValue("highlights", v)}
                         icon={<IconSun className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
                         label="Shadows"
-                        value={settings.shadows || 0}
+                        value={getDevValue("shadows", 0)}
                         min={-1}
                         max={1}
-                        onChange={(v) => updateSetting("shadows", v)}
+                        onChange={(v) => updateDevValue("shadows", v)}
                         icon={<IconMoon className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
                         label="Whites"
-                        value={settings.whites || 0}
+                        value={getDevValue("whites", 0)}
                         min={-1}
                         max={1}
-                        onChange={(v) => updateSetting("whites", v)}
+                        onChange={(v) => updateDevValue("whites", v)}
                         icon={<IconSun className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
                         label="Blacks"
-                        value={settings.blacks || 0}
+                        value={getDevValue("blacks", 0)}
                         min={-1}
                         max={1}
-                        onChange={(v) => updateSetting("blacks", v)}
+                        onChange={(v) => updateDevValue("blacks", v)}
                         icon={<IconMoon className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
                         label="Vibrance"
-                        value={settings.vibrance || 0}
+                        value={getDevValue("vibrance", 0)}
                         min={-1}
                         max={1}
-                        onChange={(v) => updateSetting("vibrance", v)}
+                        onChange={(v) => updateDevValue("vibrance", v)}
                         icon={<IconPalette className="intaglio-icon"/>}
                         bipolar
                       />
                       <Slider
                         label="Dehaze"
-                        value={settings.dehaze}
+                        value={getDevValue("dehaze", 0)}
                         min={0}
                         max={1}
-                        onChange={(v) => updateSetting("dehaze", v)}
+                        onChange={(v) => updateDevValue("dehaze", v)}
                         icon={<IconAperture className="intaglio-icon"/>}
                       />
                     </ControlGroup>
@@ -517,18 +533,18 @@ export function EditorRightSidebar() {
                     <ControlGroup title="Detail">
                       <Slider
                         label="Structure (Clarity)"
-                        value={settings.structure}
+                        value={getDevValue("structure", 0)}
                         min={0}
                         max={1}
-                        onChange={(v) => updateSetting("structure", v)}
+                        onChange={(v) => updateDevValue("structure", v)}
                         icon={<IconBolt className="intaglio-icon"/>}
                       />
                       <Slider
                         label="Sharpness"
-                        value={settings.sharpness}
+                        value={getDevValue("sharpness", 0)}
                         min={0}
                         max={1}
-                        onChange={(v) => updateSetting("sharpness", v)}
+                        onChange={(v) => updateDevValue("sharpness", v)}
                         icon={<IconBolt className="intaglio-icon"/>}
                       />
                     </ControlGroup>
@@ -662,6 +678,46 @@ export function EditorRightSidebar() {
                       </div>
 
                       {sourceROI && (
+                        <div className="flex gap-2 text-[10px] font-mono tracking-widest text-[rgba(231,223,208,0.58)] bg-black/40 p-2 rounded border border-white/5">
+                          <IconCheck className="w-3 h-3 text-green-400" />
+                          Region selected for match
+                        </div>
+                      )}
+                    </ControlGroup>
+
+                    <ColorMixerUI settings={getPlateSettings()} updateSetting={updateDevValue} />
+
+                    <ControlGroup title="White Balance">
+                      <div className="flex gap-2 mb-4">
+                        {/* ROI Toggle */}
+                        <div role="button"
+                          onClick={() =>
+                            setRoiMode(roiMode === "source" ? "none" : "source")
+                          }
+                          className={`flex-1 py-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${roiMode === "source" ? "bg-amber-500 text-black border-amber-500" : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"}`}
+                        >
+                          <IconMapPin className="intaglio-icon"/>
+                          <span className="intaglio-label">
+                            Select Region
+                          </span>
+                        </div>
+
+                        {/* Steal Button */}
+                        <label
+                          className={`flex-[2] flex items-center justify-center gap-2 py-2 bg-gradient-to-r from-purple-900 to-blue-900 hover:from-purple-800 hover:to-blue-800 text-xs font-medium font-medium rounded-lg transition border border-white/20 cursor-pointer shadow-lg`}
+                        >
+                          <IconBolt className="intaglio-icon text-yellow-400"/>{" "}
+                          Match Reference
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePaletteHeist}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {sourceROI && (
                         <div className="flex justify-between items-center mb-4 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded">
                           <span className="text-[9px] font-mono tracking-widest text-amber-500 font-mono uppercase">
                             Region Active
@@ -711,20 +767,22 @@ export function EditorRightSidebar() {
 
                     <ControlGroup title="White Balance">
                       <Slider
-                        label="Temp"
-                        value={settings.temperature}
+                        label="Temperature"
+                        value={getDevValue("temperature", 0)}
                         min={-1}
                         max={1}
-                        onChange={(v) => updateSetting("temperature", v)}
-                        icon={<IconPalette className="intaglio-icon"/>}
+                        onChange={(v) => updateDevValue("temperature", v)}
+                        icon={<IconTemperature className="intaglio-icon"/>}
+                        bipolar
                       />
                       <Slider
                         label="Tint"
-                        value={settings.tint}
+                        value={getDevValue("tint", 0)}
                         min={-1}
                         max={1}
-                        onChange={(v) => updateSetting("tint", v)}
+                        onChange={(v) => updateDevValue("tint", v)}
                         icon={<IconPalette className="intaglio-icon"/>}
+                        bipolar
                       />
                     </ControlGroup>
 
@@ -740,7 +798,7 @@ export function EditorRightSidebar() {
                       />
                     </ControlGroup>
 
-                    <ControlGroup title="AI & Trust">
+                    <ControlGroup title="Deterministic Safeguards">
                       <div className="flex flex-col gap-2 mb-4">
                         <label className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
                           <div className="flex items-center gap-2">
@@ -1151,19 +1209,11 @@ export function EditorRightSidebar() {
 
                 {activeTab === "masking" && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <AdjustmentLayersPanel
+                    <PlateStackPanel
                       settings={settings}
                       updateSetting={updateSetting}
-                      setBrushMaskActive={setBrushMaskActive}
-                      setBrushErasing={setBrushErasing}
-                      brushMaskActive={brushMaskActive}
-                      brushErasing={brushErasing}
-                      brushSize={brushSize}
-                      setBrushSize={setBrushSize}
-                      brushFeather={brushFeather}
-                      setBrushFeather={setBrushFeather}
-                      activeMaskId={activeMaskId}
-                      setActiveMaskId={setActiveMaskId}
+                      activePlateId={activePlateId}
+                      setActivePlateId={setActivePlateId}
                     />
                   </div>
                 )}
@@ -1187,7 +1237,7 @@ export function EditorRightSidebar() {
                             <div role="button"
                               key={rating}
                               onClick={() =>
-                                setAssetMetadata((prev: any) => ({
+                                setAssetMetadata((prev) => ({
                                   ...prev,
                                   rating,
                                 }))
@@ -1219,7 +1269,7 @@ export function EditorRightSidebar() {
                             <div role="button"
                               key={flag}
                               onClick={() =>
-                                setAssetMetadata((prev: any) => ({
+                                setAssetMetadata((prev) => ({
                                   ...prev,
                                   flagStatus: flag,
                                 }))
@@ -1249,7 +1299,7 @@ export function EditorRightSidebar() {
                             <div role="button"
                               key={label.id}
                               onClick={() =>
-                                setAssetMetadata((prev: any) => ({
+                                setAssetMetadata((prev) => ({
                                   ...prev,
                                   colorLabel: label.id,
                                 }))
@@ -1286,7 +1336,7 @@ export function EditorRightSidebar() {
                           <input
                             value={assetMetadata.title}
                             onChange={(event) =>
-                              setAssetMetadata((prev: any) => ({
+                              setAssetMetadata((prev) => ({
                                 ...prev,
                                 title: event.target.value,
                               }))
@@ -1303,7 +1353,7 @@ export function EditorRightSidebar() {
                           <textarea
                             value={assetMetadata.caption}
                             onChange={(event) =>
-                              setAssetMetadata((prev: any) => ({
+                              setAssetMetadata((prev) => ({
                                 ...prev,
                                 caption: event.target.value,
                               }))
@@ -1322,7 +1372,7 @@ export function EditorRightSidebar() {
                             <input
                               value={assetMetadata.creator}
                               onChange={(event) =>
-                                setAssetMetadata((prev: any) => ({
+                                setAssetMetadata((prev) => ({
                                   ...prev,
                                   creator: event.target.value,
                                 }))
@@ -1339,7 +1389,7 @@ export function EditorRightSidebar() {
                             <input
                               value={assetMetadata.copyright}
                               onChange={(event) =>
-                                setAssetMetadata((prev: any) => ({
+                                setAssetMetadata((prev) => ({
                                   ...prev,
                                   copyright: event.target.value,
                                 }))
@@ -1357,7 +1407,7 @@ export function EditorRightSidebar() {
                           <input
                             value={assetMetadata.keywords}
                             onChange={(event) =>
-                              setAssetMetadata((prev: any) => ({
+                              setAssetMetadata((prev) => ({
                                 ...prev,
                                 keywords: event.target.value,
                               }))
@@ -1376,7 +1426,7 @@ export function EditorRightSidebar() {
                         </span>
                         <div role="button"
                           onClick={() =>
-                            setWatermark((prev: any) => ({
+                            setWatermark((prev) => ({
                               ...prev,
                               enabled: !prev.enabled,
                               text: prev.text || "PROOF",
@@ -1397,7 +1447,7 @@ export function EditorRightSidebar() {
                         <input
                           value={watermark.text}
                           onChange={(event) =>
-                            setWatermark((prev: any) => ({
+                            setWatermark((prev) => ({
                               ...prev,
                               text: event.target.value,
                             }))
@@ -1416,7 +1466,7 @@ export function EditorRightSidebar() {
                             <div role="button"
                               key={position.id}
                               onClick={() =>
-                                setWatermark((prev: any) => ({
+                                setWatermark((prev) => ({
                                   ...prev,
                                   position: position.id,
                                 }))
@@ -1441,7 +1491,7 @@ export function EditorRightSidebar() {
                           max={1}
                           step={0.01}
                           onChange={(value) =>
-                            setWatermark((prev: any) => ({
+                            setWatermark((prev) => ({
                               ...prev,
                               opacity: value,
                             }))
@@ -1455,7 +1505,7 @@ export function EditorRightSidebar() {
                           max={1}
                           step={0.01}
                           onChange={(value) =>
-                            setWatermark((prev: any) => ({
+                            setWatermark((prev) => ({
                               ...prev,
                               size: value,
                             }))
@@ -1471,6 +1521,7 @@ export function EditorRightSidebar() {
                   <CinematicTextControls
                     textOverlay={textOverlay}
                     setTextOverlay={setTextOverlay}
+                    onFontUpload={handleFontUpload}
                   />
                 )}
 
@@ -1587,7 +1638,7 @@ export function EditorRightSidebar() {
                     <IconFileCode className="intaglio-icon"/> Load .{FORMAT.recipeExtension}
                     <input
                       type="file"
-                      accept={`.${FORMAT.recipeExtension},.nyv,.json`}
+                      accept={`.${FORMAT.recipeExtension},${FORMAT.recipeMimeType}`}
                       onChange={handleLoadPreset}
                       className="hidden"
                     />
@@ -1630,17 +1681,7 @@ export function EditorRightSidebar() {
         isOpen={isPresetModalOpen}
         onClose={() => setIsPresetModalOpen(false)}
         settings={settings}
-        onSave={(presetData) => {
-          const blob = new Blob([JSON.stringify(presetData, null, 2)], {
-            type: "application/json",
-          });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `${presetData.name.replace(/\s+/g, "-").toLowerCase() || "recipe"}-${Date.now()}.${FORMAT.recipeExtension}`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }}
+        onSave={(presetData) => void handleSaveRecipe(presetData)}
       />
 
       {/* Reference Viewer */}
@@ -1660,32 +1701,16 @@ export function EditorRightSidebar() {
         isOpen={isLUTCreatorOpen}
         onClose={() => setIsLUTCreatorOpen(false)}
         onApplyLUT={(lutData) => {
-          // Create a 3D LUT texture from the data
-          const size = 17;
-          const data = new Uint8Array(size * size * size * 4);
-          for (let i = 0; i < lutData.length; i += 3) {
-            const idx = (i / 3) * 4;
-            data[idx] = Math.round(lutData[i] * 255);
-            data[idx + 1] = Math.round(lutData[i + 1] * 255);
-            data[idx + 2] = Math.round(lutData[i + 2] * 255);
-            data[idx + 3] = 255;
-          }
-          const texture = new THREE.Data3DTexture(data, size, size, size);
-          texture.format = THREE.RGBAFormat;
-          texture.type = THREE.UnsignedByteType;
-          texture.minFilter = THREE.LinearFilter;
-          texture.magFilter = THREE.LinearFilter;
-          texture.wrapS = THREE.ClampToEdgeWrapping;
-          texture.wrapT = THREE.ClampToEdgeWrapping;
-          texture.wrapR = THREE.ClampToEdgeWrapping;
-          texture.needsUpdate = true;
-          updateSetting("lutTexture", texture);
-          updateSetting("lutStrength", 1.0);
-          addToHistory(settings, "Apply Custom LUT");
+          void handleApplyGeneratedLut({
+            size: Math.round(Math.cbrt(lutData.length / 3)),
+            values: Float32Array.from(lutData),
+            domainMin: [0, 0, 0],
+            domainMax: [1, 1, 1],
+            title: "Custom LUT",
+          });
         }}
       />
 
-      {/* Video Grading Panel */}
       
 
       {/* Histogram Help Modal */}
@@ -1771,7 +1796,7 @@ export function EditorRightSidebar() {
             <div className="custom-scrollbar overflow-y-auto p-6">
               {editDiffs.length > 0 ? (
                 <div className="space-y-2">
-                  {editDiffs.map((diff: any) => (
+                  {editDiffs.map((diff) => (
                     <div
                       key={diff.key}
                       className="grid grid-cols-1 gap-3 border border-white/5 bg-[var(--intaglio-panel-soft)] p-4 md:grid-cols-3"
@@ -1840,4 +1865,3 @@ export function EditorRightSidebar() {
     </>
   );
 }
-

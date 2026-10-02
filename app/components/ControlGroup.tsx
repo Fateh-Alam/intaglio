@@ -18,7 +18,7 @@ const ControlGroup = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="relative border-b border-[var(--intaglio-line)] bg-transparent transition-colors hover:bg-white/[0.02]">
+    <div data-accent={accentColor} className="relative border-b border-[var(--intaglio-line)] bg-transparent transition-colors hover:bg-white/[0.02]">
       <div role="button" tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
         className="group flex w-full items-center justify-between px-4 py-3 text-left"

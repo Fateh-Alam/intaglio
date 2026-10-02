@@ -2,6 +2,7 @@ import React from "react";
 import { IconDownload, IconX } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import { EXPORT_RECIPES } from "../pageTypes";
+import type { ExportRecipe } from "../pageTypes";
 import { ExportMatchIndicator } from './ExportMatchIndicator';
 
 export function ExportModal() {
@@ -21,7 +22,7 @@ export function ExportModal() {
     handleCarouselExport,
   } = useEditorState();
 
-  const applyExportRecipe = (recipe: any) => {
+  const applyExportRecipe = (recipe: ExportRecipe) => {
     setActiveExportRecipeId(recipe.id);
     setExportFormat(recipe.format);
     setExportQuality(recipe.quality);
@@ -171,7 +172,7 @@ export function ExportModal() {
                 Export Safety
               </label>
               <div className="space-y-2">
-                {exportSafetyWarnings.map((warning: any) => (
+                {exportSafetyWarnings.map((warning) => (
                   <div
                     key={`${warning.title}-${warning.detail}`}
                     className={`border p-3 ${

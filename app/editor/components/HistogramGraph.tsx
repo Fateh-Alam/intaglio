@@ -41,17 +41,6 @@ export const ScopeMetric = ({
   );
 };
 
-const StatusChip = ({ label, value }: { label: string; value: string }) => (
-  <div className="min-w-[96px] border border-white/10 bg-black/35 px-3 py-1.5">
-    <div className="font-mono text-[8px] uppercase tracking-[0.22em] text-white/25">
-      {label}
-    </div>
-    <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-[0.18em] text-white/60">
-      {value}
-    </div>
-  </div>
-);
-
 export const HistogramGraph = ({
   data,
 }: {

@@ -1,40 +1,66 @@
 {
-  "name": "nyvarra-studio",
+  "name": "intaglio",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.5.1",
+  "engines": {
+    "node": "24.1.0",
+    "pnpm": "11.5.1"
+  },
   "scripts": {
-    "build": "next build",
+    "build": "node scripts/prepare-public-runtime.mjs && next build",
     "dev": "next dev",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint app scripts tests",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:render": "vitest run tests/render",
+    "test:archive": "vitest run tests/archive",
     "test:e2e": "node scripts/e2e-smoke.mjs",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "test:browser": "playwright test",
+    "test:offline": "playwright test tests/browser/offline.spec.ts",
+    "build:cloudflare": "node scripts/prepare-public-runtime.mjs && opennextjs-cloudflare build",
+    "preview": "pnpm build:cloudflare && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "qualify": "pnpm install --frozen-lockfile --config.confirmModulesPurge=false && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm test:browser && pnpm build:cloudflare"
   },
   "dependencies": {
+    "@jsquash/jpeg": "1.6.0",
+    "@jsquash/png": "3.1.1",
+    "@jsquash/webp": "1.5.0",
     "@opennextjs/cloudflare": "^1.20.1",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@tabler/icons-react": "^3.36.0",
     "@types/three": "^0.181.0",
+    "@xyflow/react": "^12.9.2",
+    "fflate": "^0.8.2",
     "framer-motion": "^12.23.26",
     "html-to-image": "^1.11.13",
+    "libraw-wasm": "1.6.0",
     "next": "16.2.12",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "three": "^0.181.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@serwist/turbopack": "9.5.12",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.28.2",
+    "esbuild-wasm": "0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.0.6",
+    "serwist": "9.5.12",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "wrangler": "^4.108.0"
+    "vitest": "^3.2.4",
+    "wrangler": "4.107.1"
   }
 }

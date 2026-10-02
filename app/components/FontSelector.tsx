@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { IconChevronDown, IconCheck, IconSearch } from "@tabler/icons-react";
+import { IconChevronDown, IconSearch } from "@tabler/icons-react";
 
 interface FontSelectorProps {
   value: string;
@@ -123,7 +123,7 @@ export default function FontSelector({
                 }}
                 className="px-3 py-3 text-xs border-t border-[var(--intaglio-line)] text-amber-400 hover:bg-white/10"
               >
-                Use custom: "{search}"
+                Use custom: &ldquo;{search}&rdquo;
               </div>
             )}
           </div>

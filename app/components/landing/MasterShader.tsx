@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { motion, MotionValue, useVelocity, useSpring, useTransform } from "framer-motion";
+import { MotionValue, useVelocity, useSpring, useTransform } from "framer-motion";
 
 export function MasterShader({ scrollY }: { scrollY: MotionValue<number> }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

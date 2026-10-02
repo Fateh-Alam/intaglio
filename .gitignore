@@ -49,3 +49,8 @@ next-env.d.ts
 !.dev.vars.example
 
 !.env.example
+
+# generated runtime + test output
+/public/libraw
+/test-results
+/playwright-report

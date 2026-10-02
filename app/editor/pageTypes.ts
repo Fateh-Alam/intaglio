@@ -1,5 +1,5 @@
-import type { EditorSettings, CompositionGuide, PerformanceMode, SerializableEditorSettings, WatermarkPosition, WatermarkSettings, AssetMetadataSettings, HistogramData, ImageBounds, AppCommand } from "../types/editor";
-import { IconCircle, IconChartLine, IconLayersIntersect, IconMovie, IconBrush, IconPhoto, IconInfoCircle, IconTypography, IconArrowsMaximize, IconSparkles, IconHistory, IconCamera } from "@tabler/icons-react";
+import type { EditorSettings, CompositionGuide, PerformanceMode, SerializableEditorSettings, WatermarkPosition, WatermarkSettings, AssetMetadataSettings } from "../types/editor";
+import { IconCircle, IconCircles, IconChartLine, IconLayersIntersect, IconMovie, IconBrush, IconPhoto, IconInfoCircle, IconTypography, IconArrowsMaximize, IconSparkles, IconHistory, IconCamera, IconPalette } from "@tabler/icons-react";
 import { TextOverlaySettings } from "../components/CinematicTextOverlay";
 import { FORMAT } from "../lib/brand";
 
@@ -42,7 +42,6 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   lumaDesat: 0,
 
   // Tone Curve
-  toneCurveTexture: null,
   curvePoints: {
     master: [
       { x: 0, y: 0 },
@@ -391,7 +390,6 @@ export const serializeEditorSettings = (
     ...settingsToSerialize,
   };
   delete serializableSettings.lutTexture;
-  delete serializableSettings.toneCurveTexture;
   delete serializableSettings.compareTexture;
   return serializableSettings as SerializableEditorSettings;
 };
@@ -408,7 +406,6 @@ export const hydrateEditorSettings = (
     partialSettings.colorGrading ?? DEFAULT_SETTINGS.colorGrading
   ),
   lutTexture: null,
-  toneCurveTexture: null,
   compareTexture: null,
 });
 
@@ -509,20 +506,6 @@ export const hydrateWatermark = (
       : DEFAULT_WATERMARK.size,
 });
 
-export const isProjectSessionFile = (value: unknown): value is ProjectSessionFile => {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<ProjectSessionFile>;
-  return (
-    (candidate.app === PROJECT_FILE_APP ||
-      (FORMAT.legacyAppIds as readonly string[]).includes(
-        candidate.app ?? ""
-      )) &&
-    candidate.version === PROJECT_FILE_VERSION &&
-    !!candidate.settings &&
-    typeof candidate.settings === "object"
-  );
-};
-
 export const toFileStem = (name: string) =>
   name
     .replace(/\.[^.]+$/, "")
@@ -532,16 +515,6 @@ export const toFileStem = (name: string) =>
 
 export const createTimestampSlug = () =>
   new Date().toISOString().replace(/[:.]/g, "-");
-
-export const downloadTextFile = (filename: string, text: string) => {
-  const blob = new Blob([text], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-};
 
 export const formatDiffLabel = (key: string) =>
   key
@@ -641,16 +614,18 @@ export const COMPOSITION_GUIDES: {
 ];
 
 export const EDITOR_MODULES = [
-  { id: "basic", label: "Develop", shortLabel: "Dev", icon: IconCircle },
-  { id: "curves", label: "Tone Curve", shortLabel: "Curve", icon: IconChartLine },
-  { id: "hsl", label: "Color Mixer", shortLabel: "Mixer", icon: IconLayersIntersect },
-  { id: "color", label: "Profiles", shortLabel: "LUT", icon: IconMovie },
-  { id: "masking", label: "Masks", shortLabel: "Mask", icon: IconBrush },
+  { id: "process", label: "Process Engine", shortLabel: "Process", icon: IconLayersIntersect },
+  { id: "graph", label: "Grade Graph", shortLabel: "Graph", icon: IconCircles },
+  { id: "basic", label: "Development", shortLabel: "Dev", icon: IconCircle },
   { id: "films", label: "Film Room", shortLabel: "Film", icon: IconPhoto },
-  { id: "metadata", label: "Metadata", shortLabel: "Meta", icon: IconInfoCircle },
-  { id: "text", label: "Typography", shortLabel: "Type", icon: IconTypography },
+  { id: "curves", label: "Tone Curve", shortLabel: "Curve", icon: IconChartLine },
+  { id: "hsl", label: "Colour Mixer", shortLabel: "Mixer", icon: IconPalette },
+  { id: "color", label: "Profiles", shortLabel: "LUT", icon: IconMovie },
+  { id: "masking", label: "Plates & Masks", shortLabel: "Masks", icon: IconBrush },
   { id: "transform", label: "Geometry", shortLabel: "Geom", icon: IconArrowsMaximize },
-  { id: "effects", label: "Effects", shortLabel: "FX", icon: IconSparkles },
+  { id: "effects", label: "Texture & Optics", shortLabel: "Texture", icon: IconSparkles },
+  { id: "text", label: "Typography", shortLabel: "Type", icon: IconTypography },
+  { id: "metadata", label: "Archive", shortLabel: "Meta", icon: IconInfoCircle },
 ];
 
 export const AUXILIARY_MODULES = [
@@ -661,4 +636,3 @@ export const AUXILIARY_MODULES = [
 export const getEditorModuleLabel = (id: string) =>
   [...EDITOR_MODULES, ...AUXILIARY_MODULES].find((module) => module.id === id)
     ?.label ?? id;
-

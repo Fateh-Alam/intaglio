@@ -3,18 +3,30 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { EditorSettings } from "../types/editor";
-import { RenderGraph } from "../editor/render/RenderGraph";
-import { BaseDevelopPass } from "../editor/render/passes/BaseDevelopPass";
-import { LocalAdjustmentsPass } from "../editor/render/passes/LocalAdjustmentsPass";
-import { OklchMixerPass } from "../editor/render/passes/OklchMixerPass";
-import { ColorWheelsPass } from "../editor/render/passes/ColorWheelsPass";
-import { BloomPass } from "../editor/render/passes/BloomPass";
-import { HalationPass } from "../editor/render/passes/HalationPass";
-import { FilmEmulationPass } from "../editor/render/passes/FilmEmulationPass";
-import { OpticalFXPass } from "../editor/render/passes/OpticalFXPass";
-import { SharpenPass } from "../editor/render/passes/SharpenPass";
-import { DisplayTransformPass } from "../editor/render/passes/DisplayTransformPass";
+import type { EditorSettings, HistogramData } from "../types/editor";
+import { IntaglioRenderer } from "../editor/render/IntaglioRenderer";
+import { createLinearSourceTexture, type LinearSourceBuffer } from "../editor/render/sourceTexture";
+import { computeHistogramMetrics } from "../utils/histogram";
+import { extractDominantColors } from "../utils/swatch";
+
+const STATS_WIDTH = 192;
+const STATS_DELAY_MS = 120;
+
+const statsCopyVertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }
+`;
+
+const statsCopyFragmentShader = `
+  uniform sampler2D uTexture;
+  varying vec2 vUv;
+  void main() {
+    gl_FragColor = texture2D(uTexture, vUv);
+  }
+`;
 
 const finalDisplayVertexShader = `
   varying vec2 vUv;
@@ -34,13 +46,9 @@ const finalDisplayFragmentShader = `
   void main() {
     vec4 color = texture2D(uTexture, vUv);
     
-    if (uMouseX < 1.0) {
+    if (uCompareEnabled > 0.5 && uMouseX < 1.0) {
       float wiper = step(vUv.x, uMouseX);
       vec4 source = texture2D(uOriginalTexture, vUv);
-      
-      // If we had a true compare texture, we would use it here.
-      // For now, we compare against the raw original texture.
-      // In the old shader, it used uCompareTexture or originalPixel.
       
       vec4 finalColor = mix(source, color, wiper);
       float line = step(abs(vUv.x - uMouseX), 0.002);
@@ -58,15 +66,24 @@ export default function ImagePlane({
   wiperPosition = 0.5,
   brushCanvas,
   brushCanvasDirty,
+  rawSource,
+  onStatsUpdate,
 }: {
   imageUrl: string;
   settings: EditorSettings;
   wiperPosition?: number;
   brushCanvas?: HTMLCanvasElement | null;
   brushCanvasDirty?: number;
+  rawSource?: LinearSourceBuffer | null;
+  onStatsUpdate?: (data: HistogramData) => void;
 }) {
-  const texture = useLoader(THREE.TextureLoader, imageUrl);
-  const { size, viewport, gl } = useThree();
+  // The 8-bit display proxy doubles as the "original" for before/after.
+  const previewTexture = useLoader(THREE.TextureLoader, imageUrl);
+  const { size, viewport, gl, invalidate } = useThree();
+  const texture = useMemo(
+    () => rawSource ? createLinearSourceTexture(rawSource, gl.capabilities.maxTextureSize) : previewTexture,
+    [rawSource, previewTexture, gl],
+  );
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
   const aspect = useMemo(() => {
@@ -87,33 +104,8 @@ export default function ImagePlane({
   }, [viewport, aspect]);
 
   // Pro-Grade Render Graph Pipeline
-  const { graph, finalTarget } = useMemo(() => {
-    const graph = new RenderGraph();
-
-    // Pass instantiation — order matches spec §6.1 pipeline
-    const baseDevelop = new BaseDevelopPass();       // Exposure, WB, Contrast, Highlights/Shadows, Vibrance, Dehaze
-    const localAdjustments = new LocalAdjustmentsPass(); // Layer-based local adjustments with masks
-    const oklchMixer = new OklchMixerPass();         // 8-channel OKLCH color mixer + skin protection
-    const colorWheels = new ColorWheelsPass();       // Three-way color grading in OKLAB space
-    const filmEmulation = new FilmEmulationPass();   // Authentic analog film emulation
-    const halation = new HalationPass();             // Film halation (red channel diffusion)
-    const bloom = new BloomPass();                   // Soft glow from bright areas
-    const optical = new OpticalFXPass();             // God light, vignette, grain, aberration, anamorphic
-    const sharpen = new SharpenPass();               // Structure + sharpness (applied last before display)
-    const displayTransform = new DisplayTransformPass(); // Linear→sRGB + dithering
-
-    // Pipeline order per spec §6.1:
-    // BaseDevelop → LocalAdjustments → OklchMixer → ColorWheels → FilmEmulation → Halation → Bloom → OpticalFX → Sharpen → DisplayTransform
-    graph.addPass(baseDevelop);
-    graph.addPass(localAdjustments);
-    graph.addPass(oklchMixer);
-    graph.addPass(colorWheels);
-    graph.addPass(filmEmulation);
-    graph.addPass(halation);
-    graph.addPass(bloom);
-    graph.addPass(optical);
-    graph.addPass(sharpen);
-    graph.addPass(displayTransform);
+  const { intaglioRenderer, finalTarget } = useMemo(() => {
+    const intaglioRenderer = new IntaglioRenderer();
 
     const finalTarget = new THREE.WebGLRenderTarget(1, 1, {
       type: THREE.HalfFloatType,
@@ -125,7 +117,7 @@ export default function ImagePlane({
       colorSpace: THREE.NoColorSpace // Output from DisplayTransformPass is already sRGB encoded
     });
 
-    return { graph, finalTarget };
+    return { intaglioRenderer, finalTarget };
   }, []);
 
   // Handle Resize & Proxy Resolution
@@ -156,61 +148,110 @@ export default function ImagePlane({
       targetWidth = Math.min(targetWidth, texture.image.width);
       targetHeight = Math.min(targetHeight, texture.image.height);
 
-      graph.setSize(Math.floor(targetWidth), Math.floor(targetHeight));
       finalTarget.setSize(Math.floor(targetWidth), Math.floor(targetHeight));
     }
-  }, [texture, size, gl, graph, finalTarget]);
+  }, [texture, size, gl, finalTarget]);
 
   // Handle Brush Canvas updates
   const brushTexture = useMemo(() => {
+    void brushCanvasDirty;
     if (!brushCanvas) return null;
     return new THREE.CanvasTexture(brushCanvas);
-  }, [brushCanvas]);
+  }, [brushCanvas, brushCanvasDirty]); // dirty is the version signal for the mutable canvas
 
   useEffect(() => {
-    if (brushTexture) {
-      brushTexture.needsUpdate = true;
-      // Also update the local adjustments pass with the texture
-      const localAdjustmentsPass = graph.getPasses().find(p => p instanceof LocalAdjustmentsPass) as LocalAdjustmentsPass;
-      if (localAdjustmentsPass) {
-        // We can expose a method on LocalAdjustmentsPass to set the brush mask
-        // But for now, since material is private, we will add a setter in LocalAdjustmentsPass
-        localAdjustmentsPass.setBrushMask(brushTexture);
-      }
-    }
-  }, [brushCanvasDirty, brushTexture, graph]);
+    return () => brushTexture?.dispose();
+  }, [brushTexture]);
 
   // Clean up
   useEffect(() => {
+    const material = materialRef.current;
     return () => {
       // Aggressive disposal when the entire plane unmounts
-      graph.dispose();
+      intaglioRenderer.dispose();
       finalTarget.dispose();
-      if (materialRef.current) {
-        materialRef.current.dispose();
-      }
+      material?.dispose();
     };
-  }, [graph, finalTarget]);
+  }, [intaglioRenderer, finalTarget]);
 
   // Texture-swap aggressive cleanup
   useEffect(() => {
     return () => {
-      if (texture) {
-        texture.dispose();
-      }
+      previewTexture.dispose();
     };
-  }, [texture]);
+  }, [previewTexture]);
+
+  useEffect(() => {
+    if (texture === previewTexture) return;
+    return () => texture.dispose();
+  }, [texture, previewTexture]);
+
+  // The canvas renders on demand; request a frame whenever an input changes.
+  useEffect(() => {
+    invalidate();
+  }, [invalidate, settings, wiperPosition, brushTexture, texture, finalTarget]);
+
+  // Histogram/palette stats come from the rendered image itself (not the
+  // letterboxed canvas), read back once rendering settles.
+  const stats = useMemo(() => {
+    const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, depthBuffer: false, stencilBuffer: false, colorSpace: THREE.NoColorSpace });
+    const material = new THREE.ShaderMaterial({ vertexShader: statsCopyVertexShader, fragmentShader: statsCopyFragmentShader, uniforms: { uTexture: { value: null } } });
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const quad = new THREE.Mesh(geometry, material);
+    quad.frustumCulled = false;
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    return { target, material, geometry, quad, camera };
+  }, []);
+
+  const statsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (statsTimerRef.current) clearTimeout(statsTimerRef.current);
+    stats.target.dispose();
+    stats.material.dispose();
+    stats.geometry.dispose();
+  }, [stats]);
+
+  const scheduleStats = () => {
+    if (!onStatsUpdate) return;
+    if (statsTimerRef.current) clearTimeout(statsTimerRef.current);
+    statsTimerRef.current = setTimeout(() => {
+      statsTimerRef.current = null;
+      const width = Math.min(STATS_WIDTH, finalTarget.width);
+      const height = Math.max(1, Math.round(width * finalTarget.height / Math.max(finalTarget.width, 1)));
+      stats.target.setSize(width, height);
+      stats.material.uniforms.uTexture.value = finalTarget.texture;
+      const previous = gl.getRenderTarget();
+      gl.setRenderTarget(stats.target);
+      gl.render(stats.quad, stats.camera);
+      const pixels = new Uint8Array(width * height * 4);
+      gl.readRenderTargetPixels(stats.target, 0, 0, width, height, pixels);
+      gl.setRenderTarget(previous);
+      onStatsUpdate({ ...computeHistogramMetrics(pixels), palette: extractDominantColors(pixels, 5, 10) });
+    }, STATS_DELAY_MS);
+  };
 
   useFrame((state) => {
     // 1. Execute the Render Graph
     // This renders the pipeline into finalTarget
     const oldRenderTarget = state.gl.getRenderTarget();
-    graph.render(state.gl, settings, texture, finalTarget);
+    intaglioRenderer.render({
+      renderer: gl,
+      sourceTexture: texture,
+      settings,
+      target: finalTarget,
+      width: finalTarget.width,
+      height: finalTarget.height,
+      brushMaskTexture: brushTexture,
+    });
     state.gl.setRenderTarget(oldRenderTarget);
+    scheduleStats();
 
     // 2. Update final display material uniforms
     if (materialRef.current) {
       materialRef.current.uniforms.uTexture.value = finalTarget.texture;
+      materialRef.current.uniforms.uOriginalTexture.value = settings.compareTexture ?? previewTexture;
+      materialRef.current.uniforms.uCompareEnabled.value = settings.compareEnabled ? 1.0 : 0.0;
       
       if (settings.wiperActive) {
         materialRef.current.uniforms.uMouseX.value = wiperPosition;
@@ -229,7 +270,7 @@ export default function ImagePlane({
         fragmentShader={finalDisplayFragmentShader}
         uniforms={{
           uTexture: { value: null },
-          uOriginalTexture: { value: texture },
+          uOriginalTexture: { value: settings.compareTexture ?? previewTexture },
           uMouseX: { value: 1.0 },
           uCompareEnabled: { value: settings.compareEnabled ? 1.0 : 0.0 }
         }}

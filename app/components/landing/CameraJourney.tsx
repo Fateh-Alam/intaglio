@@ -111,7 +111,7 @@ export function CameraJourney() {
           >
             <p className="text-sm md:text-lg text-[#e2ae65] uppercase tracking-[0.5em] font-mono flex items-center gap-4">
               <span className="w-8 h-px bg-[#e2ae65]/50" />
-              PURE OPTICS. RAW POWER.
+              LOCAL PROCESSING. MEASURABLE OUTPUT.
               <span className="w-8 h-px bg-[#e2ae65]/50" />
             </p>
             <div className="flex gap-4">
@@ -143,7 +143,7 @@ export function CameraJourney() {
              <div>
                 <IconTarget className="intaglio-icon text-[#e2ae65] mb-4"/>
                 <h3 className="text-white font-mono text-sm tracking-widest mb-2">PRECISION</h3>
-                <p className="text-sm text-white/60">Tools built for macro adjustments. Half-float accuracy.</p>
+                <p className="text-sm text-white/60">Typed controls feed one linear-sRGB render contract.</p>
              </div>
              <div>
                 <IconBolt className="intaglio-icon text-[#e2ae65] mb-4"/>
@@ -160,8 +160,8 @@ export function CameraJourney() {
           title={<>Perfect<br/><span className="italic text-white/70">imperfection.</span></>}
           body={
              <>
-               <p className="mb-6">Chromatic aberration, anamorphic flaring, and geometric distortion aren&apos;t just stamped on. They are mathematically calculated through a true optical pipeline.</p>
-               <p className="text-[#e2ae65] font-mono text-sm tracking-widest opacity-80">{"/* GLSL SHADER PIPELINE ACTIVE */"}</p>
+               <p className="mb-6">Geometry, optical texture, bloom, halation, and sharpening are compiled into the same renderer used by preview, proofs, batch, and export.</p>
+               <p className="text-[#e2ae65] font-mono text-sm tracking-widest opacity-80">{"/* INTAGLIO RENDER GRAPH */"}</p>
              </>
           }
         />
@@ -171,7 +171,7 @@ export function CameraJourney() {
           scrollY={scrollYProgress} start={0.34} hang={0.50} end={0.52} align="left"
           eyebrow="03 / The Mechanism"
           title={<>Absolute<br/><span className="italic text-white/70">control.</span></>}
-          body="A signed distance field calculating the exact edges of a 9-blade iris. Volumetric light calculated per-pixel. Total control over the hardware."
+          body="A typed source-to-output graph keeps plates, mask expressions, geometry, LUTs, text, and watermark placement explicit and portable."
         >
           <div className="flex gap-4 mt-8">
              <Link href="/editor" className="intaglio-button px-6 py-3 text-xs tracking-widest uppercase">
@@ -184,27 +184,27 @@ export function CameraJourney() {
         <StickySection 
           scrollY={scrollYProgress} start={0.51} hang={0.66} end={0.68} align="right"
           eyebrow="04 / Sensor Dynamics"
-          title={<>Uncompressed<br/><span className="italic text-white/70">data.</span></>}
-          body="An infinite grid of red, green, and blue sub-pixels. As you scroll, watch the readout wave scan across the array, capturing light in real-time."
+          title={<>Original<br/><span className="italic text-white/70">bytes preserved.</span></>}
+          body="Supported-camera RAW develops locally in a cancellable worker. Portable projects retain the untouched original and checksum-verified document assets."
         />
 
         {/* SECTION 5: Feature Matrix (0.67 -> 0.84) */}
         <StickySection 
           scrollY={scrollYProgress} start={0.67} hang={0.82} end={0.84} align="center"
           eyebrow="05 / Capabilities"
-          title={<>The full<br/><span className="italic text-white/70">arsenal.</span></>}
+          title={<>The beta<br/><span className="italic text-white/70">contract.</span></>}
           body=""
         >
            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-5xl mt-8">
               {[
                 { i: <IconAdjustmentsHorizontal/>, t: "Node-Based Grading" },
-                { i: <IconDatabase/>, t: "LUT Generation" },
-                { i: <IconLayersIntersect/>, t: "Batch Processing" },
+                { i: <IconDatabase/>, t: "Embedded LUT Import" },
+                { i: <IconLayersIntersect/>, t: "Local Batch ZIP" },
                 { i: <IconTarget/>, t: "Film Emulation" },
-                { i: <IconBolt/>, t: "GPU Acceleration" },
-                { i: <IconHexagon/>, t: "Color Matrix" },
-                { i: <IconBook/>, t: "Recipe Archiving" },
-                { i: <IconCamera/>, t: "Tethered Capture" }
+                { i: <IconBolt/>, t: "Unified Rendering" },
+                { i: <IconHexagon/>, t: "Typed Mask Graph" },
+                { i: <IconBook/>, t: "Portable .int Recipes" },
+                { i: <IconCamera/>, t: "Supported-camera RAW" }
               ].map((item, idx) => (
                 <div key={idx} className="bg-white/5 border border-white/10 p-6 flex flex-col items-center justify-center text-center hover:bg-white/10 transition-colors cursor-pointer">
                    <div className="text-[#e2ae65] mb-3">{item.i}</div>
@@ -235,7 +235,7 @@ export function CameraJourney() {
               Enter the<br/><span className="italic">darkroom.</span>
             </h2>
             <p className="text-xl text-white/60 mb-12 font-light max-w-lg mx-auto">
-              Your workflow is waiting. No subscriptions, no cloud rendering. Just raw performance on your local machine.
+              Your photographs and edits remain local. No cloud image processing, no AI pipeline, and no legacy-format ambiguity.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-6 relative z-10">
               <Link href="/editor" className="intaglio-button intaglio-button-primary px-12 py-5 text-sm tracking-widest uppercase">

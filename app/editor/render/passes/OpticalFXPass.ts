@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RenderPass } from '../RenderPass';
+import { dimensionsFromRenderInput, RenderPass } from '../RenderPass';
 import { EditorSettings } from '../../../types/editor';
 
 const vertexShader = `
@@ -13,6 +13,9 @@ void main() {
 const fragmentShader = `
 uniform sampler2D tDiffuse;
 uniform vec2 uResolution;
+uniform vec2 uFullSize;
+uniform vec2 uTileOffset;
+uniform vec2 uTileSize;
 uniform float uTime;
 
 uniform float uGodLightStrength;
@@ -41,13 +44,10 @@ float random(vec2 st) {
 
 void main() {
   vec2 uv = vUv;
-  
-  if (uAnamorphicDistortion > 0.0) {
-    vec2 d = uv - 0.5;
-    float r2 = dot(d, d);
-    float f = 1.0 + r2 * (uAnamorphicDistortion * 0.5);
-    uv = d * f + 0.5;
-  }
+  vec2 globalUv = vec2(
+    (uTileOffset.x + vUv.x * uTileSize.x) / uFullSize.x,
+    (uFullSize.y - uTileOffset.y - uTileSize.y + vUv.y * uTileSize.y) / uFullSize.y
+  );
   
   float r = texture2D(tDiffuse, uv + vec2(uAberration, 0.0)).r;
   float g = texture2D(tDiffuse, uv).g;
@@ -81,9 +81,9 @@ void main() {
     float dy = (t - bot) * 5.0;
     vec3 normal = normalize(vec3(dx, dy, 1.0));
     
-    vec3 lightDir = normalize(vec3(uGodLightPos - uv, 0.5));
+    vec3 lightDir = normalize(vec3(uGodLightPos - globalUv, 0.5));
     
-    float dist = length(uGodLightPos - uv);
+    float dist = length(uGodLightPos - globalUv);
     float falloff = 1.0 / (1.0 + dist * dist * uGodLightFalloff * 5.0);
     
     float diffuse = max(dot(normal, lightDir), 0.0);
@@ -104,7 +104,7 @@ void main() {
   }
   
   if (uGrainStrength > 0.0) {
-    float noise = random(uv * uResolution + uTime);
+    float noise = random(floor(globalUv * uFullSize) + uTime);
     float luma = getLuma(color);
     
     // Film grain is typically most visible in midtones, present in shadows, 
@@ -121,13 +121,13 @@ void main() {
   }
 
   if (uVignette > 0.0) {
-    vec2 dist = uv - 0.5;
+    vec2 dist = globalUv - 0.5;
     float vignette = smoothstep(0.8, 0.25 * (1.0 - uVignette), length(dist));
     color *= vignette;
   }
 
   if (uFilmBorder > 0.5) {
-    vec2 border = step(vec2(0.02), uv) * step(uv, vec2(0.98));
+    vec2 border = step(vec2(0.02), globalUv) * step(globalUv, vec2(0.98));
     float box = border.x * border.y;
     color *= box;
   }
@@ -138,6 +138,7 @@ void main() {
 
 export class OpticalFXPass extends RenderPass {
   private material: THREE.ShaderMaterial;
+  private tiled = false;
 
   constructor() {
     super();
@@ -147,6 +148,9 @@ export class OpticalFXPass extends RenderPass {
       uniforms: {
         tDiffuse: { value: null },
         uResolution: { value: new THREE.Vector2(1, 1) },
+        uFullSize: { value: new THREE.Vector2(1, 1) },
+        uTileOffset: { value: new THREE.Vector2(0, 0) },
+        uTileSize: { value: new THREE.Vector2(1, 1) },
         uTime: { value: 0.0 },
         uGodLightStrength: { value: 0.0 },
         uGodLightPos: { value: new THREE.Vector2(0.5, 0.5) },
@@ -168,7 +172,9 @@ export class OpticalFXPass extends RenderPass {
   public setup() {}
 
   public updateUniforms(settings: EditorSettings) {
-    this.material.uniforms.uTime.value = performance.now() / 1000.0;
+    // Grain is intentionally fixed in output coordinates so preview, proof,
+    // tiled export, and repeated exports render the same document pixels.
+    this.material.uniforms.uTime.value = 0.0;
     this.material.uniforms.uGodLightStrength.value = settings.godLightStrength || 0.0;
     this.material.uniforms.uGodLightPos.value.set(settings.godLightX || 0.5, settings.godLightY || 0.5);
     this.material.uniforms.uGodLightColor.value.set(
@@ -190,6 +196,18 @@ export class OpticalFXPass extends RenderPass {
     this.enabled = true; // Grain requires constant updates, or we can check if anything > 0
   }
 
+  override setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number): void {
+    this.tiled = true;
+    this.material.uniforms.uFullSize.value.set(fullWidth, fullHeight);
+    this.material.uniforms.uTileOffset.value.set(x, y);
+    this.material.uniforms.uTileSize.value.set(width, height);
+  }
+
+  override clearViewOffset(): void {
+    this.tiled = false;
+    this.material.uniforms.uTileOffset.value.set(0, 0);
+  }
+
   public render(
     renderer: THREE.WebGLRenderer,
     readBuffer: THREE.WebGLRenderTarget | THREE.Texture,
@@ -209,14 +227,19 @@ export class OpticalFXPass extends RenderPass {
     this.material.uniforms.tDiffuse.value = inputTexture;
     
     if ((readBuffer as THREE.WebGLRenderTarget).width !== undefined) {
-      this.material.uniforms.uResolution.value.set(
-        (readBuffer as THREE.WebGLRenderTarget).width,
-        (readBuffer as THREE.WebGLRenderTarget).height
-      );
+      const width = (readBuffer as THREE.WebGLRenderTarget).width;
+      const height = (readBuffer as THREE.WebGLRenderTarget).height;
+      this.material.uniforms.uResolution.value.set(width, height);
+      if (!this.tiled) {
+        this.material.uniforms.uFullSize.value.set(width, height);
+        this.material.uniforms.uTileSize.value.set(width, height);
+      }
     } else {
-      const img = inputTexture.image as any;
-      if (img && img.width) {
-        this.material.uniforms.uResolution.value.set(img.width, img.height);
+      const dimensions = dimensionsFromRenderInput(readBuffer);
+      this.material.uniforms.uResolution.value.set(dimensions.width, dimensions.height);
+      if (!this.tiled) {
+        this.material.uniforms.uFullSize.value.set(dimensions.width, dimensions.height);
+        this.material.uniforms.uTileSize.value.set(dimensions.width, dimensions.height);
       }
     }
 

@@ -3,43 +3,36 @@
 
 import React from "react";
 import { EditorProvider } from "./hooks/useEditorState";
-import { EditorLeftSidebar } from "./components/EditorLeftSidebar";
 import { EditorWorkspaceCanvas } from "./components/EditorWorkspaceCanvas";
 import { EditorRightSidebar } from "./components/EditorRightSidebar";
 import { useEditorState } from "./hooks/useEditorState";
 import StartScreen from "../components/StartScreen";
 import MobileLimitationModal from "../components/MobileLimitationModal";
-import VideoGradingPanel from "../components/VideoGradingPanel";
 import { CommandBar, ShortcutHelp } from "../components/CommandBar";
 import { DEFAULT_SETTINGS, DEFAULT_ASSET_METADATA } from "./pageTypes";
 
 import { EditorTopToolbar } from "./components/EditorTopToolbar";
-import { PresetsBottomBar } from "./components/PresetsBottomBar";
 import { EditorToolStrip } from "./components/EditorToolStrip";
 import { ExportModal } from "./components/ExportModal";
+import { ProofSheetModal } from "./components/ProofSheetModal";
+import { BatchExportModal } from "./components/BatchExportModal";
 
 function EditorLayout() {
   const editorState = useEditorState();
   const { 
-    isFocusMode, 
     showMobileWarning, 
     setShowMobileWarning, 
     imageSrc, 
     setImageSrc, 
     openImagePicker, 
     openProjectPicker, 
-    setIsVideoGradingOpen, 
     setSettings, 
     setImageName, 
     setImageInfo, 
     setAssetMetadata,
-    isVideoGradingOpen,
-    videoSrc,
     isCommandBarOpen,
     setIsCommandBarOpen,
     appCommands,
-    settings,
-    handleCommand,
     isShortcutHelpOpen,
     setIsShortcutHelpOpen
   } = editorState;
@@ -50,7 +43,6 @@ function EditorLayout() {
         <StartScreen
           onOpenImage={openImagePicker}
           onOpenArchive={openProjectPicker}
-          onOpenVideo={() => setIsVideoGradingOpen(true)}
           onTrySample={() => {
             setSettings(DEFAULT_SETTINGS);
             setImageSrc("/demo.jpg");
@@ -64,15 +56,6 @@ function EditorLayout() {
           }}
         />
         
-      <VideoGradingPanel
-        isOpen={isVideoGradingOpen}
-        onClose={() => setIsVideoGradingOpen(false)}
-        settings={settings}
-        onExtractFrame={(dataUrl) => {
-          setImageSrc(dataUrl);
-          setImageName("Video Frame");
-        }}
-      />
       </main>
     );
   }
@@ -98,7 +81,10 @@ function EditorLayout() {
         commands={appCommands}
       />
 
+
       <ExportModal />
+      <ProofSheetModal />
+      <BatchExportModal />
 
       <EditorTopToolbar />
       
@@ -112,7 +98,7 @@ function EditorLayout() {
         {/* Far Right: Tools Strip */}
         <EditorToolStrip />
         
-        <PresetsBottomBar />
+
       </div>
     </main>
   );

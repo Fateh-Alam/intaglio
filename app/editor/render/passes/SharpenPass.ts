@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RenderPass } from '../RenderPass';
+import { dimensionsFromRenderInput, RenderPass } from '../RenderPass';
 import { EditorSettings } from '../../../types/editor';
 
 const vertexShader = `
@@ -94,10 +94,8 @@ export class SharpenPass extends RenderPass {
     const inputTexture = (readBuffer as THREE.WebGLRenderTarget).texture ?? readBuffer;
     this.material.uniforms.tDiffuse.value = inputTexture;
     
-    const img = inputTexture.image as any;
-    if (img) {
-      this.material.uniforms.uResolution.value.set(img.width, img.height);
-    }
+    const dimensions = dimensionsFromRenderInput(readBuffer);
+    this.material.uniforms.uResolution.value.set(dimensions.width, dimensions.height);
 
     if (writeBuffer) renderer.setRenderTarget(writeBuffer);
     else renderer.setRenderTarget(null);

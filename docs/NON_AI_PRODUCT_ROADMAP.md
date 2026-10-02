@@ -1,41 +1,21 @@
-# Ormond Product Roadmap
+# Intaglio Public-Beta Roadmap
 
-Ormond should feel like a crafted instrument for photographers: quiet,
-deliberate, local-first, and built around the photograph rather than the
-software.
+Intaglio is a deterministic, non-AI, local still-photography darkroom. The public-beta priority is proof: one serializable document, one measurable renderer, portable assets, offline continuity, and claims that never exceed qualification evidence.
 
-## Current Direction
+## Public-beta boundary
 
-Ormond is a professional web-based digital darkroom for photographers and visual
-teams who want patient photo development without a heavy desktop application.
-The app should prioritize control, consistency, and delivery while preserving a
-restrained editorial interface.
+- Current and previous major Chrome and Safari on Apple Silicon Macs.
+- JPEG, PNG, WebP, and supported-camera RAW input; JPEG, PNG, and WebP output.
+- `.int`, `.intaglio`, and `.cube`; no legacy migration or generic JSON import.
+- Local Process, Plate, Mask, graph, proof-sheet, batch, and export workflows.
+- Linear-sRGB working space and sRGB output.
 
-## Current Foundation
+## Qualification still required
 
-- Browser-local image development and export.
-- Print Recipe creation/import/export via `.orm`.
-- Complete portable session save/restore via `.ormond` Ormond Archives.
-- Legacy `.nyv`, `.nyvlt`, and `.nyvproj` import compatibility.
-- LUT import and in-app LUT creation.
-- Manual culling, metadata, proof watermark, command palette, virtual copies,
-  and export recipes.
+1. Expand the passing PNG/MozJPEG/WebP equal-size and forced-tile Chromium/WebKit fixtures into the full image/effect matrix, landmark extraction, and the 100-megapixel stress run.
+2. Qualify redistributable RAW samples per advertised family and camera.
+3. Extend the Chromium-proven 65 MB OPFS-backed writer to streaming extraction, prove the same path in actual Safari, then qualify a 1 GB project without process-memory duplication. Playwright WebKit currently proves the preflight recovery path when OPFS is unavailable.
+4. Complete installed-PWA and offline-update testing in real Chrome and Safari.
+5. Validate the OpenNext preview before the single public traffic cutover.
 
-## Highest-Impact Priorities
-
-1. Tighten the loaded darkroom layout around a stable rail, image canvas, and
-   inspector.
-2. Improve archive import/export confidence with clearer success and error
-   states.
-3. Make Collections feel like photographic eras rather than software presets.
-4. Improve keyboard-first editing and command search.
-5. Keep mobile as a limited review/import surface unless the editor interaction
-   model is redesigned for touch.
-
-## Product Principles
-
-- Photograph first, software second.
-- Precision over automation.
-- Quiet defaults over loud effects.
-- Local files over cloud dependency.
-- Compatibility where it preserves existing work.
+Future work includes wider-gamut/HDR output, deeper camera/lens profiles, and advanced denoise. It does not include AI, video, tethering, cloud editing, or collaboration.

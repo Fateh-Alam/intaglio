@@ -6,7 +6,6 @@ import {
   IconArchive,
   IconCamera,
   IconFileImport,
-  IconMovie,
   IconPhoto,
   IconSparkles,
 } from "@tabler/icons-react";
@@ -15,7 +14,6 @@ import { BRAND, FORMAT } from "../lib/brand";
 interface StartScreenProps {
   onOpenImage: () => void;
   onOpenArchive: () => void;
-  onOpenVideo: () => void;
   onTrySample: () => void;
 }
 
@@ -38,12 +36,6 @@ const deskActions = [
     icon: IconCamera,
     tone: "navy",
   },
-  {
-    title: "Lift Frame",
-    meta: "Video still workflow",
-    icon: IconMovie,
-    tone: "copper",
-  },
 ];
 
 const formatRows = [
@@ -53,7 +45,6 @@ const formatRows = [
     FORMAT.archiveName,
     "Full session with metadata and delivery state",
   ],
-  [".nyv / .nyvlt", "Legacy Files", "Accepted on import"],
   [".cube", "3D LUT", "Color profile import"],
 ];
 
@@ -67,10 +58,9 @@ const scopeItems = [
 export default function StartScreen({
   onOpenImage,
   onOpenArchive,
-  onOpenVideo,
   onTrySample,
 }: StartScreenProps) {
-  const handlers = [onOpenImage, onOpenArchive, onTrySample, onOpenVideo];
+  const handlers = [onOpenImage, onOpenArchive, onTrySample];
 
   return (
     <div className="absolute inset-0 overflow-y-auto bg-[var(--intaglio-charcoal)] text-[var(--intaglio-paper)]">
@@ -220,10 +210,10 @@ export default function StartScreen({
               </div>
               <div className="space-y-3 p-5">
                 {[
-                  "RAW development remains roadmap scope",
-                  "Archives are local JSON session artifacts",
-                  "Exports run through the browser render pipeline",
-                  "Legacy files remain importable",
+                  "Supported-camera RAW develops locally in a worker",
+                  "Projects and recipes embed checksum-verified assets",
+                  "Preview, proofs, batch, and export share one render graph",
+                  "Legacy formats, video, and tethering are unsupported",
                 ].map((item) => (
                   <div
                     key={item}

@@ -1,7 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
 import { useEditorState } from '../hooks/useEditorState';
-import { EDITOR_MODULES, AUXILIARY_MODULES } from '../pageTypes';
 import { 
   IconDeviceFloppy, 
   IconFileCode, 
@@ -10,25 +9,26 @@ import {
   IconArrowForwardUp, 
   IconFocus2, 
   IconDownload,
-  IconBooks,
   IconGridPattern,
-  IconChartHistogram
+  IconChartHistogram,
+  IconLayoutGrid,
+  IconFiles
 } from "@tabler/icons-react";
 import { AnalysisPanel } from './AnalysisPanel';
 import { PaletteHeist } from './PaletteHeist';
+import { STILL_FILE_ACCEPT } from '../../lib/rawDecoder';
 
 export function EditorTopToolbar() {
   const {
-    activeTab,
-    handleTabChange,
     handleUndo,
     handleRedo,
     handleUpload,
     handleSaveProjectSession,
     openProjectPicker,
     setIsExportModalOpen,
-    isPresetsBarOpen,
-    setIsPresetsBarOpen,
+    isProofSheetOpen,
+    setIsProofSheetOpen,
+    setIsBatchExportOpen,
     setIsFocusMode,
     isFocusMode,
     imageName,
@@ -55,7 +55,7 @@ export function EditorTopToolbar() {
     setGridOverlayMode(modes[nextIndex]);
   };
 
-  if (isFocusMode && !isPresetsBarOpen) return null;
+  if (isFocusMode && !isProofSheetOpen) return null;
 
   return (
     <div className="relative z-40 flex h-12 w-full items-center justify-between border-b border-[var(--intaglio-line)] bg-[#0d0c0a] px-4 shadow-sm">
@@ -71,7 +71,7 @@ export function EditorTopToolbar() {
         <div className="flex items-center gap-1">
           <label className="group p-1 cursor-pointer text-white/50 transition-colors hover:text-[var(--intaglio-paper)] rounded hover:bg-white/5" title="Import Image">
             <IconUpload className="intaglio-icon"/>
-            <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+            <input type="file" accept={STILL_FILE_ACCEPT} onChange={handleUpload} className="hidden" />
           </label>
           <button onClick={openProjectPicker} className="p-1 text-white/50 transition-colors hover:text-cyan-600 rounded hover:bg-white/5" title="Open Archive">
             <IconFileCode className="intaglio-icon"/>
@@ -103,15 +103,15 @@ export function EditorTopToolbar() {
         <div className="h-3 w-px bg-[var(--intaglio-line)] mr-1" />
 
         <button 
-          onClick={() => setIsPresetsBarOpen(!isPresetsBarOpen)}
+          onClick={() => setIsProofSheetOpen(!isProofSheetOpen)}
           className={`flex items-center gap-1.5 px-3 py-1 rounded intaglio-label transition-all border ${
-            isPresetsBarOpen 
+            isProofSheetOpen
               ? "bg-[var(--intaglio-brass)]/10 border-[var(--intaglio-brass)] text-[var(--intaglio-brass)]" 
               : "bg-transparent border-[var(--intaglio-line)] text-white/70 hover:border-[rgba(231,223,208,0.3)]"
           }`}
         >
-          <IconBooks className="intaglio-icon"/>
-          Presets
+          <IconLayoutGrid className="intaglio-icon"/>
+          Proof Sheets
         </button>
 
         <button
@@ -156,6 +156,14 @@ export function EditorTopToolbar() {
           title="Focus Mode (Hide UI)"
         >
           <IconFocus2 className="intaglio-icon"/>
+        </button>
+
+        <button
+          onClick={() => setIsBatchExportOpen(true)}
+          className="p-1 text-white/50 hover:text-[var(--intaglio-brass)] rounded hover:bg-white/5 transition-colors"
+          title="Local Batch Export"
+        >
+          <IconFiles className="intaglio-icon"/>
         </button>
 
         <button

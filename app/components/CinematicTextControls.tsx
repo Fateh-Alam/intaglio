@@ -17,6 +17,7 @@ import {
   IconAlignRight,
   IconArrowAutofitHeight,
   IconShadow,
+  IconUpload,
 } from "@tabler/icons-react";
 import Toggle from "./Toggle";
 import CustomSelect from "./CustomSelect";
@@ -71,11 +72,13 @@ const POPULAR_FONTS = [
 interface CinematicTextControlsProps {
   textOverlay: TextOverlaySettings;
   setTextOverlay: React.Dispatch<React.SetStateAction<TextOverlaySettings>>;
+  onFontUpload?: (file: File) => Promise<void>;
 }
 
 export default function CinematicTextControls({
   textOverlay,
   setTextOverlay,
+  onFontUpload,
 }: CinematicTextControlsProps) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -358,6 +361,10 @@ export default function CinematicTextControls({
                 className="pl-7" // Extra padding for the icon
               />
             </div>
+            <label className="flex cursor-pointer items-center justify-center gap-2 border border-white/10 bg-black/25 px-3 py-2 font-mono text-[9px] uppercase tracking-widest text-white/55 hover:border-amber-500/40 hover:text-amber-300">
+              <IconUpload className="intaglio-icon"/> Embed font file
+              <input type="file" accept=".woff2,.ttf,.otf,font/woff2,font/ttf,font/otf" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file && onFontUpload) void onFontUpload(file); event.target.value = ""; }} />
+            </label>
 
             {/* Weight & Style */}
             <div className="grid grid-cols-2 gap-2">

@@ -1,12 +1,12 @@
-import { NyvarraRecipe } from "../types/recipe";
+import { IntaglioRecipe } from "../types/recipe";
 
 // Built-in collections that heavily utilize all editor capabilities.
-export const PRESETS: NyvarraRecipe[] = [
+export const PRESETS: IntaglioRecipe[] = [
   {
-    id: "nyvarra-poster",
-    name: "Nyvarra Poster Mode",
+    id: "intaglio-poster",
+    name: "Intaglio Poster Mode",
     description: "The ultimate 4:5 cinematic layout. Heavy film emulation, film borders, and halation, designed to be paired with a Title Overlay.",
-    tags: ["Nyvarra Signatures", "Poster", "Cinematic"],
+    tags: ["Intaglio Signatures", "Poster", "Cinematic"],
     intensityDefault: 1.0,
     settings: {
       film: {
@@ -41,7 +41,7 @@ export const PRESETS: NyvarraRecipe[] = [
     id: "kodak-portra-400",
     name: "Kodak Portra 400",
     description: "The gold standard of portrait film. Warm, glowing highlights, soft contrast roll-off, and perfectly protected skin tones.",
-    tags: ["Vintage", "Warm", "Nyvarra Signatures", "Portrait"],
+    tags: ["Vintage", "Warm", "Intaglio Signatures", "Portrait"],
     intensityDefault: 1.0,
     settings: {
       film: {
@@ -77,7 +77,7 @@ export const PRESETS: NyvarraRecipe[] = [
     id: "cinematic-teal-orange",
     name: "Blockbuster Teal & Orange",
     description: "Modern cinematic look. Aggressive color separation pushing shadows to teal and highlights to orange.",
-    tags: ["Nyvarra Signatures", "Cinematic", "Cool"],
+    tags: ["Intaglio Signatures", "Cinematic", "Cool"],
     intensityDefault: 1.0,
     settings: {
       film: {
@@ -146,7 +146,7 @@ export const PRESETS: NyvarraRecipe[] = [
     id: "bleach-bypass",
     name: "Bleach Bypass",
     description: "Gritty, desaturated, extremely high contrast look famous in 90s war films and thrillers.",
-    tags: ["Cinematic", "Nyvarra Signatures"],
+    tags: ["Cinematic", "Intaglio Signatures"],
     intensityDefault: 1.0,
     settings: {
       film: {

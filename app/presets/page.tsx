@@ -16,10 +16,15 @@ import {
 import { BRAND, FORMAT, STORAGE_KEYS } from "../lib/brand";
 
 import { PRESETS } from "../lib/presets";
-import { NyvarraRecipe } from "../types/recipe";
+import { IntaglioRecipe } from "../types/recipe";
+import { createIntaglioContainer, openIntaglioContainer, triggerContainerDownload } from "../lib/intaglioContainer";
+import { createIntaglioDocument, createRuntimeAssetStore } from "../lib/intaglioDocument";
+import { applyRecipe } from "../lib/recipeEngine";
+import { DEFAULT_ASSET_METADATA, DEFAULT_SETTINGS, DEFAULT_WATERMARK } from "../editor/pageTypes";
+import { DEFAULT_TEXT_OVERLAY } from "../components/CinematicTextOverlay";
 
 interface PresetCardProps {
-  preset: NyvarraRecipe;
+  preset: IntaglioRecipe;
   onDownload: () => void;
   onPreview: () => void;
   onToggleFavorite: () => void;
@@ -98,39 +103,20 @@ const PresetCard: React.FC<PresetCardProps> = ({
   );
 };
 
-const readPresetFile = (file: File) =>
-  new Promise<NyvarraRecipe>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const parsed = JSON.parse(String(reader.result ?? "")) as {
-          id?: string;
-          name?: string;
-          description?: string;
-          tags?: string[];
-          settings?: Record<string, unknown>;
-        };
-        const settings = parsed.settings ?? parsed;
-        resolve({
-          id: parsed.id || `imported-${file.name}-${Date.now()}`,
-          name:
-            parsed.name ||
-            file.name.replace(/\.(orm|nyv|json)$/i, "") ||
-            "Imported Look",
-          description:
-            parsed.description || "Imported local Intaglio Print Recipe.",
-          tags: parsed.tags?.length ? parsed.tags : ["Imported"],
-          settings: { raw: settings } as any,
-          intensityDefault: 1.0,
-          source: "imported",
-        });
-      } catch (error) {
-        reject(error);
-      }
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(file);
-  });
+const readPresetFile = async (file: File): Promise<IntaglioRecipe> => {
+  if (!file.name.toLowerCase().endsWith(`.${FORMAT.recipeExtension}`)) throw new Error("Only portable .int V2 recipes are supported.");
+  const { manifest } = await openIntaglioContainer(file);
+  if (manifest.kind !== "recipe") throw new Error("Choose an .int recipe, not an .intaglio project.");
+  return {
+    id: manifest.document.id,
+    name: manifest.document.title,
+    description: "Imported portable Intaglio Print Recipe.",
+    tags: ["Imported"],
+    settings: { raw: Object.fromEntries(Object.entries(manifest.document.editorSettingsSnapshot)) },
+    intensityDefault: 1,
+    source: "imported",
+  };
+};
 
 export default function PresetsPage() {
   const router = useRouter();
@@ -140,22 +126,18 @@ export default function PresetsPage() {
     if (typeof window === "undefined") return [];
     try {
       return JSON.parse(
-        localStorage.getItem(STORAGE_KEYS.presetFavorites) ||
-          localStorage.getItem(STORAGE_KEYS.legacyPresetFavorites) ||
-          "[]"
+        localStorage.getItem(STORAGE_KEYS.presetFavorites) || "[]"
       ) as string[];
     } catch {
       return [];
     }
   });
-  const [importedPresets, setImportedPresets] = React.useState<NyvarraRecipe[]>(() => {
+  const [importedPresets, setImportedPresets] = React.useState<IntaglioRecipe[]>(() => {
     if (typeof window === "undefined") return [];
     try {
       return JSON.parse(
-        localStorage.getItem(STORAGE_KEYS.importedPresets) ||
-          localStorage.getItem(STORAGE_KEYS.legacyImportedPresets) ||
-          "[]"
-      ) as NyvarraRecipe[];
+        localStorage.getItem(STORAGE_KEYS.importedPresets) || "[]"
+      ) as IntaglioRecipe[];
     } catch {
       return [];
     }
@@ -205,26 +187,28 @@ export default function PresetsPage() {
     });
   }, [activeTag, allPresets, favorites, query]);
 
-  const handleDownload = (preset: NyvarraRecipe) => {
-    const payload = {
-      version: "2.7",
+  const handleDownload = async (preset: IntaglioRecipe) => {
+    const settings = applyRecipe(DEFAULT_SETTINGS, preset, 1);
+    const document = await createIntaglioDocument({
       id: preset.id,
-      name: preset.name,
-      description: preset.description,
-      tags: preset.tags,
-      settings: preset.settings,
-    };
-    const json = JSON.stringify(payload, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `intaglio-${preset.id}.${FORMAT.recipeExtension}`;
-    a.click();
-    URL.revokeObjectURL(url);
+      title: preset.name,
+      sourceFile: null,
+      sourceName: "",
+      imageInfo: null,
+      settings,
+      textOverlay: DEFAULT_TEXT_OVERLAY,
+      watermark: DEFAULT_WATERMARK,
+      metadata: DEFAULT_ASSET_METADATA,
+      exportFormat: "image/jpeg",
+      exportQuality: 90,
+      exportScale: 1,
+      exportRecipeId: null,
+    });
+    const archive = await createIntaglioContainer("recipe", document, createRuntimeAssetStore());
+    triggerContainerDownload(archive, `intaglio-${preset.id}.${FORMAT.recipeExtension}`);
   };
 
-  const handlePreview = (preset: NyvarraRecipe) => {
+  const handlePreview = (preset: IntaglioRecipe) => {
     // Store preset in localStorage and redirect to editor
     localStorage.setItem(
       STORAGE_KEYS.presetPreview,
@@ -336,7 +320,7 @@ export default function PresetsPage() {
                 Import .{FORMAT.recipeExtension}
                 <input
                   type="file"
-                  accept={`.${FORMAT.recipeExtension},.nyv,.json,application/json`}
+                  accept={`.${FORMAT.recipeExtension},${FORMAT.recipeMimeType}`}
                   multiple
                   onChange={handleImportPreset}
                   className="hidden"

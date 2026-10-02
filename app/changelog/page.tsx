@@ -16,7 +16,7 @@ const entries = [
     date: "2026-06-25",
     title: "Archive and Recipe Formats",
     icon: IconArchive,
-    body: `Introduced .${FORMAT.archiveExtension} Intaglio Archives and .${FORMAT.recipeExtension} Print Recipes while keeping legacy .nyv, .nyvlt, and .nyvproj imports available.`,
+    body: `Introduced portable .${FORMAT.archiveExtension} projects and .${FORMAT.recipeExtension} recipes with embedded, checksum-verified assets. Legacy formats are intentionally unsupported.`,
   },
   {
     date: "2026-06-25",

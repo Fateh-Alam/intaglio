@@ -1,16 +1,10 @@
 import * as THREE from 'three';
-import { RenderGraph } from './RenderGraph';
-import { BaseDevelopPass } from './passes/BaseDevelopPass';
-import { LocalAdjustmentsPass } from './passes/LocalAdjustmentsPass';
-import { OklchMixerPass } from './passes/OklchMixerPass';
-import { ColorWheelsPass } from './passes/ColorWheelsPass';
-import { FilmEmulationPass } from './passes/FilmEmulationPass';
-import { HalationPass } from './passes/HalationPass';
-import { BloomPass } from './passes/BloomPass';
-import { OpticalFXPass } from './passes/OpticalFXPass';
-import { SharpenPass } from './passes/SharpenPass';
-import { DisplayTransformPass } from './passes/DisplayTransformPass';
+import { IntaglioRenderer } from './IntaglioRenderer';
 import { EditorSettings } from '../../types/editor';
+import type { TextOverlaySettings } from '../../components/CinematicTextOverlay';
+import type { WatermarkSettings } from '../../types/editor';
+import { ensureOverlayFonts, renderOverlays } from './overlayCompositor';
+import { encodeCanvasWasm } from './wasmCodecs';
 
 export interface ExportOptions {
   format: 'image/jpeg' | 'image/png' | 'image/webp';
@@ -19,6 +13,10 @@ export interface ExportOptions {
   width?: number;   // explicit target width
   height?: number;  // explicit target height
   brushCanvas?: HTMLCanvasElement | null;
+  /** Test/qualification hook; production defaults to the GPU texture limit. */
+  maxTileSize?: number;
+  signal?: AbortSignal;
+  overlays?: { text: TextOverlaySettings; watermark: WatermarkSettings };
   tileInfo?: {
     fullWidth: number;
     fullHeight: number;
@@ -68,50 +66,25 @@ export class ExportEngine {
     settings: EditorSettings,
     options: ExportOptions
   ): Promise<Blob> {
+    throwIfCancelled(options.signal);
     const img = sourceTexture.image as HTMLImageElement | undefined;
     const imgWidth = img?.width || 1920;
     const imgHeight = img?.height || 1080;
 
-    let targetWidth = options.width || Math.round(imgWidth * (options.scale || 1.0));
-    let targetHeight = options.height || Math.round(imgHeight * (options.scale || 1.0));
+    const targetWidth = options.width || Math.round(imgWidth * (options.scale || 1.0));
+    const targetHeight = options.height || Math.round(imgHeight * (options.scale || 1.0));
 
     const renderer = this.getRenderer(targetWidth, targetHeight);
-    const maxTextureSize = renderer.capabilities.maxTextureSize || 4096;
+    const maxTextureSize = Math.min(renderer.capabilities.maxTextureSize || 4096, options.maxTileSize ?? Number.POSITIVE_INFINITY);
 
     // Check if tiling is needed
     if (targetWidth > maxTextureSize || targetHeight > maxTextureSize) {
       return this.exportTiled(sourceTexture, settings, options, targetWidth, targetHeight, maxTextureSize);
     }
 
-    const graph = new RenderGraph();
-    const baseDevelop = new BaseDevelopPass();
-    const localAdjustments = new LocalAdjustmentsPass();
-    const oklchMixer = new OklchMixerPass();
-    const colorWheels = new ColorWheelsPass();
-    const filmEmulation = new FilmEmulationPass();
-    const halation = new HalationPass();
-    const bloom = new BloomPass();
-    const optical = new OpticalFXPass();
-    const sharpen = new SharpenPass();
-    const displayTransform = new DisplayTransformPass();
+    const intaglioRenderer = new IntaglioRenderer();
 
-    graph.addPass(baseDevelop);
-    graph.addPass(localAdjustments);
-    graph.addPass(oklchMixer);
-    graph.addPass(colorWheels);
-    graph.addPass(filmEmulation);
-    graph.addPass(halation);
-    graph.addPass(bloom);
-    graph.addPass(optical);
-    graph.addPass(sharpen);
-    graph.addPass(displayTransform);
-
-    graph.setSize(targetWidth, targetHeight);
-
-    if (options.brushCanvas) {
-      const brushTexture = new THREE.CanvasTexture(options.brushCanvas);
-      localAdjustments.setBrushMask(brushTexture);
-    }
+    const brushTexture = options.brushCanvas ? new THREE.CanvasTexture(options.brushCanvas) : null;
 
     const finalTarget = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
       type: THREE.HalfFloatType,
@@ -123,19 +96,25 @@ export class ExportEngine {
       colorSpace: THREE.NoColorSpace
     });
 
-    if (options.tileInfo) {
-      graph.setViewOffset(
-        options.tileInfo.fullWidth,
-        options.tileInfo.fullHeight,
-        options.tileInfo.offsetX,
-        options.tileInfo.offsetY,
-        options.tileInfo.tileWidth,
-        options.tileInfo.tileHeight
-      );
-    }
-
     // Execute graph rendering
-    graph.render(renderer, settings, sourceTexture, finalTarget);
+    intaglioRenderer.render({
+      renderer,
+      sourceTexture,
+      settings,
+      target: finalTarget,
+      width: targetWidth,
+      height: targetHeight,
+      brushMaskTexture: brushTexture,
+      tile: options.tileInfo ? {
+        fullWidth: options.tileInfo.fullWidth,
+        fullHeight: options.tileInfo.fullHeight,
+        offsetX: options.tileInfo.offsetX,
+        offsetY: options.tileInfo.offsetY,
+        width: options.tileInfo.tileWidth,
+        height: options.tileInfo.tileHeight,
+      } : undefined,
+    });
+    throwIfCancelled(options.signal);
 
     // Copy from WebGLRenderTarget to canvas
     const finalQuad = new THREE.Mesh(
@@ -150,27 +129,29 @@ export class ExportEngine {
     renderer.render(scene, camera);
 
     // Clean up GPU targets
-    graph.dispose();
+    intaglioRenderer.dispose();
+    brushTexture?.dispose();
     finalTarget.dispose();
     finalQuad.geometry.dispose();
     (finalQuad.material as THREE.Material).dispose();
 
-    // Export canvas blob
+    if (!this.canvas) throw new Error('Export canvas initialization failed');
+    const renderCanvas = this.canvas;
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = targetWidth;
+    exportCanvas.height = targetHeight;
+    const exportContext = exportCanvas.getContext('2d', { willReadFrequently: true });
+    if (!exportContext) throw new Error('Output staging canvas initialization failed');
+    exportContext.drawImage(renderCanvas, 0, 0, targetWidth, targetHeight);
+    if (options.overlays) {
+      await ensureOverlayFonts(options.overlays);
+      throwIfCancelled(options.signal);
+      renderOverlays(exportContext, targetWidth, targetHeight, options.overlays);
+    }
+
     const quality = options.quality ?? 0.92;
-    return new Promise<Blob>((resolve, reject) => {
-      if (!this.canvas) {
-        reject(new Error('Export canvas initialization failed'));
-        return;
-      }
-      this.canvas.toBlob(
-        (blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Failed to encode image blob'));
-        },
-        options.format,
-        quality
-      );
-    });
+    throwIfCancelled(options.signal);
+    return encodeCanvasWasm(exportCanvas, options.format, quality);
   }
 
   /**
@@ -189,24 +170,40 @@ export class ExportEngine {
     stitchCanvas.height = totalHeight;
     const stitchCtx = stitchCanvas.getContext('2d')!;
 
-    const tilesX = Math.ceil(totalWidth / maxSize);
-    const tilesY = Math.ceil(totalHeight / maxSize);
+    const effectOverlap = Math.min(128, Math.max(32, Math.ceil(Math.max(totalWidth, totalHeight) * 0.002)));
+    const coreSize = Math.max(1, maxSize - effectOverlap * 2);
+    const tilesX = Math.ceil(totalWidth / coreSize);
+    const tilesY = Math.ceil(totalHeight / coreSize);
 
     for (let ty = 0; ty < tilesY; ty++) {
       for (let tx = 0; tx < tilesX; tx++) {
-        const tileW = Math.min(maxSize, totalWidth - tx * maxSize);
-        const tileH = Math.min(maxSize, totalHeight - ty * maxSize);
+        throwIfCancelled(options.signal);
+        const coreX = tx * coreSize;
+        const coreY = ty * coreSize;
+        const coreW = Math.min(coreSize, totalWidth - coreX);
+        const coreH = Math.min(coreSize, totalHeight - coreY);
+        const leftOverlap = Math.min(effectOverlap, coreX);
+        const topOverlap = Math.min(effectOverlap, coreY);
+        const rightOverlap = Math.min(effectOverlap, totalWidth - (coreX + coreW));
+        const bottomOverlap = Math.min(effectOverlap, totalHeight - (coreY + coreH));
+        const tileX = coreX - leftOverlap;
+        const tileY = coreY - topOverlap;
+        const tileW = coreW + leftOverlap + rightOverlap;
+        const tileH = coreH + topOverlap + bottomOverlap;
 
         const tileOptions: ExportOptions = {
           ...options,
+          format: 'image/png',
+          quality: 1,
+          overlays: undefined,
           scale: 1,
           width: tileW,
           height: tileH,
           tileInfo: {
             fullWidth: totalWidth,
             fullHeight: totalHeight,
-            offsetX: tx * maxSize,
-            offsetY: ty * maxSize,
+            offsetX: tileX,
+            offsetY: tileY,
             tileWidth: tileW,
             tileHeight: tileH
           }
@@ -214,21 +211,20 @@ export class ExportEngine {
 
         const tileBlob = await this.exportImage(sourceTexture, settings, tileOptions);
         const tileImg = await loadImageFromBlob(tileBlob);
-        stitchCtx.drawImage(tileImg, tx * maxSize, ty * maxSize, tileW, tileH);
+        throwIfCancelled(options.signal);
+        stitchCtx.drawImage(tileImg, leftOverlap, topOverlap, coreW, coreH, coreX, coreY, coreW, coreH);
       }
     }
 
+    if (options.overlays) {
+      await ensureOverlayFonts(options.overlays);
+      throwIfCancelled(options.signal);
+      renderOverlays(stitchCtx, totalWidth, totalHeight, options.overlays);
+    }
+
     const quality = options.quality ?? 0.92;
-    return new Promise<Blob>((resolve, reject) => {
-      stitchCanvas.toBlob(
-        (blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Failed to encode tiled image blob'));
-        },
-        options.format,
-        quality
-      );
-    });
+    throwIfCancelled(options.signal);
+    return encodeCanvasWasm(stitchCanvas, options.format, quality);
   }
 
   public dispose() {
@@ -238,6 +234,10 @@ export class ExportEngine {
     }
     this.canvas = null;
   }
+}
+
+function throwIfCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException("Render cancelled", "AbortError");
 }
 
 function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {

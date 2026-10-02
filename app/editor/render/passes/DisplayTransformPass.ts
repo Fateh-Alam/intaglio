@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { RenderPass } from '../RenderPass';
-import { EditorSettings } from '../../../types/editor';
 
 const vertexShader = `
 varying vec2 vUv;
@@ -13,6 +12,9 @@ void main() {
 const fragmentShader = `
 uniform sampler2D tDiffuse;
 uniform float uTime;
+uniform vec2 uFullSize;
+uniform vec2 uTileOffset;
+uniform vec2 uTileSize;
 varying vec2 vUv;
 
 // Linear to sRGB display transform
@@ -45,6 +47,10 @@ vec3 applyDither(vec3 srgb, vec2 uv, float seed) {
 
 void main() {
   vec4 texColor = texture2D(tDiffuse, vUv);
+  vec2 globalUv = vec2(
+    (uTileOffset.x + vUv.x * uTileSize.x) / uFullSize.x,
+    (uFullSize.y - uTileOffset.y - uTileSize.y + vUv.y * uTileSize.y) / uFullSize.y
+  );
   
   // 1. Display Transform (Linear -> sRGB)
   vec3 color = linearToSrgb(texColor.rgb);
@@ -52,7 +58,7 @@ void main() {
   // 2. Dithering
   // Generate a deterministic seed based on UV so it's stable, or use uTime to crawl.
   // The spec recommends a stable seed for export, subtle for preview. We'll use a static seed for now.
-  color = applyDither(color, vUv, 1.0);
+  color = applyDither(color, floor(globalUv * uFullSize), 1.0);
   
   gl_FragColor = vec4(clamp(color, 0.0, 1.0), texColor.a);
 }
@@ -68,7 +74,10 @@ export class DisplayTransformPass extends RenderPass {
       fragmentShader,
       uniforms: {
         tDiffuse: { value: null },
-        uTime: { value: 0.0 }
+        uTime: { value: 0.0 },
+        uFullSize: { value: new THREE.Vector2(1, 1) },
+        uTileOffset: { value: new THREE.Vector2(0, 0) },
+        uTileSize: { value: new THREE.Vector2(1, 1) },
       }
     });
     this.fsQuad.material = this.material;
@@ -78,8 +87,20 @@ export class DisplayTransformPass extends RenderPass {
     // Shaders inline
   }
 
-  public updateUniforms(settings: EditorSettings) {
-    this.material.uniforms.uTime.value = performance.now() / 1000.0;
+  public updateUniforms() {
+    this.material.uniforms.uTime.value = 0.0;
+  }
+
+  override setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number): void {
+    this.material.uniforms.uFullSize.value.set(fullWidth, fullHeight);
+    this.material.uniforms.uTileOffset.value.set(x, y);
+    this.material.uniforms.uTileSize.value.set(width, height);
+  }
+
+  override clearViewOffset(): void {
+    this.material.uniforms.uFullSize.value.set(1, 1);
+    this.material.uniforms.uTileOffset.value.set(0, 0);
+    this.material.uniforms.uTileSize.value.set(1, 1);
   }
 
   public render(

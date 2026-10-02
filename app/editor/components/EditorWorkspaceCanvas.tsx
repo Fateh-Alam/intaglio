@@ -1,119 +1,52 @@
-import { getEditorModuleLabel } from "../pageTypes";
-
 import React, { useRef } from 'react';
 import { useEditorState } from '../hooks/useEditorState';
-import Image from 'next/image';
-import { IconUpload, IconMovie, IconPhoto, IconEye, IconCommand, IconMaximize, IconDeviceFloppy, IconDownload, IconMinus, IconAdjustmentsHorizontal, IconHistory, IconLayersIntersect, IconInfoCircle, IconX, IconMenu2, IconMinimize } from "@tabler/icons-react";
+import { IconMaximize, IconDownload, IconMinus, IconAdjustmentsHorizontal, IconHistory, IconLayersIntersect, IconInfoCircle, IconX, IconMenu2, IconMinimize } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { GridOverlay } from "./GridOverlay";
 const CinematicEditor = dynamic(() => import("../../components/CinematicEditor"), { ssr: false });
-const StatusChip = ({ label, value }: { label: string; value: string }) => (<div className="rounded-lg border border-[var(--intaglio-line)] bg-white/[0.03] px-2 py-2"><div className="font-mono text-[8px] uppercase tracking-[0.26em] text-[rgba(231,223,208,0.25)]">{label}</div><div className="mt-1 font-mono text-[10px] text-[rgba(231,223,208,0.55)]">{value}</div></div>);
 
 
 export function EditorWorkspaceCanvas() {
   const editorState = useEditorState();
   const {
-    settings, setSettings,
+    settings,
     textOverlay, setTextOverlay,
-    assetMetadata, setAssetMetadata,
-    watermark, setWatermark,
-    clipboard, setClipboard,
-    imageSrc, setImageSrc,
-    imageName, setImageName,
-    imageInfo, setImageInfo,
-    histogram, setHistogram,
+    assetMetadata,
+    watermark,
+    imageSrc,
+    rawSource,
+    setHistogram,
     activeTab, setActiveTab,
-    handleTabChange,
-    handleTutorialClose,
-    showTutorial,
-    history, setHistory,
-    historyIndex, setHistoryIndex,
-    snapshots, setSnapshots,
-    settingsSnapshots, setSettingsSnapshots,
-    activeVirtualCopyId, setActiveVirtualCopyId,
-    diffVirtualCopyId, setDiffVirtualCopyId,
-    seenTutorials, setSeenTutorials,
-    activeTutorial, setActiveTutorial,
+    history,
+    settingsSnapshots,
     isMobileMenuOpen, setIsMobileMenuOpen,
-    isLeftSidebarOpen, setIsLeftSidebarOpen,
-    isRightSidebarOpen, setIsRightSidebarOpen,
     isLookIntensityOpen, setIsLookIntensityOpen,
     isFocusMode, setIsFocusMode,
-    isHistogramHelpOpen, setIsHistogramHelpOpen,
-    isExportModalOpen, setIsExportModalOpen,
-    showMobileWarning, setShowMobileWarning,
-    isMobileControlsExpanded, setIsMobileControlsExpanded,
-    isPresetModalOpen, setIsPresetModalOpen,
-    isReferenceOpen, setIsReferenceOpen,
-    isLUTCreatorOpen, setIsLUTCreatorOpen,
-    roiMode, setRoiMode,
+    setIsExportModalOpen,
+    setIsMobileControlsExpanded,
+    roiMode,
     sourceROI, setSourceROI,
-    matchROI, setMatchROI,
-    brushMaskActive, setBrushMaskActive,
-    brushSize, setBrushSize,
-    brushFeather, setBrushFeather,
-    brushErasing, setBrushErasing,
+    brushMaskActive,
+    brushSize,
+    brushFeather,
+    brushErasing,
     brushCanvas, setBrushCanvas,
     brushCanvasDirty, setBrushCanvasDirty,
-    isVideoGradingOpen, setIsVideoGradingOpen,
-    videoSrc, setVideoSrc,
     updateSetting,
-    updateSettings,
-    handleUndo,
-    handleRedo,
-    addToHistory,
-    toneCurveTexture,
-    handleSaveProjectSession,
-    openImagePicker,
-    openProjectPicker,
-    isCommandBarOpen, setIsCommandBarOpen,
-    isShortcutHelpOpen, setIsShortcutHelpOpen,
-    handleCommand,
-    compositionGuide, setCompositionGuide,
-    performanceMode, setPerformanceMode,
+    compositionGuide,
+    performanceMode,
     imageBounds, setImageBounds,
-    handleUpload,
-    handlePaletteHeist,
-    handleLutUpload,
-    handleExport,
-    handleCompareSnapshot,
-    handleDeleteVirtualCopy,
-    handleTakeSnapshot,
-    handleRestoreVirtualCopy,
-    handleJumpToHistory,
-    handleClearHistory,
-    handleLoadPreset,
-    fileInputRef,
-    lutInputRef,
-    appCommands,
-    compareEnabled,
-    compareSplit,
-    setCompareSplit,
-    exportSafetyWarnings,
-    activeCurveChannel,
-    setActiveCurveChannel,
-    editDiffs,
-    referenceImageUrl,
-    setReferenceImageUrl,
     handleCreateVirtualCopy,
-    handleCopySettings,
-    handlePasteSettings,
-    applyExportRecipe,
     activeExportRecipeId,
-    setActiveExportRecipeId,
-    setExportFormat,
     exportFormat,
-    exportQuality, activeExportRecipe,
-    setExportQuality,
-    setExportScale,
-    exportScale,
-    diffVirtualCopy,
+    exportQuality,
     gridOverlayMode,
+    activePlateId,
+    rawProgress,
+    cancelRawDecode,
   } = editorState;
   
-  const containerRef = useRef(null);
-
   // Zoom & Pan State
   const [zoom, setZoom] = React.useState(1);
   const [pan, setPan] = React.useState({ x: 0, y: 0 });
@@ -179,6 +112,15 @@ export function EditorWorkspaceCanvas() {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
+          {rawProgress && (
+            <div role="status" aria-live="polite" className="absolute inset-0 z-[70] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+              <div className="w-[min(420px,calc(100%-48px))] border border-[var(--intaglio-line)] bg-[#15130f] p-6 shadow-2xl">
+                <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[var(--intaglio-paper)]">Developing supported-camera RAW</div>
+                <div className="mt-4 h-1 overflow-hidden bg-white/10"><div className="h-full bg-[var(--intaglio-brass)] transition-[width]" style={{ width: `${Math.round(rawProgress.progress * 100)}%` }} /></div>
+                <div className="mt-3 flex items-center justify-between gap-4"><span className="text-xs text-white/55">{rawProgress.stage}</span><button type="button" onClick={cancelRawDecode} className="font-mono text-[9px] uppercase tracking-widest text-white/55 hover:text-white">Cancel</button></div>
+              </div>
+            </div>
+          )}
           {/* Zoom Reset Button */}
           <AnimatePresence>
             {(zoom !== 1 || pan.x !== 0 || pan.y !== 0) && (
@@ -299,7 +241,7 @@ export function EditorWorkspaceCanvas() {
               className="w-full h-full origin-center transition-transform ease-out duration-75 relative"
               style={{
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                cursor: brushMaskActive ? "crosshair" : (isDragging.current ? "grabbing" : "grab")
+                cursor: brushMaskActive ? "crosshair" : "grab"
               }}
             >
               {settings.wiperActive && (
@@ -332,8 +274,9 @@ export function EditorWorkspaceCanvas() {
                 </div>
               )}
               <CinematicEditor
-                settings={{ ...settings, toneCurveTexture }}
+                settings={settings}
                 imageUrl={imageSrc}
+                rawSource={rawSource}
                 wiperPosition={wiperPosition}
                 onStatsUpdate={setHistogram}
                 textOverlay={textOverlay}
@@ -349,6 +292,12 @@ export function EditorWorkspaceCanvas() {
                 performanceMode={performanceMode}
                 compositionGuide={compositionGuide}
                 onBrushMaskUpdate={() => setBrushCanvasDirty((v: number) => v + 1)}
+                onBrushStrokeComplete={(stroke) => {
+                  const plate = settings.adjustmentLayers.find((layer) => layer.id === activePlateId);
+                  const brushMaskId = plate?.maskIds.find((id) => settings.masks.find((mask) => mask.id === id)?.type === "brush");
+                  if (!brushMaskId) return;
+                  updateSetting("masks", settings.masks.map((mask) => mask.id === brushMaskId && mask.type === "brush" ? { ...mask, params: { strokes: [...mask.params.strokes, stroke] } } : mask));
+                }}
                 onBoundsChange={setImageBounds}
               />
               
@@ -481,8 +430,7 @@ export function EditorWorkspaceCanvas() {
               <IconDownload className="intaglio-icon"/> Export
             </div>
             <div className="mt-3 text-xs font-light leading-5 text-white/60">
-              {activeExportRecipe?.name ??
-                exportFormat.split("/")[1].toUpperCase()}{" "}
+              {activeExportRecipeId ?? exportFormat.split("/")[1].toUpperCase()}{" "}
               • {exportQuality}%
             </div>
           </div>

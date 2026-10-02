@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { useEditorState } from '../hooks/useEditorState';
 import { EDITOR_MODULES, AUXILIARY_MODULES } from '../pageTypes';
 import { IconUpload, IconDeviceFloppy, IconFileCode } from "@tabler/icons-react";
+import { STILL_FILE_ACCEPT } from '../../lib/rawDecoder';
 
 export function EditorLeftSidebar() {
   const {
@@ -84,7 +85,7 @@ export function EditorLeftSidebar() {
       <div className="flex flex-col items-center gap-1.5 border-t border-[var(--intaglio-line)] bg-transparent py-4">
         <label className="group relative flex h-12 w-14 cursor-pointer items-center justify-center text-white/30 transition-colors hover:bg-[#13110e] hover:text-[var(--intaglio-paper)]">
           <IconUpload className="intaglio-icon"/>
-          <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+          <input type="file" accept={STILL_FILE_ACCEPT} onChange={handleUpload} className="hidden" />
           <span className="absolute left-16 whitespace-nowrap border border-[var(--intaglio-line)] bg-[#0a0908] px-3 py-1.5 text-[9px] font-mono uppercase tracking-widest text-[var(--intaglio-paper)] opacity-0 shadow-2xl transition-opacity group-hover:opacity-100 z-50 pointer-events-none">
             Import Image
           </span>

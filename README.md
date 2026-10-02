@@ -1,76 +1,49 @@
 # Intaglio
 
-A timeless digital darkroom for photographs that deserve patience.
+Intaglio is a deterministic, non-AI, client-only digital darkroom for still photography. This branch targets a public beta on the current and previous major Chrome and Safari releases on Apple Silicon Macs.
 
-Intaglio is a browser-based, local-first photography workspace built with Next.js,
-React, Three.js, and WebGL. The visible product direction is quiet, archival,
-and photo-led; the editing capabilities remain client-side.
+## Implemented beta boundary
 
-## Features
+- JPEG, PNG, WebP, and worker-backed supported-camera RAW input. The adapter recognizes `DNG`, `CR2/CR3`, `NEF`, `ARW`, `RAF`, `ORF`, and `RW2`; per-camera fixture qualification is still a release gate.
+- JPEG, PNG, and WebP output through pinned browser WASM codecs, including overlap-cropped tiled rendering.
+- One `IntaglioRenderer` graph shared by preview, proof sheets, exports, and batch jobs, with measured equal-size PNG parity in local Chromium and WebKit automation.
+- Typed Process Engine, Plate, Mask, and advanced graph contracts.
+- Portable ZIP-based `.int` recipes and `.intaglio` projects with incremental SHA-256, content-addressed source/LUT/font assets, quota preflight, and disk-backed OPFS creation for large archives where supported.
+- Local batch ZIP export with deterministic collision-safe names and `batch-manifest.json`.
+- Installable Serwist/Turbopack PWA shell with content-revisioned product assets and post-first-load offline operation.
 
-- WebGL image development with exposure, contrast, HSL, color wheels, tone
-  curves, film emulation, halation, bloom, grain, lens effects, and masking.
-- 3D `.cube` LUT import plus an in-app LUT creator.
-- Reference matching, history, virtual copies, edit diff viewer, snapshots, and
-  A/B comparison.
-- `.orm` Print Recipes for reusable edit settings.
-- Intaglio Collections with search, tags, favorites, local imports, and native
-  `.orm` downloads.
-- `.ormond` Intaglio Archives for complete portable sessions.
-- Legacy `.nyv`, `.nyvlt`, and `.nyvproj` imports remain supported.
-- Manual culling with ratings, pick/reject flags, color labels, and shortcuts.
-- Editable title, caption, creator, copyright, and keyword metadata saved inside
-  Archives.
-- Exportable proof watermark and export recipes for delivery workflows.
-- Command palette, PWA install support, and offline editor fallback.
-- Local export to JPEG, PNG, and WebP.
+Legacy Ormond and Nyvarra formats, generic JSON imports, video, tethering, cloud image processing, and arbitrary shader plugins are intentionally unsupported.
 
-## Native File Formats
+## Development
 
-- `.orm` - Print Recipe. Stores selected edit settings as a reusable recipe.
-- `.ormond` - Intaglio Archive. Stores a full local session: image source, edit
-  recipe, text overlay, metadata, watermark settings, export recipe, virtual
-  copies, and restore state.
-- `.nyv` - Legacy recipe import.
-- `.nyvlt` - Legacy session import.
-- `.nyvproj` - Legacy project session import.
-- `.cube` - Industry LUT format for import and creator output.
-
-The PWA manifest advertises `.ormond` archive handling and still accepts legacy
-session formats where supported by the installed browser.
-
-## Getting Started
-
-Install dependencies:
+The repository pins Node `24.1.0` and pnpm `11.5.1`.
 
 ```bash
-pnpm install
-```
-
-Run the development server:
-
-```bash
+corepack enable
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-## Scripts
+Release gates:
 
 ```bash
+pnpm typecheck
 pnpm lint
+pnpm test:unit
+pnpm test:render
+pnpm test:archive
+pnpm test:browser
+pnpm test:offline
 pnpm build
-pnpm start
-pnpm test:e2e
+pnpm build:cloudflare
 ```
 
-## Project Structure
+`pnpm qualify` runs the clean local automated gate. It does not replace actual Chrome/Safari interaction, installed/offline QA, or post-cutover Cloudflare health checks.
 
-- `app/page.tsx` - Intaglio editorial home.
-- `app/editor/page.tsx` - main darkroom workspace.
-- `app/presets/page.tsx` - Intaglio Collections.
-- `app/components` - editor controls, modals, WebGL canvas components, and panels.
-- `app/lib/brand.ts` - product naming, format, and storage-key constants.
-- `app/utils` - LUT parsing, reference matching, spline, and tutorial helpers.
-- `docs/NON_AI_PRODUCT_ROADMAP.md` - product roadmap.
-- `public` - public app assets.
+The archive browser contract currently proves a 65 MB disk-backed project in Chromium and a safe size-specific rejection in Playwright WebKit when OPFS is unavailable. This is not yet the promised 1 GB real-Safari qualification.
+
+## Privacy
+
+Photographs, RAW files, recipes, projects, LUTs, uploaded fonts, and exports stay in the browser. Cloudflare may record request and error telemetry for the application shell, but editor content is never sent to the Worker.
+
+See [file formats](docs/FILE_FORMATS.md), [render parity](docs/RENDER_PARITY.md), [privacy and offline behavior](docs/PRIVACY_AND_OFFLINE.md), and the [release runbook](docs/RELEASE_RUNBOOK.md).

@@ -1,75 +1,21 @@
-# Changelog
+# Intaglio Changelog
 
-All notable changes to the Nyvarra Studio project will be documented in this file.
+## 0.1.0 public-beta stabilization — unreleased
 
-## [2.5.0] - 2025-12-31 "The Physics Update"
+- Preserved and stabilized the Process Engine, Plate Stack, Mask Blend, Tone Curve, Proof Sheet, and RenderGraph refactor.
+- Introduced `IntaglioDocumentV2`, a validated typed graph, canonical plates/masks/brush vectors, overlays, asset references, and export profiles.
+- Unified preview/proof/export/batch graph construction and deterministic text/watermark composition.
+- Added CIEDE2000/SSIM parity gates, half-pixel landmark checks, proof deltas, and overlap-cropped tiling.
+- Added checksum-verified ZIP `.int` recipes and `.intaglio` projects, incremental Blob hashing, quota preflight, and OPFS-backed large-archive creation with deterministic recovery errors.
+- Added pinned worker-backed supported-camera RAW development and preserved originals.
+- Added local batch ZIP export with progress, cancel/retry, hashes, and manifest.
+- Replaced the old service worker with a Serwist/Turbopack-generated, content-revisioned Intaglio offline shell.
+- Removed video, tethering, legacy formats, repair scripts, backup files, and unsupported claims.
+- Fixed the master tone curve (previously ignored) and curves missing from export, batch, proof, and plates; curves are now overshoot-free PCHIP in a float32 table applied in display-encoded space.
+- Fixed adjustment plates decoding sRGB twice; a single input transform now linearizes each source.
+- Fixed creative LUTs being applied to linear light and quantized to 8 bits; LUTs are half-float 3D textures sampled in display-encoded space. LUT Creator and Palette Match now work and save their LUTs into projects.
+- RAW sources now render from the decoder's 16-bit linear buffer in preview, export, and batch instead of the 8-bit proxy.
+- Fixed rotation shear and elliptical lens distortion on non-square images, batch export double-decoding sRGB, an idle 60 fps render loop, letterbox-polluted histograms, and silent export failures.
+- Added render-contract correctness gates (neutral plate, identity LUT, master curve in export) and the long-range [Pro Roadmap](docs/PRO_ROADMAP.md).
 
-### 🚀 New Features
-
-- **Palette Heist v2 (Interactive Color Match)**:
-  - Added **Region of Interest (ROI)** selection. Draw a box on your image to match colors from a specific area.
-  - Visual ROI overlay with draggable/resizable selection.
-- **Physics-Based Effects**:
-  - Added **Halation**: Film-like red-orange light bleed around bright areas.
-  - Added **Optical Bloom**: Soft, natural glow effect with adjustable threshold and radius.
-- **New Controls**:
-  - Added "Physics: Halation & Bloom" control group in the Effects tab.
-  - Strength, Threshold, and Radius sliders for fine-tuning.
-- **3D LUT Creator**:
-  - Build custom Look Up Tables with lift, gamma, gain, saturation, temperature controls.
-  - 6 quick presets (Neutral, Cinematic, Faded Film, High Contrast, Cool/Warm Tone).
-  - Export as industry-standard .cube files or apply directly to image.
-- **Video Color Grading**:
-  - Upload .mp4, .mov, .webm videos for live color grading preview.
-  - Real-time CSS filter application showing your grade on video.
-  - Extract frames to use as images with full grading controls.
-- **Reference View**:
-  - Floating, draggable comparison window for reference images.
-  - Pin position, zoom controls, and Original/Reference toggle.
-- **History Branching**:
-  - Create named branches to save different edit versions.
-  - Restore or delete branches from the History panel.
-
-### 🎨 UI/UX Improvements
-
-- **Advanced Export Modal**: Added quality slider (1-100%), scale selection (0.5x-4x), and format choice (JPG/PNG/WEBP).
-- **Histogram Tutorial**: Interactive modal explaining how to read histograms with "Plain English" explanations.
-- **Minimizable Panels**: Left/Right sidebars and Look Intensity overlay can now be collapsed.
-
----
-
-## [2.0.0] - 2025-12-31 "The Cinematic Update"
-
-### 🚀 New Features
-
-- **Advanced Typography Engine**:
-  - Integrated dynamic Google Fonts support (Type any font name).
-  - Added **Character Spacing (Tracking)** control.
-  - Added text transforms: Uppercase, Lowercase, Capitalize.
-  - Added true **Small Caps** support.
-  - Variable font weight control (Thin 100 to Black 900) and Italics.
-- **Cinematic Text Presets**:
-  - Added 12 Hollywood-grade text styles (e.g., _Blade Runner_, _Dune_, _Oppenheimer_, _Barbie_).
-- **Masking Studio**:
-  - Added **Brush Mask** ("Paint to Select") for precise local adjustments.
-  - Added **Luminosity Masks** (targeting Shadows/Highlights).
-  - Added **Gradient Masks** (Linear/Radial).
-
-### 🎨 UI/UX Improvements
-
-- **Modernized Controls**:
-  - Replaced native browser checkboxes with custom animated `Toggle` components.
-  - Replaced native dropdowns with premium `CustomSelect` components (backdrop blur, search-ready styling).
-  - Removed all emojis from the interface; replaced with professional **Tabler Icons** (e.g., colored circles in HSL panel).
-- **Text Tab Overhaul**:
-  - Completely redesigned the Typography tab for better hierarchy (Content vs. Style vs. Typography).
-
-### 🛠️ Technical Improvements
-
-- **Refactoring**:
-  - Extracted `CinematicTextControls.tsx` as a standalone component.
-  - Modularized `ControlGroup` and `Slider` into reusable `app/components/`.
-  - Improved type safety across component props.
-- **Stability**:
-  - Resolved `Next.js` Turbopack build issues ("Expected static flag was missing").
-  - Optimized dynamic imports for Editor performance.
+This entry records implementation only. Public-beta release claims remain blocked until the real-browser, installed/offline, stress, and Cloudflare runbook gates pass.

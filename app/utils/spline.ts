@@ -1,118 +1,102 @@
-export class MonotoneCubicSpline {
-  private points: { x: number; y: number }[];
-  private m: number[];
+import type { CurvePoints } from "../types/editor";
 
-  constructor(points: { x: number; y: number }[]) {
-    this.points = points;
-
-    // Sort points by x
-    this.points.sort((a, b) => a.x - b.x);
-
-    const n = points.length;
-    const d: number[] = []; // Slopes
-    const m: number[] = []; // Tangents
-
-    // Compute slopes
-    for (let i = 0; i < n - 1; i++) {
-      const h = points[i + 1].x - points[i].x;
-      const dv = points[i + 1].y - points[i].y;
-      d[i] = dv / h;
-    }
-
-    // Compute tangents
-    m[0] = d[0];
-    m[n - 1] = d[n - 2];
-
-    for (let i = 1; i < n - 1; i++) {
-      if (d[i - 1] === 0 || d[i] === 0 || d[i - 1] > 0 !== d[i] > 0) {
-        m[i] = 0;
-      } else {
-        m[i] = 3 * (d[i - 1] + d[i]); // Should be something else?
-        // Fritsch-Carlson algorithm for monotone cubic interpolation
-        // m[i] = 0.5 * (d[i-1] + d[i]); // Standard Catmull-Rom-ish?
-        // Actually, for monotone:
-        // if d[i-1] and d[i] have diff signs, m[i] = 0
-        // else m[i] = 3 * (h_prev + h_next) / ((2*h_next + h_prev)/d[i-1] + (h_next + 2*h_prev)/d[i])
-        // Simplified version:
-        m[i] = (d[i - 1] + d[i]) / 2;
-      }
-    }
-
-    this.m = m;
-  }
-
-  // Precomputed Spline logic is often better but let's implement calculateAt
-  // Simple Catmull-Rom is easier if we don't need strict monotonicity, but RGB curves strictly monotonic is good for luminance but not strictly required for artistic curves.
-  // Actually, standard curves in Lightroom are not strictly monotonic, you can invert them.
-  // So a standard Cubic Spline or Catmull-Rom is better.
-  // Let's switch to a simpler Catmull-Rom helper function instead of a class.
+export interface CurveControlPoint {
+  x: number;
+  y: number;
 }
 
-// Simple Catmull-Rom Spline Interpolation
-export function solveCatmullRom(
-  data: { x: number; y: number }[],
-  k: number = 0.5 // tension
-) {
-  if (data.length < 2) return [];
+export const TONE_CURVE_RESOLUTION = 1024;
 
-  const size = 256;
+/**
+ * Samples a piecewise cubic Hermite (PCHIP, Fritsch–Carlson) curve through the
+ * control points. PCHIP never overshoots between points, so curves cannot ring
+ * or posterize, and non-monotone (inverting) curves remain shape-preserving.
+ * The input array is not mutated.
+ */
+export function sampleMonotoneCurve(data: readonly CurveControlPoint[], size = 256): Float32Array {
   const lut = new Float32Array(size);
+  const points = [...data]
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+    .sort((a, b) => a.x - b.x)
+    .filter((point, index, sorted) => index === 0 || point.x > sorted[index - 1].x);
 
-  // Helper to get point at index with clamping
-  const p = (i: number) => {
-    if (i < 0) return data[0];
-    if (i >= data.length) return data[data.length - 1];
-    return data[i];
-  };
+  if (points.length === 0) {
+    for (let i = 0; i < size; i++) lut[i] = i / (size - 1);
+    return lut;
+  }
+  if (points.length === 1) return lut.fill(points[0].y);
 
-  // We need to generate 256 values from x=0 to x=1
-  // This approach iterates through segments and effectively draws them into the LUT bucket
-
-  // Alternative: For every X in 0..255, find the segment and interpolate Y.
-
-  // Sort data just in case
-  data.sort((a, b) => a.x - b.x);
-
-  for (let i = 0; i < size; i++) {
-    const x = i / 255;
-
-    // Find segment [p1, p2] where p1.x <= x <= p2.x
-    let idx = 0;
-    while (idx < data.length - 2 && x > data[idx + 1].x) {
-      idx++;
-    }
-
-    const p0 = p(idx - 1);
-    const p1 = p(idx);
-    const p2 = p(idx + 1);
-    const p3 = p(idx + 2);
-
-    // If segment is zero length (vertical), just handle it? Standard curves shouldn't have vertical segments usually.
-    const segmentLength = p2.x - p1.x;
-
-    if (segmentLength <= 0) {
-      lut[i] = p1.y;
-      continue;
-    }
-
-    // Local t for the segment
-    const t = (x - p1.x) / segmentLength;
-
-    // Catmull-Rom calculation
-    const t2 = t * t;
-    const t3 = t * t * t;
-
-    const v0 = (p2.y - p0.y) * k;
-    const v1 = (p3.y - p1.y) * k;
-
-    const y =
-      (2 * p1.y - 2 * p2.y + v0 + v1) * t3 +
-      (-3 * p1.y + 3 * p2.y - 2 * v0 - v1) * t2 +
-      v0 * t +
-      p1.y;
-
-    lut[i] = Math.max(0, Math.min(1, y));
+  const n = points.length;
+  const h: number[] = [];
+  const delta: number[] = [];
+  for (let i = 0; i < n - 1; i++) {
+    h[i] = points[i + 1].x - points[i].x;
+    delta[i] = (points[i + 1].y - points[i].y) / h[i];
   }
 
+  const tangents = new Array<number>(n).fill(0);
+  if (n === 2) {
+    tangents[0] = delta[0];
+    tangents[1] = delta[0];
+  } else {
+    for (let i = 1; i < n - 1; i++) {
+      if (delta[i - 1] * delta[i] <= 0) continue;
+      const w1 = 2 * h[i] + h[i - 1];
+      const w2 = h[i] + 2 * h[i - 1];
+      tangents[i] = (w1 + w2) / (w1 / delta[i - 1] + w2 / delta[i]);
+    }
+    tangents[0] = endpointTangent(h[0], h[1], delta[0], delta[1]);
+    tangents[n - 1] = endpointTangent(h[n - 2], h[n - 3], delta[n - 2], delta[n - 3]);
+  }
+
+  let segment = 0;
+  for (let i = 0; i < size; i++) {
+    const x = i / (size - 1);
+    if (x <= points[0].x) { lut[i] = points[0].y; continue; }
+    if (x >= points[n - 1].x) { lut[i] = points[n - 1].y; continue; }
+    while (segment < n - 2 && x > points[segment + 1].x) segment++;
+    const t = (x - points[segment].x) / h[segment];
+    const t2 = t * t;
+    const t3 = t2 * t;
+    lut[i] =
+      (2 * t3 - 3 * t2 + 1) * points[segment].y +
+      (t3 - 2 * t2 + t) * h[segment] * tangents[segment] +
+      (-2 * t3 + 3 * t2) * points[segment + 1].y +
+      (t3 - t2) * h[segment] * tangents[segment + 1];
+  }
   return lut;
+}
+
+function endpointTangent(h0: number, h1: number, d0: number, d1: number): number {
+  const tangent = ((2 * h0 + h1) * d0 - h0 * d1) / (h0 + h1);
+  if (Math.sign(tangent) !== Math.sign(d0)) return 0;
+  if (Math.sign(d0) !== Math.sign(d1) && Math.abs(tangent) > Math.abs(3 * d0)) return 3 * d0;
+  return tangent;
+}
+
+const isIdentityCurve = (points: readonly CurveControlPoint[]): boolean =>
+  points.length === 0 || points.every((point) => Math.abs(point.x - point.y) < 1e-6);
+
+export function isIdentityCurveSet(curves: CurvePoints): boolean {
+  return isIdentityCurve(curves.master) && isIdentityCurve(curves.red) && isIdentityCurve(curves.green) && isIdentityCurve(curves.blue);
+}
+
+/**
+ * Builds the RGBA float table consumed by ToneCurvePass: red, green, and blue
+ * hold per-channel curves, alpha holds the master curve. Values are in
+ * display-encoded (sRGB transfer) space.
+ */
+export function buildToneCurveTable(curves: CurvePoints, size = TONE_CURVE_RESOLUTION): Float32Array {
+  const master = sampleMonotoneCurve(curves.master, size);
+  const red = sampleMonotoneCurve(curves.red, size);
+  const green = sampleMonotoneCurve(curves.green, size);
+  const blue = sampleMonotoneCurve(curves.blue, size);
+  const table = new Float32Array(size * 4);
+  for (let i = 0; i < size; i++) {
+    table[i * 4] = red[i];
+    table[i * 4 + 1] = green[i];
+    table[i * 4 + 2] = blue[i];
+    table[i * 4 + 3] = master[i];
+  }
+  return table;
 }

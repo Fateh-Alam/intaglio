@@ -322,10 +322,11 @@ export default function PresetCreatorModal({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">
+                <label htmlFor="recipe-name" className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">
                   Recipe Name
                 </label>
                 <input
+                  id="recipe-name"
                   type="text"
                   value={presetName}
                   onChange={(e) => setPresetName(e.target.value)}
@@ -334,10 +335,11 @@ export default function PresetCreatorModal({
                 />
               </div>
               <div>
-                <label className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">
+                <label htmlFor="recipe-description" className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">
                   Description (Optional)
                 </label>
                 <textarea
+                  id="recipe-description"
                   value={presetDescription}
                   onChange={(e) => setPresetDescription(e.target.value)}
                   placeholder="A warm, film-inspired look for portraits..."
@@ -347,12 +349,12 @@ export default function PresetCreatorModal({
               </div>
             </div>
 
-            <div role="button" tabIndex={0}
+            <button type="button"
               onClick={() => setStep(2)}
               className="w-full py-4 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25 transition flex items-center justify-center gap-2"
             >
               Next: Select Settings <IconChevronRight className="intaglio-icon"/>
-            </div>
+            </button>
           </div>
         )}
 
@@ -422,15 +424,15 @@ export default function PresetCreatorModal({
             </div>
 
             <div className="flex gap-3 pt-4">
-              <div role="button" tabIndex={0}
+              <button type="button"
                 onClick={() => setStep(1)}
                 className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition"
               >
                 Back
-              </div>
-              <div role="button" tabIndex={0}
+              </button>
+              <button type="button"
                 onClick={() => setStep(3)}
-                aria-disabled={selectedCategories.length === 0}
+                disabled={selectedCategories.length === 0}
                 className={`flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest transition flex items-center justify-center gap-2 ${
                   selectedCategories.length > 0
                     ? "bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25"
@@ -438,7 +440,7 @@ export default function PresetCreatorModal({
                 }`}
               >
                 Next <IconChevronRight className="intaglio-icon"/>
-              </div>
+              </button>
             </div>
           </div>
         )}
@@ -498,18 +500,18 @@ export default function PresetCreatorModal({
             </div>
 
             <div className="flex gap-3">
-              <div role="button" tabIndex={0}
+              <button type="button"
                 onClick={() => setStep(2)}
                 className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition"
               >
                 Back
-              </div>
-              <div role="button" tabIndex={0}
+              </button>
+              <button type="button"
                 onClick={handleSave}
                 className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 transition flex items-center justify-center gap-2"
               >
                 <IconDeviceFloppy className="intaglio-icon"/> Save Recipe
-              </div>
+              </button>
             </div>
           </div>
         )}

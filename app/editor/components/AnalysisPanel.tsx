@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import type { HistogramData } from "../../types/editor";
 import { HistogramGraph, RgbParadeGraph, getColorCastLabel, ScopeMetric } from "./HistogramGraph";
 

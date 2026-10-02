@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
+import type { BrushStroke } from "../types/editor";
 
 declare global {
   interface Window {
@@ -18,6 +19,7 @@ interface BrushMaskCanvasProps {
   onMaskUpdate: () => void;
   onCanvasReady: (canvas: HTMLCanvasElement) => void;
   onClear: () => void;
+  onStrokeComplete?: (stroke: BrushStroke) => void;
 }
 
 export default function BrushMaskCanvas({
@@ -30,10 +32,12 @@ export default function BrushMaskCanvas({
   onMaskUpdate,
   onCanvasReady,
   onClear,
+  onStrokeComplete,
 }: BrushMaskCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
+  const strokeRef = useRef<BrushStroke | null>(null);
 
   // Clear canvas
   const clearCanvas = useCallback(() => {
@@ -141,9 +145,10 @@ export default function BrushMaskCanvas({
       if (!pos) return;
       setIsDrawing(true);
       setLastPos(pos);
+      strokeRef.current = { id: crypto.randomUUID(), points: [{ x: pos.x / width, y: pos.y / height, pressure: 1, t: performance.now() }], size: brushSize, feather: brushFeather, flow: 1, opacity: 1, mode: isErasing ? "erase" : "paint" };
       drawBrush(pos.x, pos.y);
     },
-    [isActive, getCanvasCoords, drawBrush]
+    [brushFeather, brushSize, drawBrush, getCanvasCoords, height, isActive, isErasing, width]
   );
 
   const handleMouseMove = useCallback(
@@ -152,20 +157,25 @@ export default function BrushMaskCanvas({
       const pos = getCanvasCoords(e);
       if (!pos) return;
       drawBrush(pos.x, pos.y, lastPos?.x, lastPos?.y);
+      strokeRef.current?.points.push({ x: pos.x / width, y: pos.y / height, pressure: 1, t: performance.now() });
       setLastPos(pos);
     },
-    [isActive, isDrawing, getCanvasCoords, drawBrush, lastPos]
+    [drawBrush, getCanvasCoords, height, isActive, isDrawing, lastPos, width]
   );
 
   const handleMouseUp = useCallback(() => {
+    if (strokeRef.current) onStrokeComplete?.(strokeRef.current);
+    strokeRef.current = null;
     setIsDrawing(false);
     setLastPos(null);
-  }, []);
+  }, [onStrokeComplete]);
 
   const handleMouseLeave = useCallback(() => {
+    if (strokeRef.current) onStrokeComplete?.(strokeRef.current);
+    strokeRef.current = null;
     setIsDrawing(false);
     setLastPos(null);
-  }, []);
+  }, [onStrokeComplete]);
 
   if (!isActive) return null;
 

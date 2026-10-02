@@ -413,12 +413,7 @@ export default function CinematicTextOverlay({
         document.head.removeChild(link);
       };
     }
-  }, [
-    settings?.customFontEnabled,
-    settings?.customFontName,
-    settings?.customFontWeight,
-    settings?.customFontStyle,
-  ]);
+  }, [settings]);
 
   if (!settings) return null;
   if (!settings.subtitleEnabled && !settings.dateEnabled && !settings.billingBlockEnabled) return null;
