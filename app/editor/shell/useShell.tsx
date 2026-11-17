@@ -37,6 +37,14 @@ interface ShellState {
   /** Temporary settings shown while hovering a look or history step; never saved. */
   preview: EditorSettings | null;
   setPreview: (settings: EditorSettings | null) => void;
+  /** Mask component being edited on the canvas (inside the active adjustment). */
+  selectedComponentId: string | null;
+  setSelectedComponentId: (id: string | null) => void;
+  showMaskOverlay: boolean;
+  setShowMaskOverlay: (show: boolean) => void;
+  /** Eyedropper target while picking a luminance or color range from the photo. */
+  picking: "luminosity" | "colorRange" | null;
+  setPicking: (mode: "luminosity" | "colorRange" | null) => void;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -55,6 +63,9 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
   const [compare, setCompare] = useState<CompareMode>("off");
   const [splitPosition, setSplitPosition] = useState(0.5);
   const [preview, setPreview] = useState<EditorSettings | null>(null);
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
+  const [showMaskOverlay, setShowMaskOverlay] = useState(true);
+  const [picking, setPicking] = useState<"luminosity" | "colorRange" | null>(null);
 
   const value = useMemo<ShellState>(() => ({
     leftOpen,
@@ -85,7 +96,13 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     setSplitPosition,
     preview,
     setPreview,
-  }), [leftOpen, leftTab, rightMode, panelsHidden, showClipping, surround, compare, splitPosition, preview]);
+    selectedComponentId,
+    setSelectedComponentId,
+    showMaskOverlay,
+    setShowMaskOverlay,
+    picking,
+    setPicking,
+  }), [leftOpen, leftTab, rightMode, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking]);
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }

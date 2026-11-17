@@ -39,27 +39,45 @@ export type BrushStroke = {
   mode: "paint" | "erase";
 };
 
+/** Positions are in image space: 0…1 across, 0…1 down (top-left origin). */
 export type RadialMaskParams = {
   center: { x: number; y: number };
+  /** Legacy single radius in normalized coordinates (used when radiusX is absent). */
   radius: number;
+  /** Ellipse half-width and half-height, in units of image height. */
+  radiusX?: number;
+  radiusY?: number;
+  /** Ellipse rotation in degrees. */
+  angle?: number;
+  /** Soft edge: legacy absolute width, or (with radiusX) a 0…1 fraction of the radius. */
   feather: number;
   invert: boolean;
 };
 
 export type LinearMaskParams = {
+  /** Legacy angle/position/feather form (used when start/end are absent). */
   angle: number;
   position: number;
   feather: number;
   invert: boolean;
+  /** Full effect at start, fading to none at end (image space). */
+  start?: { x: number; y: number };
+  end?: { x: number; y: number };
 };
 
+/** Perceived lightness range (0 = black, 1 = white). */
 export type LuminosityMaskParams = {
+  /** Missing on older projects, which use Rec. 709 luminance. */
+  colorSpace?: "oklab";
   target: number;
   range: number;
   feather: number;
 };
 
+/** OKLCh hue range; hue and width are fractions of a turn. Chroma 0 = any colorfulness. */
 export type ColorRangeMaskParams = {
+  /** Missing on older projects, which use HSV. */
+  colorSpace?: "oklch";
   targetHue: number;
   hueWidth: number;
   targetChroma: number;
@@ -127,6 +145,7 @@ export type AdjustmentLayer = {
   name: string;
   maskIds: string[];
   opacity: number;
+  enabled?: boolean;
   blendMode: "normal"; // Extendable later
   params: Partial<EditorSettings>;
 };

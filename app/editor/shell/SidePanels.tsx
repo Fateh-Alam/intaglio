@@ -4,7 +4,7 @@ import React from "react";
 import { IconAdjustmentsHorizontal, IconBrush, IconTypography, IconX } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import { DevelopPanel } from "../develop/DevelopPanel";
-import PlateStackPanel from "../components/PlateStackPanel";
+import { MasksPanel } from "../masks/MasksPanel";
 import CinematicTextControls from "../../components/CinematicTextControls";
 import { Segmented, IconButton, Switch } from "../../ui/Controls";
 import { DevSlider } from "../../ui/DevSlider";
@@ -12,6 +12,7 @@ import { SubHeading } from "../../ui/Section";
 import { WATERMARK_POSITIONS } from "../pageTypes";
 import { useShell, type LeftTab, type RightMode } from "./useShell";
 import { LooksTab } from "./LooksTab";
+import { useSwitchRightMode } from "./useSwitchRightMode";
 import { HistoryTab } from "./HistoryTab";
 import { VersionsTab } from "./VersionsTab";
 import { InfoTab } from "./InfoTab";
@@ -48,36 +49,6 @@ const RIGHT_MODES: ReadonlyArray<{ id: RightMode; label: React.ReactNode; hint: 
   { id: "masks", label: <><IconBrush size={14} stroke={1.75} /> Masks</>, hint: "Adjust selected areas (M)" },
   { id: "text", label: <><IconTypography size={14} stroke={1.75} /> Text</>, hint: "Titles, captions and watermark (T)" },
 ];
-
-function MasksMode() {
-  const { settings, updateSetting, activePlateId, setActivePlateId, brushMaskActive, setBrushMaskActive, brushSize, setBrushSize, brushFeather, setBrushFeather, brushErasing, setBrushErasing } = useEditorState();
-  const shell = useShell();
-  const plate = settings.adjustmentLayers.find((layer) => layer.id === activePlateId);
-  const hasBrush = Boolean(plate?.maskIds.some((id) => settings.masks.find((mask) => mask.id === id)?.type === "brush"));
-  return (
-    <div className="ui-scroll h-full overflow-y-auto px-4 py-3">
-      <PlateStackPanel settings={settings} updateSetting={updateSetting} activePlateId={activePlateId} setActivePlateId={setActivePlateId} />
-      {hasBrush && (
-        <div className="mt-4 rounded-[10px] bg-white/[0.03] p-3 ring-1 ring-inset ring-[var(--ui-line)]">
-          <Switch label="Paint on photo" checked={brushMaskActive} onChange={setBrushMaskActive} hint="Paint where this adjustment applies." />
-          <Segmented
-            className="my-2"
-            value={brushErasing ? "erase" : "paint"}
-            onChange={(mode) => setBrushErasing(mode === "erase")}
-            options={[{ id: "paint", label: "Paint" }, { id: "erase", label: "Erase" }]}
-          />
-          <DevSlider label="Size" value={brushSize} defaultValue={0.3} min={0.02} max={1} onChange={setBrushSize} format={(value) => `${Math.round(value * 100)}`} />
-          <DevSlider label="Feather" value={brushFeather} defaultValue={0.5} min={0} max={1} onChange={setBrushFeather} format={(value) => `${Math.round(value * 100)}`} />
-        </div>
-      )}
-      {plate && (
-        <button type="button" onClick={() => shell.setRightMode("develop")} className="ui-focus mt-4 w-full rounded-[9px] bg-[var(--ui-accent-soft)] py-2 text-[12px] font-medium text-[var(--ui-accent-strong)] hover:bg-[var(--ui-accent)]/25">
-          Adjust “{plate.name}”
-        </button>
-      )}
-    </div>
-  );
-}
 
 function TextMode() {
   const { textOverlay, setTextOverlay, handleFontUpload, watermark, setWatermark } = useEditorState();
@@ -119,14 +90,15 @@ function TextMode() {
 
 export function RightPanel() {
   const shell = useShell();
+  const changeMode = useSwitchRightMode();
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-[var(--ui-line)] px-3 py-2.5">
-        <Segmented size="md" value={shell.rightMode} onChange={shell.setRightMode} options={RIGHT_MODES} />
+        <Segmented size="md" value={shell.rightMode} onChange={changeMode} options={RIGHT_MODES} />
       </div>
       <div className="min-h-0 flex-1">
         {shell.rightMode === "develop" && <DevelopPanel />}
-        {shell.rightMode === "masks" && <MasksMode />}
+        {shell.rightMode === "masks" && <MasksPanel />}
         {shell.rightMode === "text" && <TextMode />}
       </div>
     </div>

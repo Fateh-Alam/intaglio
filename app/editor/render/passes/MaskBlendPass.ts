@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { RenderPass } from '../RenderPass';
-import { AdjustmentLayer, MaskLayer } from '../../../types/editor';
-
-const MAX_MASKS = 32;
+import { RenderPass, type RenderInput, dimensionsFromRenderInput, textureFromRenderInput } from '../RenderPass';
+import type { AdjustmentLayer, MaskLayer } from '../../../types/editor';
+import { OKLAB_GLSL_CHUNK } from '../shaders/oklabChunk';
+import { linearGeometry, MAX_BRUSH_PARTS, MAX_MASK_PARTS, radialGeometry } from '../../../lib/maskGeometry';
+import { BrushTextureCache } from '../brushTextures';
 
 const vertexShader = `
 varying vec2 vUv;
@@ -12,314 +13,300 @@ void main() {
 }
 `;
 
+// Positions are image space (top-left origin); x is scaled by the aspect so
+// shapes stay round. Luminance uses OKLab lightness and color uses OKLCh hue,
+// matching how people perceive "mid-tones" and "this blue".
 const fragmentShader = `
-#define MAX_MASKS ${MAX_MASKS}
+#define MAX_MASKS ${MAX_MASK_PARTS}
 
-uniform sampler2D tDiffuse; // Graded Plate
-uniform sampler2D tBase;    // Base image (before plate)
-uniform sampler2D tBrushMask;
+uniform sampler2D tDiffuse; // graded plate
+uniform sampler2D tBase;    // image before this plate
+uniform sampler2D tBrush0;
+uniform sampler2D tBrush1;
+uniform sampler2D tBrush2;
+uniform sampler2D tBrush3;
 
 uniform float uPlateOpacity;
 uniform int uMaskCount;
+uniform float uAspect;
 uniform vec2 uFullSize;
 uniform vec2 uTileOffset;
 uniform vec2 uTileSize;
+uniform bool uCoverageOnly;
 
-// Mask Uniforms
-uniform int uMaskType[MAX_MASKS]; // 0=none, 1=radial, 2=linear, 3=luma, 4=brush, 5=colorRange
-uniform int uMaskBlendMode[MAX_MASKS]; // 0=ADD, 1=SUBTRACT, 2=INTERSECT
+uniform int uMaskType[MAX_MASKS]; // 1 radial, 2 linear, 3 luminance, 4 brush, 5 color range
+uniform int uMaskBlendMode[MAX_MASKS]; // 0 add, 1 subtract, 2 intersect
 uniform float uMaskOpacity[MAX_MASKS];
-
-// Radial & Linear
-uniform vec2 uMaskCenter[MAX_MASKS];
-uniform float uMaskRadius[MAX_MASKS];
-uniform float uMaskAngle[MAX_MASKS];
-uniform float uMaskPosition[MAX_MASKS];
-uniform float uMaskFeather[MAX_MASKS];
 uniform int uMaskInvert[MAX_MASKS];
-
-// Luma
-uniform float uMaskLumaTarget[MAX_MASKS];
-uniform float uMaskLumaRange[MAX_MASKS];
-uniform float uMaskHueTarget[MAX_MASKS];
-uniform float uMaskHueWidth[MAX_MASKS];
+uniform float uMaskFeather[MAX_MASKS];
+uniform vec2 uMaskCenter[MAX_MASKS];
+uniform vec2 uMaskRadii[MAX_MASKS];
+uniform float uMaskAngle[MAX_MASKS];
+uniform vec2 uMaskStart[MAX_MASKS];
+uniform vec2 uMaskEnd[MAX_MASKS];
+uniform float uMaskTarget[MAX_MASKS];
+uniform float uMaskRange[MAX_MASKS];
 uniform float uMaskChromaTarget[MAX_MASKS];
 uniform float uMaskChromaRange[MAX_MASKS];
+uniform int uMaskBrushSlot[MAX_MASKS];
 
 varying vec2 vUv;
 
-// Luma util
-float luma709(vec3 color) {
-  return dot(color, vec3(0.2126, 0.7152, 0.0722));
-}
+${OKLAB_GLSL_CHUNK}
 
-vec3 rgbToHsv(vec3 c) {
-  vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-  vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+vec2 hueAndSaturation(vec3 c) {
+  vec4 k = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+  vec4 p = mix(vec4(c.bg, k.wz), vec4(c.gb, k.xy), step(c.b, c.g));
   vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
   float d = q.x - min(q.w, q.y);
-  float e = 1.0e-10;
-  return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+  return vec2(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10));
 }
 
-// Evaluate a single mask
-float evaluateMask(int i, vec3 baseColor, vec2 maskUv) {
+float sampleBrush(int slot, vec2 uv) {
+  if (slot == 0) return texture2D(tBrush0, uv).a;
+  if (slot == 1) return texture2D(tBrush1, uv).a;
+  if (slot == 2) return texture2D(tBrush2, uv).a;
+  if (slot == 3) return texture2D(tBrush3, uv).a;
+  return 0.0;
+}
+
+float evaluateMask(int i, vec3 baseColor, vec2 p, vec2 glUv) {
   int type = uMaskType[i];
   float m = 0.0;
-  
-  if (type == 1) { // Radial
-    vec2 center = uMaskCenter[i];
-    float radius = uMaskRadius[i];
-    float feather = uMaskFeather[i];
-    float dist = distance(maskUv, center);
-    float inner = max(0.0, radius - feather);
-    m = 1.0 - smoothstep(inner, radius, dist);
-    if (uMaskInvert[i] == 1) m = 1.0 - m;
-  } 
-  else if (type == 2) { // Linear
-    float angle = uMaskAngle[i] * 6.28318;
-    float pos = uMaskPosition[i];
-    float feather = uMaskFeather[i];
-    vec2 dir = vec2(cos(angle), sin(angle));
-    float proj = dot(maskUv - vec2(0.5), dir) + 0.5;
-    m = smoothstep(pos - feather, pos + feather, proj);
-    if (uMaskInvert[i] == 1) m = 1.0 - m;
+  if (type == 1) {
+    vec2 d = (p - uMaskCenter[i]) * vec2(uAspect, 1.0);
+    float c = cos(-uMaskAngle[i]);
+    float s = sin(-uMaskAngle[i]);
+    vec2 r = vec2(d.x * c - d.y * s, d.x * s + d.y * c);
+    float distance = length(r / max(uMaskRadii[i], vec2(1e-4)));
+    m = 1.0 - smoothstep(1.0 - max(1e-5, uMaskFeather[i]), 1.0, distance);
+  } else if (type == 2) {
+    vec2 axis = (uMaskEnd[i] - uMaskStart[i]) * vec2(uAspect, 1.0);
+    vec2 offset = (p - uMaskStart[i]) * vec2(uAspect, 1.0);
+    float t = dot(offset, axis) / max(dot(axis, axis), 1e-6);
+    m = 1.0 - smoothstep(0.0, 1.0, t);
+  } else if (type == 3) {
+    float lightness = linearSrgbToOklab(max(baseColor, vec3(0.0))).x;
+    float distance = abs(lightness - uMaskTarget[i]);
+    float range = uMaskRange[i];
+    m = 1.0 - smoothstep(range, range + max(uMaskFeather[i], 1e-4), distance);
+  } else if (type == 4) {
+    m = sampleBrush(uMaskBrushSlot[i], glUv);
+  } else if (type == 5) {
+    vec3 lab = linearSrgbToOklab(max(baseColor, vec3(0.0)));
+    float chroma = length(lab.yz);
+    float hue = fract(atan(lab.z, lab.y) / 6.28318530718);
+    float distance = abs(hue - uMaskTarget[i]);
+    distance = min(distance, 1.0 - distance);
+    float width = max(uMaskRange[i], 1e-4);
+    m = (1.0 - smoothstep(width * 0.5, width, distance)) * smoothstep(0.012, 0.045, chroma);
+    if (uMaskChromaTarget[i] > 0.0) {
+      m *= 1.0 - smoothstep(uMaskChromaRange[i], uMaskChromaRange[i] + 0.04, abs(chroma - uMaskChromaTarget[i]));
+    }
+  } else if (type == 6) {
+    float lightness = dot(baseColor, vec3(0.2126, 0.7152, 0.0722));
+    float distance = abs(lightness - uMaskTarget[i]);
+    float range = uMaskRange[i];
+    m = 1.0 - smoothstep(min(range - 1e-5, max(0.0, range - uMaskFeather[i])), range, distance);
+  } else if (type == 7) {
+    vec2 hs = hueAndSaturation(max(baseColor, vec3(0.0)));
+    float distance = abs(hs.x - uMaskTarget[i]);
+    distance = min(distance, 1.0 - distance);
+    float width = max(uMaskRange[i], 1e-4);
+    float saturationRange = max(uMaskChromaRange[i], 1e-4);
+    m = (1.0 - smoothstep(width * 0.75, width, distance))
+      * (1.0 - smoothstep(saturationRange * 0.75, saturationRange, abs(hs.y - uMaskChromaTarget[i])));
   }
-  else if (type == 3) { // Luma
-    float y = luma709(baseColor);
-    float target = uMaskLumaTarget[i];
-    float range = uMaskLumaRange[i];
-    float feather = uMaskFeather[i];
-    float diff = abs(y - target);
-    m = 1.0 - smoothstep(max(0.0, range - feather), range, diff);
-  }
-  else if (type == 4) { // Brush
-    m = texture2D(tBrushMask, maskUv).r; 
-  }
-  else if (type == 5) { // Color range
-    vec3 hsv = rgbToHsv(max(baseColor, vec3(0.0)));
-    float hueDistance = abs(hsv.x - uMaskHueTarget[i]);
-    hueDistance = min(hueDistance, 1.0 - hueDistance);
-    float hueMask = 1.0 - smoothstep(uMaskHueWidth[i] * 0.75, uMaskHueWidth[i], hueDistance);
-    float chromaDistance = abs(hsv.y - uMaskChromaTarget[i]);
-    float chromaMask = 1.0 - smoothstep(uMaskChromaRange[i] * 0.75, uMaskChromaRange[i], chromaDistance);
-    m = hueMask * chromaMask;
-  }
-  
+  if (uMaskInvert[i] == 1) m = 1.0 - m;
   return clamp(m * uMaskOpacity[i], 0.0, 1.0);
 }
 
 void main() {
   vec4 baseColor = texture2D(tBase, vUv);
   vec4 gradedColor = texture2D(tDiffuse, vUv);
-  vec2 maskUv = vec2(
+  vec2 glUv = vec2(
     (uTileOffset.x + vUv.x * uTileSize.x) / uFullSize.x,
     (uFullSize.y - uTileOffset.y - uTileSize.y + vUv.y * uTileSize.y) / uFullSize.y
   );
-  
-  if (uPlateOpacity == 0.0) {
-    gl_FragColor = baseColor;
-    return;
-  }
-  
+  vec2 p = vec2(glUv.x, 1.0 - glUv.y);
+
   float finalMask = 1.0;
-  
   if (uMaskCount > 0) {
-    finalMask = 0.0; // Start at 0 if we have masks, then accumulate
+    finalMask = 0.0;
     for (int i = 0; i < MAX_MASKS; i++) {
       if (i >= uMaskCount) break;
-      
-      float m = evaluateMask(i, baseColor.rgb, maskUv);
+      float m = evaluateMask(i, baseColor.rgb, p, glUv);
       int blend = uMaskBlendMode[i];
-      
-      if (i == 0) {
-        finalMask = m;
-      } else {
-        if (blend == 0) finalMask = clamp(finalMask + m, 0.0, 1.0); // ADD
-        else if (blend == 1) finalMask = clamp(finalMask - m, 0.0, 1.0); // SUBTRACT
-        else if (blend == 2) finalMask = finalMask * m; // INTERSECT
-      }
+      if (i == 0) finalMask = blend == 1 ? 1.0 - m : m;
+      else if (blend == 0) finalMask = clamp(finalMask + m, 0.0, 1.0);
+      else if (blend == 1) finalMask = clamp(finalMask - m, 0.0, 1.0);
+      else finalMask = finalMask * m;
     }
   }
-  
-  float mixFactor = finalMask * uPlateOpacity;
-  
-  gl_FragColor = vec4(mix(baseColor.rgb, gradedColor.rgb, mixFactor), 1.0);
+
+  if (uCoverageOnly) gl_FragColor = vec4(baseColor.rgb, finalMask);
+  else gl_FragColor = vec4(mix(baseColor.rgb, gradedColor.rgb, finalMask * uPlateOpacity), 1.0);
 }
 `;
 
+const MASK_TYPE: Record<MaskLayer["type"], number> = { radial: 1, linear: 2, luminosity: 3, brush: 4, colorRange: 5 };
+
 export class MaskBlendPass extends RenderPass {
   private material: THREE.ShaderMaterial;
+  private tiled = false;
+  private plate: AdjustmentLayer | null = null;
+  private masks: MaskLayer[] = [];
+  private readonly brushTextures = new BrushTextureCache();
+  private sourceAspect = 1;
+  private includeLiveBrush = false;
 
   constructor() {
     super();
+    const floats = () => ({ value: new Float32Array(MAX_MASK_PARTS) });
+    const ints = () => ({ value: new Int32Array(MAX_MASK_PARTS) });
+    const vec2s = () => ({ value: new Float32Array(MAX_MASK_PARTS * 2) });
     this.material = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
       uniforms: {
         tDiffuse: { value: null },
         tBase: { value: null },
-        tBrushMask: { value: null },
+        tBrush0: { value: null },
+        tBrush1: { value: null },
+        tBrush2: { value: null },
+        tBrush3: { value: null },
         uPlateOpacity: { value: 1.0 },
         uMaskCount: { value: 0 },
+        uAspect: { value: 1 },
         uFullSize: { value: new THREE.Vector2(1, 1) },
         uTileOffset: { value: new THREE.Vector2(0, 0) },
         uTileSize: { value: new THREE.Vector2(1, 1) },
-        
-        uMaskType: { value: new Int32Array(MAX_MASKS) },
-        uMaskBlendMode: { value: new Int32Array(MAX_MASKS) },
-        uMaskOpacity: { value: new Float32Array(MAX_MASKS) },
-        uMaskCenter: { value: new Float32Array(MAX_MASKS * 2) },
-        uMaskRadius: { value: new Float32Array(MAX_MASKS) },
-        uMaskAngle: { value: new Float32Array(MAX_MASKS) },
-        uMaskPosition: { value: new Float32Array(MAX_MASKS) },
-        uMaskFeather: { value: new Float32Array(MAX_MASKS) },
-        uMaskInvert: { value: new Int32Array(MAX_MASKS) },
-        uMaskLumaTarget: { value: new Float32Array(MAX_MASKS) },
-        uMaskLumaRange: { value: new Float32Array(MAX_MASKS) },
-        uMaskHueTarget: { value: new Float32Array(MAX_MASKS) },
-        uMaskHueWidth: { value: new Float32Array(MAX_MASKS) },
-        uMaskChromaTarget: { value: new Float32Array(MAX_MASKS) },
-        uMaskChromaRange: { value: new Float32Array(MAX_MASKS) },
-      }
+        uCoverageOnly: { value: false },
+        uMaskType: ints(),
+        uMaskBlendMode: ints(),
+        uMaskOpacity: floats(),
+        uMaskInvert: ints(),
+        uMaskFeather: floats(),
+        uMaskCenter: vec2s(),
+        uMaskRadii: vec2s(),
+        uMaskAngle: floats(),
+        uMaskStart: vec2s(),
+        uMaskEnd: vec2s(),
+        uMaskTarget: floats(),
+        uMaskRange: floats(),
+        uMaskChromaTarget: floats(),
+        uMaskChromaRange: floats(),
+        uMaskBrushSlot: ints(),
+      },
     });
     this.fsQuad.material = this.material;
   }
 
-  public setup() {
-    // Shaders already provided inline
-  }
+  public setup() {}
 
-  public updateUniforms() {
-    // Not used via standard RenderGraph update
-  }
+  public updateUniforms() {}
 
   override setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number): void {
+    this.tiled = true;
     this.material.uniforms.uFullSize.value.set(fullWidth, fullHeight);
     this.material.uniforms.uTileOffset.value.set(x, y);
     this.material.uniforms.uTileSize.value.set(width, height);
   }
 
   override clearViewOffset(): void {
+    this.tiled = false;
     this.material.uniforms.uFullSize.value.set(1, 1);
     this.material.uniforms.uTileOffset.value.set(0, 0);
     this.material.uniforms.uTileSize.value.set(1, 1);
   }
 
-  updateForPlate(plate: AdjustmentLayer, masks: MaskLayer[], brushMaskTex: THREE.Texture | null) {
-    this.material.uniforms.uPlateOpacity.value = plate.opacity;
-    this.material.uniforms.tBrushMask.value = brushMaskTex;
-    
-    // We only process masks that belong to this plate
-    const plateMasks = masks.filter(m => plate.maskIds.includes(m.id)).slice(0, MAX_MASKS);
-    this.material.uniforms.uMaskCount.value = plateMasks.length;
-    
-    const types = new Int32Array(MAX_MASKS);
-    const blendModes = new Int32Array(MAX_MASKS);
-    const opacities = new Float32Array(MAX_MASKS);
-    const centers = new Float32Array(MAX_MASKS * 2);
-    const radii = new Float32Array(MAX_MASKS);
-    const angles = new Float32Array(MAX_MASKS);
-    const positions = new Float32Array(MAX_MASKS);
-    const feathers = new Float32Array(MAX_MASKS);
-    const inverts = new Int32Array(MAX_MASKS);
-    const lumaTargets = new Float32Array(MAX_MASKS);
-    const lumaRanges = new Float32Array(MAX_MASKS);
-    const hueTargets = new Float32Array(MAX_MASKS);
-    const hueWidths = new Float32Array(MAX_MASKS);
-    const chromaTargets = new Float32Array(MAX_MASKS);
-    const chromaRanges = new Float32Array(MAX_MASKS);
-    
-    plateMasks.forEach((m, i) => {
-      let typeId = 0;
-      if (m.type === 'radial') typeId = 1;
-      else if (m.type === 'linear') typeId = 2;
-      else if (m.type === 'luminosity') typeId = 3;
-      else if (m.type === 'brush') typeId = 4;
-      else if (m.type === 'colorRange') typeId = 5;
-      
-      types[i] = typeId;
-      blendModes[i] = m.blendMode === 'ADD' ? 0 : m.blendMode === 'SUBTRACT' ? 1 : 2;
-      opacities[i] = m.opacity;
-      
-      if (m.type === 'radial') {
-        const p = m.params;
-        centers[i * 2] = p.center.x;
-        centers[i * 2 + 1] = p.center.y;
-        radii[i] = p.radius;
-        feathers[i] = p.feather;
-        inverts[i] = p.invert ? 1 : 0;
-      }
-      else if (m.type === 'linear') {
-        const p = m.params;
-        angles[i] = p.angle;
-        positions[i] = p.position;
-        feathers[i] = p.feather;
-        inverts[i] = p.invert ? 1 : 0;
-      }
-      else if (m.type === 'luminosity') {
-        const p = m.params;
-        lumaTargets[i] = p.target;
-        lumaRanges[i] = p.range;
-        feathers[i] = p.feather;
-      }
-      else if (m.type === 'colorRange') {
-        const p = m.params;
-        hueTargets[i] = p.targetHue > 1 ? p.targetHue / 360 : p.targetHue;
-        hueWidths[i] = Math.max(p.hueWidth, 0.0001);
-        chromaTargets[i] = p.targetChroma;
-        chromaRanges[i] = Math.max(p.chromaRange, 0.0001);
-      }
-    });
-    
-    this.material.uniforms.uMaskType.value = types;
-    this.material.uniforms.uMaskBlendMode.value = blendModes;
-    this.material.uniforms.uMaskOpacity.value = opacities;
-    this.material.uniforms.uMaskCenter.value = centers;
-    this.material.uniforms.uMaskRadius.value = radii;
-    this.material.uniforms.uMaskAngle.value = angles;
-    this.material.uniforms.uMaskPosition.value = positions;
-    this.material.uniforms.uMaskFeather.value = feathers;
-    this.material.uniforms.uMaskInvert.value = inverts;
-    this.material.uniforms.uMaskLumaTarget.value = lumaTargets;
-    this.material.uniforms.uMaskLumaRange.value = lumaRanges;
-    this.material.uniforms.uMaskHueTarget.value = hueTargets;
-    this.material.uniforms.uMaskHueWidth.value = hueWidths;
-    this.material.uniforms.uMaskChromaTarget.value = chromaTargets;
-    this.material.uniforms.uMaskChromaRange.value = chromaRanges;
-    
-    this.enabled = true;
+  pruneBrushes(masks: MaskLayer[]) {
+    this.brushTextures.retain(masks);
   }
 
-  renderBlend(
-    renderer: THREE.WebGLRenderer, 
-    gradedTexture: THREE.Texture | THREE.WebGLRenderTarget, 
-    baseTexture: THREE.Texture | THREE.WebGLRenderTarget, 
-    outputBuffer: THREE.WebGLRenderTarget | null
-  ) {
-    if (!this.enabled) return;
+  updateForPlate(plate: AdjustmentLayer, masks: MaskLayer[], sourceAspect: number, includeLiveBrush: boolean) {
+    this.plate = plate;
+    this.masks = plate.maskIds
+      .map((id) => masks.find((mask) => mask.id === id))
+      .filter((mask): mask is MaskLayer => Boolean(mask))
+      .slice(0, MAX_MASK_PARTS);
+    this.includeLiveBrush = includeLiveBrush;
+    this.sourceAspect = sourceAspect;
+    this.material.uniforms.uPlateOpacity.value = plate.enabled === false ? 0 : plate.opacity;
+  }
 
-    this.material.uniforms.tDiffuse.value = 'texture' in gradedTexture ? gradedTexture.texture : gradedTexture;
-    this.material.uniforms.tBase.value = 'texture' in baseTexture ? baseTexture.texture : baseTexture;
-    
-    if (outputBuffer) {
-      renderer.setRenderTarget(outputBuffer);
-    } else {
-      renderer.setRenderTarget(null);
-    }
+  private bindMasks(aspect: number) {
+    const u = this.material.uniforms;
+    u.uAspect.value = aspect;
+    u.uMaskCount.value = this.masks.length;
+    let brushSlot = 0;
+    const brushSamplers = ["tBrush0", "tBrush1", "tBrush2", "tBrush3"] as const;
+    brushSamplers.forEach((name) => { u[name].value = null; });
+    this.masks.forEach((mask, i) => {
+      u.uMaskType.value[i] = MASK_TYPE[mask.type];
+      u.uMaskBlendMode.value[i] = mask.blendMode === "ADD" ? 0 : mask.blendMode === "SUBTRACT" ? 1 : 2;
+      u.uMaskOpacity.value[i] = mask.opacity;
+      u.uMaskInvert.value[i] = 0;
+      u.uMaskBrushSlot.value[i] = -1;
+      if (mask.type === "radial") {
+        const g = radialGeometry(mask.params, aspect);
+        u.uMaskCenter.value.set([g.cx, g.cy], i * 2);
+        u.uMaskRadii.value.set([g.rx, g.ry], i * 2);
+        u.uMaskAngle.value[i] = g.angle;
+        u.uMaskFeather.value[i] = g.feather;
+        u.uMaskInvert.value[i] = g.invert ? 1 : 0;
+      } else if (mask.type === "linear") {
+        const g = linearGeometry(mask.params, aspect);
+        u.uMaskStart.value.set([g.start.x, g.start.y], i * 2);
+        u.uMaskEnd.value.set([g.end.x, g.end.y], i * 2);
+        u.uMaskInvert.value[i] = g.invert ? 1 : 0;
+      } else if (mask.type === "luminosity") {
+        if (!mask.params.colorSpace) u.uMaskType.value[i] = 6;
+        u.uMaskTarget.value[i] = mask.params.target;
+        u.uMaskRange.value[i] = mask.params.range;
+        u.uMaskFeather.value[i] = mask.params.feather;
+      } else if (mask.type === "colorRange") {
+        if (!mask.params.colorSpace) u.uMaskType.value[i] = 7;
+        const hue = mask.params.targetHue > 1 ? mask.params.targetHue / 360 : mask.params.targetHue;
+        u.uMaskTarget.value[i] = hue;
+        u.uMaskRange.value[i] = mask.params.hueWidth;
+        u.uMaskChromaTarget.value[i] = mask.params.targetChroma;
+        u.uMaskChromaRange.value[i] = mask.params.chromaRange;
+      } else if (mask.type === "brush" && brushSlot < MAX_BRUSH_PARTS) {
+        u[brushSamplers[brushSlot]].value = this.brushTextures.get(mask, this.sourceAspect, this.includeLiveBrush);
+        u.uMaskBrushSlot.value[i] = brushSlot;
+        brushSlot += 1;
+      }
+    });
+  }
+
+  renderCoverage(renderer: THREE.WebGLRenderer, base: RenderInput, target: THREE.WebGLRenderTarget) {
+    this.draw(renderer, base, base, target, true);
+  }
+
+  renderBlend(renderer: THREE.WebGLRenderer, graded: RenderInput, base: RenderInput, outputBuffer: THREE.WebGLRenderTarget | null) {
+    this.draw(renderer, graded, base, outputBuffer, false);
+  }
+
+  private draw(renderer: THREE.WebGLRenderer, graded: RenderInput, base: RenderInput, outputBuffer: THREE.WebGLRenderTarget | null, coverageOnly: boolean) {
+    if (!this.plate) return;
+    const fullSize = this.material.uniforms.uFullSize.value as THREE.Vector2;
+    const { width, height } = this.tiled ? { width: fullSize.x, height: fullSize.y } : dimensionsFromRenderInput(base, 1);
+    this.bindMasks(width / Math.max(height, 1));
+    this.material.uniforms.uCoverageOnly.value = coverageOnly;
+    this.material.uniforms.tDiffuse.value = textureFromRenderInput(graded);
+    this.material.uniforms.tBase.value = textureFromRenderInput(base);
+    renderer.setRenderTarget(outputBuffer);
     renderer.clear();
     this.fsQuad.render(renderer);
   }
-  
-  public render(
-    renderer: THREE.WebGLRenderer,
-    readBuffer: THREE.WebGLRenderTarget | THREE.Texture,
-    writeBuffer: THREE.WebGLRenderTarget | null
-  ) {
+
+  public render(renderer: THREE.WebGLRenderer, readBuffer: RenderInput, writeBuffer: THREE.WebGLRenderTarget | null) {
     this.renderBlend(renderer, readBuffer, readBuffer, writeBuffer);
   }
 
   public override dispose() {
+    this.brushTextures.dispose();
     this.material.dispose();
     super.dispose();
   }

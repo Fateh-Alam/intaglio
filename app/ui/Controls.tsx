@@ -70,19 +70,21 @@ export function IconButton({ label, shortcut, active, tooltipSide = "bottom", si
   );
 }
 
-export function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange: (value: boolean) => void; label: string; hint?: string }) {
+export function Switch({ checked, onChange, label, hint, shortcut }: { checked: boolean; onChange: (value: boolean) => void; label: string; hint?: string; shortcut?: string }) {
   const id = useId();
   const text = <label htmlFor={id} className="cursor-pointer text-[12px] text-[var(--ui-text-2)]">{label}</label>;
   return (
     <div className="flex h-8 items-center justify-between">
-      {hint ? <Tooltip content={hint} side="left">{text}</Tooltip> : text}
+      {hint ? <Tooltip content={hint} shortcut={shortcut} side="left">{text}</Tooltip> : text}
       <button
         id={id}
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-keyshortcuts={shortcut}
         onClick={() => onChange(!checked)}
-        className={`ui-focus relative h-[18px] w-[30px] rounded-full transition-colors duration-200 ${checked ? "bg-[var(--ui-accent)]" : "bg-white/[0.12]"}`}
+        className="ui-focus relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors duration-200"
+        style={{ backgroundColor: checked ? "var(--ui-accent)" : "var(--ui-line-strong)" }}
       >
         <span
           className="absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-[left] duration-200"

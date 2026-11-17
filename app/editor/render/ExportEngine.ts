@@ -12,7 +12,6 @@ export interface ExportOptions {
   scale?: number;   // multiplier relative to original image size
   width?: number;   // explicit target width
   height?: number;  // explicit target height
-  brushCanvas?: HTMLCanvasElement | null;
   /** Test/qualification hook; production defaults to the GPU texture limit. */
   maxTileSize?: number;
   signal?: AbortSignal;
@@ -83,57 +82,29 @@ export class ExportEngine {
     }
 
     const intaglioRenderer = new IntaglioRenderer();
-
-    const brushTexture = options.brushCanvas ? new THREE.CanvasTexture(options.brushCanvas) : null;
-
-    const finalTarget = new THREE.WebGLRenderTarget(targetWidth, targetHeight, {
-      type: THREE.HalfFloatType,
-      format: THREE.RGBAFormat,
-      minFilter: THREE.LinearFilter,
-      magFilter: THREE.LinearFilter,
-      depthBuffer: false,
-      stencilBuffer: false,
-      colorSpace: THREE.NoColorSpace
-    });
-
-    // Execute graph rendering
-    intaglioRenderer.render({
-      renderer,
-      sourceTexture,
-      settings,
-      target: finalTarget,
-      width: targetWidth,
-      height: targetHeight,
-      brushMaskTexture: brushTexture,
-      tile: options.tileInfo ? {
-        fullWidth: options.tileInfo.fullWidth,
-        fullHeight: options.tileInfo.fullHeight,
-        offsetX: options.tileInfo.offsetX,
-        offsetY: options.tileInfo.offsetY,
-        width: options.tileInfo.tileWidth,
-        height: options.tileInfo.tileHeight,
-      } : undefined,
-    });
+    try {
+      // The graph already encodes sRGB. Draw directly to the canvas to avoid
+      // the implicit second transfer curve of a Three.js built-in material.
+      intaglioRenderer.render({
+        renderer,
+        sourceTexture,
+        settings,
+        target: null,
+        width: targetWidth,
+        height: targetHeight,
+        tile: options.tileInfo ? {
+          fullWidth: options.tileInfo.fullWidth,
+          fullHeight: options.tileInfo.fullHeight,
+          offsetX: options.tileInfo.offsetX,
+          offsetY: options.tileInfo.offsetY,
+          width: options.tileInfo.tileWidth,
+          height: options.tileInfo.tileHeight,
+        } : undefined,
+      });
+    } finally {
+      intaglioRenderer.dispose();
+    }
     throwIfCancelled(options.signal);
-
-    // Copy from WebGLRenderTarget to canvas
-    const finalQuad = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      new THREE.MeshBasicMaterial({ map: finalTarget.texture })
-    );
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    scene.add(finalQuad);
-
-    renderer.setRenderTarget(null);
-    renderer.render(scene, camera);
-
-    // Clean up GPU targets
-    intaglioRenderer.dispose();
-    brushTexture?.dispose();
-    finalTarget.dispose();
-    finalQuad.geometry.dispose();
-    (finalQuad.material as THREE.Material).dispose();
 
     if (!this.canvas) throw new Error('Export canvas initialization failed');
     const renderCanvas = this.canvas;

@@ -36,22 +36,6 @@ function sourceCanvas(): HTMLCanvasElement {
   return canvas;
 }
 
-function brushCanvas(): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Brush fixture context is unavailable.");
-  context.strokeStyle = "#ffffff";
-  context.lineCap = "round";
-  context.lineWidth = 28;
-  context.beginPath();
-  context.moveTo(42, 104);
-  context.lineTo(154, 26);
-  context.stroke();
-  return canvas;
-}
-
 function fixtureLut(): THREE.Data3DTexture {
   const rows: string[] = [];
   for (let blue = 0; blue < 2; blue += 1) {
@@ -127,9 +111,7 @@ function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 
 async function runProbe(): Promise<ProbeMetrics> {
   const inputCanvas = sourceCanvas();
-  const brush = brushCanvas();
   const sourceTexture = new THREE.CanvasTexture(inputCanvas);
-  const brushTexture = new THREE.CanvasTexture(brush);
   const lut = fixtureLut();
   const settings = fixtureSettings(lut);
   const previewCanvas = document.createElement("canvas");
@@ -137,17 +119,9 @@ async function runProbe(): Promise<ProbeMetrics> {
   previewCanvas.height = HEIGHT;
   const renderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: false, alpha: true, preserveDrawingBuffer: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  const target = new THREE.WebGLRenderTarget(WIDTH, HEIGHT, { type: THREE.HalfFloatType, format: THREE.RGBAFormat, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: false, stencilBuffer: false, colorSpace: THREE.NoColorSpace });
   const intaglioRenderer = new IntaglioRenderer();
-  const geometry = new THREE.PlaneGeometry(2, 2);
-  const material = new THREE.MeshBasicMaterial({ map: target.texture });
-  const scene = new THREE.Scene();
-  scene.add(new THREE.Mesh(geometry, material));
-  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   try {
-    intaglioRenderer.render({ renderer, sourceTexture, settings, target, width: WIDTH, height: HEIGHT, brushMaskTexture: brushTexture });
-    renderer.setRenderTarget(null);
-    renderer.render(scene, camera);
+    intaglioRenderer.render({ renderer, sourceTexture, settings, target: null, width: WIDTH, height: HEIGHT });
     await ensureOverlayFonts(overlays);
     const previewComposite = document.createElement("canvas");
     previewComposite.width = WIDTH;
@@ -160,17 +134,17 @@ async function runProbe(): Promise<ProbeMetrics> {
 
     const exportEngine = new ExportEngine();
     try {
-      const tilePair = async (stageSettings: EditorSettings, stageBrush?: HTMLCanvasElement): Promise<ParityMetrics> => {
-        const options = { format: "image/png" as const, quality: 1, width: WIDTH, height: HEIGHT, brushCanvas: stageBrush };
+      const tilePair = async (stageSettings: EditorSettings): Promise<ParityMetrics> => {
+        const options = { format: "image/png" as const, quality: 1, width: WIDTH, height: HEIGHT };
         const full = await exportEngine.exportImage(sourceTexture, stageSettings, options);
         const tiled = await exportEngine.exportImage(sourceTexture, stageSettings, { ...options, maxTileSize: 160 });
         return measureParity(await pixelsFromBlob(full), await pixelsFromBlob(tiled));
       };
-      const rasterPng = await exportEngine.exportImage(sourceTexture, settings, { format: "image/png", quality: 1, width: WIDTH, height: HEIGHT, brushCanvas: brush });
-      const png = await exportEngine.exportImage(sourceTexture, settings, { format: "image/png", quality: 1, width: WIDTH, height: HEIGHT, brushCanvas: brush, overlays });
-      const jpeg90 = await exportEngine.exportImage(sourceTexture, settings, { format: "image/jpeg", quality: 0.9, width: WIDTH, height: HEIGHT, brushCanvas: brush, overlays });
-      const webp90 = await exportEngine.exportImage(sourceTexture, settings, { format: "image/webp", quality: 0.9, width: WIDTH, height: HEIGHT, brushCanvas: brush, overlays });
-      const tiledPng = await exportEngine.exportImage(sourceTexture, settings, { format: "image/png", quality: 1, width: WIDTH, height: HEIGHT, brushCanvas: brush, overlays, maxTileSize: 160 });
+      const rasterPng = await exportEngine.exportImage(sourceTexture, settings, { format: "image/png", quality: 1, width: WIDTH, height: HEIGHT });
+      const png = await exportEngine.exportImage(sourceTexture, settings, { format: "image/png", quality: 1, width: WIDTH, height: HEIGHT, overlays });
+      const jpeg90 = await exportEngine.exportImage(sourceTexture, settings, { format: "image/jpeg", quality: 0.9, width: WIDTH, height: HEIGHT, overlays });
+      const webp90 = await exportEngine.exportImage(sourceTexture, settings, { format: "image/webp", quality: 0.9, width: WIDTH, height: HEIGHT, overlays });
+      const tiledPng = await exportEngine.exportImage(sourceTexture, settings, { format: "image/png", quality: 1, width: WIDTH, height: HEIGHT, overlays, maxTileSize: 160 });
       const neutralPng = await exportEngine.exportImage(sourceTexture, DEFAULT_SETTINGS, { format: "image/png", quality: 1, width: WIDTH, height: HEIGHT });
       const neutralTiledPng = await exportEngine.exportImage(sourceTexture, DEFAULT_SETTINGS, { format: "image/png", quality: 1, width: WIDTH, height: HEIGHT, maxTileSize: 160 });
       // Parity alone cannot catch operations that are equally wrong in preview
@@ -191,7 +165,7 @@ async function runProbe(): Promise<ProbeMetrics> {
       const stages = {
         geometry: await tilePair({ ...DEFAULT_SETTINGS, rotate: settings.rotate, zoom: settings.zoom, keystoneH: settings.keystoneH, lensDistortion: settings.lensDistortion }),
         lut: await tilePair({ ...DEFAULT_SETTINGS, lutTexture: lut, lutStrength: settings.lutStrength }),
-        plateMasks: await tilePair({ ...DEFAULT_SETTINGS, adjustmentLayers: settings.adjustmentLayers, masks: settings.masks }, brush),
+        plateMasks: await tilePair({ ...DEFAULT_SETTINGS, adjustmentLayers: settings.adjustmentLayers, masks: settings.masks }),
         grain: await tilePair({ ...DEFAULT_SETTINGS, grain: settings.grain }),
       };
       const decodedRaster = await createImageBitmap(rasterPng);
@@ -223,12 +197,8 @@ async function runProbe(): Promise<ProbeMetrics> {
     }
   } finally {
     intaglioRenderer.dispose();
-    target.dispose();
-    geometry.dispose();
-    material.dispose();
     renderer.dispose();
     sourceTexture.dispose();
-    brushTexture.dispose();
     lut.dispose();
   }
 }

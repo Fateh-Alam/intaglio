@@ -1,12 +1,15 @@
 import * as THREE from "three";
 import type { EditorSettings } from "../../types/editor";
-import { RenderPass, type RenderInput, textureFromRenderInput } from "./RenderPass";
+import { RenderPass, type RenderInput, dimensionsFromRenderInput, textureFromRenderInput } from "./RenderPass";
 import { PingPongTarget } from "./PingPongTarget";
 import { MaskBlendPass } from "./passes/MaskBlendPass";
 import { plateRenderSettings } from "./plateParams";
 
 export interface RenderRuntimeResources {
-  brushMaskTexture?: THREE.Texture | null;
+  /** Preview only. Store coverage separately from the photo and its histogram. */
+  maskOverlay?: { plateId: string; target: THREE.WebGLRenderTarget };
+  /** Preview only. Export reads the committed strokes in the document. */
+  liveBrush?: boolean;
 }
 
 export class RenderGraph {
@@ -58,6 +61,10 @@ export class RenderGraph {
   }
 
   render(renderer: THREE.WebGLRenderer, settings: EditorSettings, inputTexture: THREE.Texture, finalTarget?: THREE.WebGLRenderTarget, runtime: RenderRuntimeResources = {}): void {
+    const overlay = runtime.maskOverlay;
+    this.maskBlendPass?.pruneBrushes(settings.masks);
+    const source = dimensionsFromRenderInput(inputTexture, 1);
+    const sourceAspect = source.width / Math.max(source.height, 1);
     this.sourcePasses.forEach((pass) => pass.setSource(inputTexture));
     let accumulator = this.runPasses(renderer, this.sourcePasses, settings, inputTexture);
     accumulator = this.runPasses(renderer, this.platePasses, settings, accumulator);
@@ -67,8 +74,9 @@ export class RenderGraph {
       const plateSettings = plateRenderSettings(settings, plate.params);
       const graded = this.runPasses(renderer, this.platePasses, plateSettings, stableBase);
       if (this.maskBlendPass) {
-        this.maskBlendPass.updateForPlate(plate, settings.masks, runtime.brushMaskTexture ?? null);
+        this.maskBlendPass.updateForPlate(plate, settings.masks, sourceAspect, Boolean(runtime.liveBrush));
         this.maskBlendPass.renderBlend(renderer, graded, stableBase, this.pingPongTarget.write);
+        if (overlay?.plateId === plate.id) this.maskBlendPass.renderCoverage(renderer, stableBase, overlay.target);
         this.pingPongTarget.swap();
         accumulator = this.pingPongTarget.read;
       } else {

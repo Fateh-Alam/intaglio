@@ -6,6 +6,8 @@ import * as THREE from "three";
 import type { EditorSettings, HistogramData } from "../types/editor";
 import { IntaglioRenderer } from "../editor/render/IntaglioRenderer";
 import { createLinearSourceTexture, type LinearSourceBuffer } from "../editor/render/sourceTexture";
+import { onBrushTexturesChanged } from "../editor/render/brushTextures";
+import type { MaskColorSampler } from "../lib/maskGeometry";
 import { computeHistogramMetrics } from "../utils/histogram";
 import { extractDominantColors } from "../utils/swatch";
 
@@ -41,6 +43,8 @@ const finalDisplayVertexShader = `
 const finalDisplayFragmentShader = `
   uniform sampler2D uTexture;
   uniform sampler2D uOriginalTexture;
+  uniform sampler2D uMaskCoverage;
+  uniform bool uShowMask;
   uniform float uSplit;
   uniform float uClipping;
   varying vec2 vUv;
@@ -54,6 +58,10 @@ const finalDisplayFragmentShader = `
       if (brightest >= 0.994) color.rgb = vec3(1.0, 0.2, 0.16);
       else if (brightest <= 0.006) color.rgb = vec3(0.12, 0.38, 1.0);
     }
+    if (uShowMask && !showBefore) {
+      float coverage = texture2D(uMaskCoverage, vUv).a;
+      color.rgb = mix(color.rgb, vec3(1.0, 0.16, 0.19), coverage * 0.56);
+    }
     gl_FragColor = color;
   }
 `;
@@ -63,8 +71,9 @@ export default function ImagePlane({
   settings,
   split = -1,
   showClipping = false,
-  brushCanvas,
-  brushCanvasDirty,
+  maskOverlayPlateId = null,
+  maskColorSamplerRef,
+  pickingMaskColor = false,
   rawSource,
   onStatsUpdate,
 }: {
@@ -73,8 +82,10 @@ export default function ImagePlane({
   /** −1 off, 0…1 split position (before on the left), 2 full before. */
   split?: number;
   showClipping?: boolean;
-  brushCanvas?: HTMLCanvasElement | null;
-  brushCanvasDirty?: number;
+  /** Preview only: inspect this mask and its input colors. */
+  maskOverlayPlateId?: string | null;
+  maskColorSamplerRef?: React.RefObject<MaskColorSampler | null>;
+  pickingMaskColor?: boolean;
   rawSource?: LinearSourceBuffer | null;
   onStatsUpdate?: (data: HistogramData) => void;
 }) {
@@ -109,6 +120,8 @@ export default function ImagePlane({
   const displayUniforms = useMemo(() => ({
     uTexture: { value: null as THREE.Texture | null },
     uOriginalTexture: { value: null as THREE.Texture | null },
+    uMaskCoverage: { value: null as THREE.Texture | null },
+    uShowMask: { value: false },
     uSplit: { value: -1 },
     uClipping: { value: 0 },
   }), []);
@@ -129,6 +142,33 @@ export default function ImagePlane({
 
     return { intaglioRenderer, finalTarget };
   }, []);
+
+  const maskCoverage = useMemo(() => new THREE.WebGLRenderTarget(1, 1, {
+    type: THREE.HalfFloatType,
+    depthBuffer: false,
+    stencilBuffer: false,
+    colorSpace: THREE.NoColorSpace,
+  }), []);
+
+  useEffect(() => () => maskCoverage.dispose(), [maskCoverage]);
+  const pendingMaskSample = useRef<{
+    x: number;
+    y: number;
+    resolve: (color: [number, number, number] | null) => void;
+  } | null>(null);
+  useEffect(() => {
+    if (!maskColorSamplerRef) return;
+    maskColorSamplerRef.current = (x, y) => new Promise((resolve) => {
+      pendingMaskSample.current?.resolve(null);
+      pendingMaskSample.current = { x, y, resolve };
+      invalidate();
+    });
+    return () => {
+      pendingMaskSample.current?.resolve(null);
+      pendingMaskSample.current = null;
+      maskColorSamplerRef.current = null;
+    };
+  }, [invalidate, maskColorSamplerRef]);
 
   // Handle Resize & Proxy Resolution
   useEffect(() => {
@@ -162,16 +202,8 @@ export default function ImagePlane({
     }
   }, [texture, size, gl, finalTarget]);
 
-  // Handle Brush Canvas updates
-  const brushTexture = useMemo(() => {
-    void brushCanvasDirty;
-    if (!brushCanvas) return null;
-    return new THREE.CanvasTexture(brushCanvas);
-  }, [brushCanvas, brushCanvasDirty]); // dirty is the version signal for the mutable canvas
-
-  useEffect(() => {
-    return () => brushTexture?.dispose();
-  }, [brushTexture]);
+  // Live brush painting updates mask textures outside React; redraw on change.
+  useEffect(() => onBrushTexturesChanged(() => invalidate()), [invalidate]);
 
   // Clean up
   useEffect(() => {
@@ -199,7 +231,7 @@ export default function ImagePlane({
   // The canvas renders on demand; request a frame whenever an input changes.
   useEffect(() => {
     invalidate();
-  }, [invalidate, settings, split, showClipping, brushTexture, texture, finalTarget]);
+  }, [invalidate, settings, split, showClipping, maskOverlayPlateId, pickingMaskColor, texture, finalTarget]);
 
   // Histogram/palette stats come from the rendered image itself (not the
   // letterboxed canvas), read back once rendering settles.
@@ -245,6 +277,10 @@ export default function ImagePlane({
     // 1. Execute the Render Graph
     // This renders the pipeline into finalTarget
     const oldRenderTarget = state.gl.getRenderTarget();
+    const inspectMask = maskOverlayPlateId !== null && settings.adjustmentLayers.some((plate) => plate.id === maskOverlayPlateId);
+    if (inspectMask && (maskCoverage.width !== finalTarget.width || maskCoverage.height !== finalTarget.height)) {
+      maskCoverage.setSize(finalTarget.width, finalTarget.height);
+    }
     intaglioRenderer.render({
       renderer: gl,
       sourceTexture: texture,
@@ -252,8 +288,24 @@ export default function ImagePlane({
       target: finalTarget,
       width: finalTarget.width,
       height: finalTarget.height,
-      brushMaskTexture: brushTexture,
+      maskOverlay: inspectMask ? { plateId: maskOverlayPlateId, target: maskCoverage } : undefined,
+      liveBrush: true,
     });
+    const sample = pendingMaskSample.current;
+    if (sample) {
+      pendingMaskSample.current = null;
+      if (inspectMask && pickingMaskColor) {
+        const px = Math.max(0, Math.min(maskCoverage.width - 1, Math.floor(sample.x * maskCoverage.width)));
+        const py = Math.max(0, Math.min(maskCoverage.height - 1, Math.floor((1 - sample.y) * maskCoverage.height)));
+        const context = gl.getContext();
+        const pixel = new Float32Array(4);
+        gl.setRenderTarget(maskCoverage);
+        context.readPixels(px, py, 1, 1, context.RGBA, context.FLOAT, pixel);
+        sample.resolve([pixel[0], pixel[1], pixel[2]]);
+      } else {
+        sample.resolve(null);
+      }
+    }
     state.gl.setRenderTarget(oldRenderTarget);
     scheduleStats();
 
@@ -261,6 +313,8 @@ export default function ImagePlane({
     if (materialRef.current) {
       materialRef.current.uniforms.uTexture.value = finalTarget.texture;
       materialRef.current.uniforms.uOriginalTexture.value = settings.compareTexture ?? previewTexture;
+      materialRef.current.uniforms.uMaskCoverage.value = inspectMask ? maskCoverage.texture : null;
+      materialRef.current.uniforms.uShowMask.value = inspectMask && !pickingMaskColor;
       materialRef.current.uniforms.uSplit.value = split;
       materialRef.current.uniforms.uClipping.value = showClipping ? 1.0 : 0.0;
     }

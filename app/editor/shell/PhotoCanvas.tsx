@@ -7,6 +7,8 @@ import { useEditorState } from "../hooks/useEditorState";
 import { GridOverlay } from "../components/GridOverlay";
 import { SURROUND_COLORS, useShell } from "./useShell";
 import { CanvasToolbar } from "./CanvasToolbar";
+import { MaskCanvasTools } from "../masks/MaskCanvasTools";
+import type { MaskColorSampler } from "../../lib/maskGeometry";
 
 const CinematicEditor = dynamic(() => import("../../components/CinematicEditor"), { ssr: false });
 
@@ -19,8 +21,7 @@ export function PhotoCanvas() {
   const shell = useShell();
   const {
     settings, imageSrc, rawSource, setHistogram, textOverlay, setTextOverlay, watermark,
-    brushMaskActive, brushSize, brushFeather, brushErasing, brushCanvas, setBrushCanvas, brushCanvasDirty, setBrushCanvasDirty,
-    performanceMode, compositionGuide, activePlateId, updateSetting, imageBounds, setImageBounds, gridOverlayMode,
+    performanceMode, compositionGuide, activePlateId, imageBounds, setImageBounds, gridOverlayMode,
     roiMode, sourceROI, setSourceROI, rawProgress, cancelRawDecode,
   } = editor;
 
@@ -30,8 +31,11 @@ export function PhotoCanvas() {
   const [panning, setPanning] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
   const splitDragRef = useRef(false);
+  const maskColorSamplerRef = useRef<MaskColorSampler | null>(null);
 
   const split = shell.compare === "split" ? shell.splitPosition : shell.compare === "before" ? 2 : -1;
+  const masksMode = shell.rightMode === "masks";
+  const maskOverlayPlateId = masksMode && (shell.showMaskOverlay || shell.picking) && !shell.preview && activePlateId !== "base" ? activePlateId : null;
   const displaySettings = shell.preview ?? settings;
 
   const zoomTo = (next: number) => {
@@ -50,7 +54,7 @@ export function PhotoCanvas() {
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (brushMaskActive || roiMode !== "none" || event.button !== 0 || zoom === 1) return;
+    if (masksMode || roiMode !== "none" || event.button !== 0 || zoom === 1) return;
     panRef.current = { x: event.clientX - pan.x, y: event.clientY - pan.y };
     setPanning(true);
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -109,7 +113,7 @@ export function PhotoCanvas() {
           className="relative h-full w-full origin-center"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            cursor: brushMaskActive ? "crosshair" : zoom > 1 ? (panning ? "grabbing" : "grab") : "default",
+            cursor: zoom > 1 ? (panning ? "grabbing" : "grab") : "default",
           }}
         >
           <CinematicEditor
@@ -121,24 +125,13 @@ export function PhotoCanvas() {
             onStatsUpdate={setHistogram}
             textOverlay={textOverlay}
             setTextOverlay={setTextOverlay}
-            onCanvasReady={setBrushCanvas}
             watermark={watermark}
-            brushMaskActive={brushMaskActive}
-            brushSize={brushSize}
-            brushFeather={brushFeather}
-            brushErasing={brushErasing}
-            brushCanvas={brushCanvas}
-            brushCanvasDirty={brushCanvasDirty}
             performanceMode={performanceMode}
             compositionGuide={compositionGuide}
-            onBrushMaskUpdate={() => setBrushCanvasDirty((value: number) => value + 1)}
-            onBrushStrokeComplete={(stroke) => {
-              const plate = settings.adjustmentLayers.find((layer) => layer.id === activePlateId);
-              const brushMaskId = plate?.maskIds.find((id) => settings.masks.find((mask) => mask.id === id)?.type === "brush");
-              if (!brushMaskId) return;
-              updateSetting("masks", settings.masks.map((mask) => mask.id === brushMaskId && mask.type === "brush" ? { ...mask, params: { strokes: [...mask.params.strokes, stroke] } } : mask));
-            }}
             onBoundsChange={setImageBounds}
+            maskOverlayPlateId={maskOverlayPlateId}
+            maskColorSamplerRef={maskColorSamplerRef}
+            pickingMaskColor={masksMode && shell.picking !== null}
           />
 
           {imageBounds && (
@@ -147,6 +140,7 @@ export function PhotoCanvas() {
               className="pointer-events-none absolute"
               style={{ left: imageBounds.left, top: imageBounds.top, width: imageBounds.width, height: imageBounds.height }}
             >
+              {masksMode && !shell.preview && <MaskCanvasTools size={{ width: imageBounds.width, height: imageBounds.height }} sampleColor={maskColorSamplerRef} />}
               <AnimatePresence>
                 {shell.compare !== "off" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-x-0 top-3 flex justify-between px-3">

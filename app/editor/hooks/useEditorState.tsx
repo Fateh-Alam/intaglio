@@ -19,7 +19,6 @@ import { createIntaglioContainer, openIntaglioContainer, triggerContainerDownloa
 import { sha256Hex } from "../../lib/crypto";
 import { createDefaultGradeGraph } from "../../lib/gradeGraph";
 import { decodeRawFile, isRawFile, STILL_FILE_ACCEPT } from "../../lib/rawDecoder";
-import { rasterizeBrushStrokes } from "../../lib/brushMaskRaster";
 
 // We need to import all types and constants from page.tsx or extract them.
 // For now, we will just export them from page.tsx and import them here.
@@ -381,7 +380,10 @@ function useEditorStateController() {
   // after a short pause instead.
   const pointerDownRef = useRef(false);
   useEffect(() => {
-    const down = () => { pointerDownRef.current = true; };
+    const down = () => {
+      if (!pointerDownRef.current) flushPendingHistory();
+      pointerDownRef.current = true;
+    };
     const up = () => {
       pointerDownRef.current = false;
       flushPendingHistory();
@@ -445,12 +447,9 @@ function useEditorStateController() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleUndo, handleRedo]);
 
-  const [brushMaskActive, setBrushMaskActive] = useState(false);
   const [brushSize, setBrushSize] = useState(0.3);
   const [brushFeather, setBrushFeather] = useState(0.5);
   const [brushErasing, setBrushErasing] = useState(false);
-  const [brushCanvas, setBrushCanvas] = useState<HTMLCanvasElement | null>(null);
-  const [brushCanvasDirty, setBrushCanvasDirty] = useState(0);
 
   // Load preset from localStorage if coming from presets page
   React.useEffect(() => {
@@ -492,9 +491,9 @@ function useEditorStateController() {
   };
 
   /** Applies several settings as one edit (one undo step). */
-  const updateSettings = (patch: Partial<EditorSettings>, label: string) => {
+  const updateSettings = (patch: Partial<EditorSettings> | ((previous: EditorSettings) => Partial<EditorSettings>), label: string) => {
     setSettings((prev) => {
-      const next = { ...prev, ...patch };
+      const next = { ...prev, ...(typeof patch === "function" ? patch(prev) : patch) };
       scheduleHistoryEntry(next, label);
       return next;
     });
@@ -942,14 +941,6 @@ function useEditorStateController() {
         };
       });
     });
-    const brushStrokes = restoredSettings.masks.filter((mask) => mask.type === "brush").flatMap((mask) => mask.params.strokes);
-    if (brushStrokes.length > 0) {
-      const canvas = rasterizeBrushStrokes(brushStrokes, 1024, Math.max(1, Math.round(1024 * source.height / source.width)));
-      setBrushCanvas(canvas);
-      setBrushCanvasDirty((current) => current + 1);
-    } else {
-      setBrushCanvas(null);
-    }
     const subtitle = document.overlays.textBlocks.find((block) => block.role === "subtitle");
     const date = document.overlays.textBlocks.find((block) => block.role === "date");
     const billing = document.overlays.textBlocks.find((block) => block.role === "billing");
@@ -1140,7 +1131,6 @@ function useEditorStateController() {
         format,
         quality: exportQuality / 100,
         scale: exportScale,
-        brushCanvas,
         overlays: { text: textOverlay, watermark },
       });
 
@@ -1170,7 +1160,7 @@ function useEditorStateController() {
       const texture = await loadRenderSource(imageSrc, rawSource);
       const exportEngine = new ExportEngine();
       const format = exportFormat as 'image/jpeg' | 'image/png' | 'image/webp';
-      const baseOpts = { format, quality: exportQuality / 100, scale: exportScale, brushCanvas, overlays: { text: textOverlay, watermark } };
+      const baseOpts = { format, quality: exportQuality / 100, scale: exportScale, overlays: { text: textOverlay, watermark } };
 
       // Helper to trigger download
       const downloadBlob = (blob: Blob, suffix: string) => {
@@ -1581,12 +1571,9 @@ function useEditorStateController() {
     roiMode, setRoiMode,
     sourceROI, setSourceROI,
     matchROI, setMatchROI,
-    brushMaskActive, setBrushMaskActive,
     brushSize, setBrushSize,
     brushFeather, setBrushFeather,
     brushErasing, setBrushErasing,
-    brushCanvas, setBrushCanvas,
-    brushCanvasDirty, setBrushCanvasDirty,
     sourceFile,
     gradeGraph, setGradeGraph,
     rawDevelop, rawProgress,

@@ -13,7 +13,7 @@ import CinematicTextOverlay, {
   TextOverlaySettings,
 } from "./CinematicTextOverlay";
 import RenderedOverlayCanvas from "./RenderedOverlayCanvas";
-import BrushMaskCanvas from "./BrushMaskCanvas";
+import type { MaskColorSampler } from "../lib/maskGeometry";
 import type {
   CompositionGuide,
   EditorSettings,
@@ -30,18 +30,12 @@ export default function CinematicEditor({
   textOverlay,
   setTextOverlay,
   watermark,
-  brushMaskActive,
-  brushSize,
-  brushFeather,
-  brushErasing,
-  brushCanvas,
-  brushCanvasDirty,
-  onCanvasReady,
   performanceMode = "balanced",
   compositionGuide = "off",
-  onBrushMaskUpdate,
-  onBrushStrokeComplete,
   onBoundsChange,
+  maskOverlayPlateId = null,
+  maskColorSamplerRef,
+  pickingMaskColor = false,
   split = -1,
   showClipping = false,
   rawSource = null,
@@ -52,18 +46,12 @@ export default function CinematicEditor({
   textOverlay?: TextOverlaySettings;
   setTextOverlay?: React.Dispatch<React.SetStateAction<TextOverlaySettings>>;
   watermark?: WatermarkSettings;
-  brushMaskActive?: boolean;
-  brushSize?: number;
-  brushFeather?: number;
-  brushErasing?: boolean;
-  brushCanvas?: HTMLCanvasElement | null;
-  brushCanvasDirty?: number;
-  onCanvasReady?: (canvas: HTMLCanvasElement) => void;
   performanceMode?: PerformanceMode;
   compositionGuide?: CompositionGuide;
-  onBrushMaskUpdate?: () => void;
-  onBrushStrokeComplete?: (stroke: import("../types/editor").BrushStroke) => void;
   onBoundsChange?: (bounds: ImageBounds) => void;
+  maskOverlayPlateId?: string | null;
+  maskColorSamplerRef?: React.RefObject<MaskColorSampler | null>;
+  pickingMaskColor?: boolean;
   split?: number;
   showClipping?: boolean;
   rawSource?: LinearSourceBuffer | null;
@@ -136,8 +124,9 @@ export default function CinematicEditor({
           <ImagePlane
             imageUrl={imageUrl}
             settings={settings}
-            brushCanvas={brushCanvas}
-            brushCanvasDirty={brushCanvasDirty}
+            maskOverlayPlateId={maskOverlayPlateId}
+            maskColorSamplerRef={maskColorSamplerRef}
+            pickingMaskColor={pickingMaskColor}
             split={split}
             showClipping={showClipping}
             rawSource={rawSource}
@@ -146,52 +135,8 @@ export default function CinematicEditor({
         </Suspense>
       </Canvas>
 
-      {/* Brush Mask Canvas - positioned within image bounds */}
-      {imageBounds && (
-        <div
-          data-export-ignore="true"
-          className="absolute"
-          style={{
-            left: imageBounds.left,
-            top: imageBounds.top,
-            width: imageBounds.width,
-            height: imageBounds.height,
-          }}
-        >
-          <BrushMaskCanvas
-            width={1024}
-            height={Math.round(1024 * (imageBounds.height / imageBounds.width))}
-            brushSize={brushSize || 0.5}
-            brushFeather={brushFeather || 0.5}
-            isErasing={brushErasing || false}
-            isActive={brushMaskActive || false}
-            onMaskUpdate={() => {
-              if (onBrushMaskUpdate) onBrushMaskUpdate();
-            }}
-            onCanvasReady={(c) => {
-              if (onCanvasReady) onCanvasReady(c);
-            }}
-            onClear={() => {}}
-            onStrokeComplete={onBrushStrokeComplete}
-          />
-        </div>
-      )}
-
       {imageBounds && (
         <CompositionGuideOverlay guide={compositionGuide} bounds={imageBounds} />
-      )}
-
-      {/* Brush Mode Indicator */}
-      {brushMaskActive && (
-        <div
-          data-export-ignore="true"
-          className="absolute top-6 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-cyan-500/20 backdrop-blur-xl border border-cyan-500/50 rounded-lg"
-        >
-          <span className="text-cyan-400 text-xs font-mono uppercase tracking-widest">
-            {brushErasing ? "Eraser Mode" : "Brush Mode"} - Paint on image to
-            create mask
-          </span>
-        </div>
       )}
 
       {/* Cinematic Text Overlay - positioned within image bounds */}

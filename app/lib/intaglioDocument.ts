@@ -134,7 +134,7 @@ export async function createIntaglioDocument(input: DocumentAdapterInput): Promi
     graph,
     plates: [
       { id: "base", name: "Base Emulsion", nodeIds: ["develop", "curve", "oklch", "wheels"], enabled: true, opacity: 1, blendMode: "normal", maskOutputNodeId: null },
-      ...input.settings.adjustmentLayers.map((layer) => ({ id: layer.id, name: layer.name, nodeIds: [], enabled: true, opacity: layer.opacity, blendMode: "normal" as const, maskOutputNodeId: layer.maskIds.at(-1) ?? null })),
+      ...input.settings.adjustmentLayers.map((layer) => ({ id: layer.id, name: layer.name, nodeIds: [], enabled: layer.enabled !== false, opacity: layer.opacity, blendMode: "normal" as const, maskOutputNodeId: layer.maskIds.at(-1) ?? null })),
     ],
     overlays: {
       textBlocks,

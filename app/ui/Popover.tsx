@@ -57,14 +57,15 @@ export function Popover({ trigger, children, side = "top", align = "center", wid
   );
 }
 
-export function MenuItem({ selected, onSelect, children, hint }: { selected?: boolean; onSelect: () => void; children: React.ReactNode; hint?: string }) {
+export function MenuItem({ selected, onSelect, children, hint, disabled }: { selected?: boolean; onSelect: () => void; children: React.ReactNode; hint?: string; disabled?: boolean }) {
   return (
     <button
       type="button"
       role="menuitemradio"
       aria-checked={selected}
+      disabled={disabled}
       onClick={onSelect}
-      className={`ui-focus flex h-8 w-full items-center justify-between gap-2 rounded-[8px] px-2.5 text-left text-[12px] transition-colors ${selected ? "bg-white/[0.1] text-[var(--ui-text)]" : "text-[var(--ui-text-2)] hover:bg-white/[0.06] hover:text-[var(--ui-text)]"}`}
+      className={`ui-focus flex h-8 w-full items-center justify-between gap-2 rounded-[8px] px-2.5 text-left text-[12px] transition-colors disabled:opacity-40 ${selected ? "bg-white/[0.1] text-[var(--ui-text)]" : "text-[var(--ui-text-2)] hover:bg-white/[0.06] hover:text-[var(--ui-text)]"}`}
     >
       <span className="flex items-center gap-2">{children}</span>
       {hint && <span className="text-[11px] text-[var(--ui-text-3)]">{hint}</span>}

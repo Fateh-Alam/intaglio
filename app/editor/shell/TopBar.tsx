@@ -49,7 +49,7 @@ export function TopBar() {
   return (
     <header className="relative z-40 flex h-12 shrink-0 items-center gap-2 border-b border-[var(--ui-line)] bg-[var(--ui-chrome)] px-2.5">
       <div className="flex min-w-0 flex-1 items-center gap-1">
-        <div className="flex items-center gap-2 px-1.5 text-[var(--ui-text)]">
+        <div className="hidden items-center gap-2 px-1.5 text-[var(--ui-text)] min-[360px]:flex">
           <BrandMark />
         </div>
         <Popover
@@ -98,7 +98,7 @@ export function TopBar() {
         </IconButton>
       </div>
 
-      <div className="flex min-w-0 max-w-[40%] items-center gap-2 text-[12.5px]">
+      <div className="sr-only min-w-0 max-w-[40%] items-center gap-2 text-[12.5px] sm:not-sr-only sm:flex">
         <span className="truncate font-medium text-[var(--ui-text)]">{imageName}</span>
         {edited && <span className="shrink-0 rounded-full bg-white/[0.07] px-2 py-0.5 text-[10.5px] text-[var(--ui-text-2)]">Edited</span>}
       </div>

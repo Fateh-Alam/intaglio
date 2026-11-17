@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useShell } from "./useShell";
+import { useSwitchRightMode } from "./useSwitchRightMode";
 
 const isTypingTarget = (target: EventTarget | null) => {
   const element = target as HTMLElement | null;
@@ -11,6 +12,7 @@ const isTypingTarget = (target: EventTarget | null) => {
 /** Lightroom-compatible view shortcuts. Editing shortcuts (⌘Z, ratings, flags) live in the editor state. */
 export function useShellShortcuts(enabled: boolean) {
   const shell = useShell();
+  const switchMode = useSwitchRightMode();
 
   useEffect(() => {
     if (!enabled) return;
@@ -25,13 +27,15 @@ export function useShellShortcuts(enabled: boolean) {
       if (key === "y") return run(() => shell.setCompare(shell.compare === "split" ? "off" : "split"));
       if (key === "j") return run(() => shell.setShowClipping(!shell.showClipping));
       if (key === "l") return run(() => shell.setLeftOpen(!shell.leftOpen));
-      if (key === "e") return run(() => shell.setRightMode("develop"));
-      if (key === "m") return run(() => shell.setRightMode("masks"));
-      if (key === "t") return run(() => shell.setRightMode("text"));
-      if (event.key === "Tab") return run(() => shell.setPanelsHidden(!shell.panelsHidden));
+      if (key === "e") return run(() => switchMode("develop"));
+      if (key === "m") return run(() => switchMode("masks"));
+      if (key === "t") return run(() => switchMode("text"));
+      if (key === "o" && shell.rightMode === "masks") return run(() => shell.setShowMaskOverlay(!shell.showMaskOverlay));
+      if (key === "f" && event.shiftKey) return run(() => shell.setPanelsHidden(!shell.panelsHidden));
+      if (event.key === "Escape" && shell.picking) return run(() => shell.setPicking(null));
       if (event.key === "Escape" && shell.preview) return run(() => shell.setPreview(null));
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [enabled, shell]);
+  }, [enabled, shell, switchMode]);
 }
