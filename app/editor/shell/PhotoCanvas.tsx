@@ -215,7 +215,7 @@ export function PhotoCanvas() {
             exit={{ opacity: 0, y: -6 }}
             className="ui-glass pointer-events-none absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full px-3 py-1.5 text-[11.5px] font-medium"
           >
-            Previewing — click to apply
+            Preview
           </motion.div>
         )}
       </AnimatePresence>

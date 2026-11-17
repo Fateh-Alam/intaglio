@@ -5,6 +5,7 @@ import type { TextOverlaySettings } from '../../components/CinematicTextOverlay'
 import type { WatermarkSettings } from '../../types/editor';
 import { ensureOverlayFonts, renderOverlays } from './overlayCompositor';
 import { encodeCanvasWasm } from './wasmCodecs';
+import { hasCreativeEffects } from '../effects/settings';
 
 export interface ExportOptions {
   format: 'image/jpeg' | 'image/png' | 'image/webp';
@@ -74,7 +75,14 @@ export class ExportEngine {
     const targetHeight = options.height || Math.round(imgHeight * (options.scale || 1.0));
 
     const renderer = this.getRenderer(targetWidth, targetHeight);
-    const maxTextureSize = Math.min(renderer.capabilities.maxTextureSize || 4096, options.maxTileSize ?? Number.POSITIVE_INFINITY);
+    const hardwareLimit = renderer.capabilities.maxTextureSize || 4096;
+    const creative = hasCreativeEffects(settings.creativeEffects);
+    // Refraction, mirror effects and sorting can read anywhere in the frame.
+    // Rendering those against independent tiles would introduce visible cuts.
+    if (creative && (targetWidth > hardwareLimit || targetHeight > hardwareLimit)) {
+      throw new Error(`Creative effects require a full-frame render. Choose an export with a longest edge of ${hardwareLimit}px or less.`);
+    }
+    const maxTextureSize = creative ? hardwareLimit : Math.min(hardwareLimit, options.maxTileSize ?? Number.POSITIVE_INFINITY);
 
     // Check if tiling is needed
     if (targetWidth > maxTextureSize || targetHeight > maxTextureSize) {

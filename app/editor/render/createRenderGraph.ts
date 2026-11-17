@@ -13,6 +13,7 @@ import { BloomPass } from "./passes/BloomPass";
 import { OpticalFXPass } from "./passes/OpticalFXPass";
 import { SharpenPass } from "./passes/SharpenPass";
 import { DisplayTransformPass } from "./passes/DisplayTransformPass";
+import { CreativeEffectsPass } from "./passes/CreativeEffectsPass";
 
 export function createRenderGraph(): RenderGraph {
   const graph = new RenderGraph();
@@ -30,5 +31,6 @@ export function createRenderGraph(): RenderGraph {
   graph.addGlobalPass(new OpticalFXPass());
   graph.addGlobalPass(new SharpenPass());
   graph.addGlobalPass(new DisplayTransformPass());
+  graph.addGlobalPass(new CreativeEffectsPass());
   return graph;
 }

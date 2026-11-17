@@ -102,7 +102,7 @@ const SETTING_CATEGORIES: SettingCategory[] = [
   },
   {
     id: "effects",
-    label: "Creative Effects",
+    label: "Film & Lens Effects",
     description: "Grain, vignette, sharpness, dehaze, chromatic aberration",
     keys: [
       "grain",
@@ -114,6 +114,12 @@ const SETTING_CATEGORIES: SettingCategory[] = [
       "filmBorder",
       "skinProtect",
     ],
+  },
+  {
+    id: "creative-stack",
+    label: "Creative Effect Stack",
+    description: "Effect layers, their order, colors and settings",
+    keys: ["creativeEffects"],
   },
   {
     id: "halation",

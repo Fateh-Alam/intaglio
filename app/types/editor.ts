@@ -1,4 +1,5 @@
 import type * as THREE from "three";
+import type { CreativeEffect } from "../editor/effects/settings";
 
 export interface CurvePoint {
   x: number;
@@ -227,6 +228,8 @@ export interface EditorSettings {
   hueShift: number;
   rotate: number;
   zoom: number;
+
+  creativeEffects: CreativeEffect[];
 
   appliedRecipeId: string | null;
   recipeIntensity: number;

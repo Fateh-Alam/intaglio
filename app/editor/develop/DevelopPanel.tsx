@@ -6,6 +6,7 @@ import { useEditorState } from "../hooks/useEditorState";
 import { useShell } from "../shell/useShell";
 import { useDevelop } from "./useDevelop";
 import { HistogramView } from "./HistogramView";
+import { CreativeEffectsSection } from "../effects/CreativeEffectsSection";
 import { LookSection } from "./LookSection";
 import { BasicSection } from "./BasicSection";
 import { ToneCurveSection } from "./ToneCurveSection";
@@ -13,7 +14,7 @@ import { ColorMixerSection } from "./ColorMixerSection";
 import { ColorGradingSection } from "./ColorGradingSection";
 import { DetailSection, EffectsSection, FilmResponseSection, GeometrySection } from "./EffectsSections";
 
-const SECTIONS = ["look", "basic", "curve", "mixer", "grading", "detail", "geometry", "effects", "film"] as const;
+const SECTIONS = ["look", "basic", "curve", "mixer", "grading", "detail", "geometry", "effects", "creative", "film"] as const;
 type SectionId = (typeof SECTIONS)[number];
 
 const OPEN_KEY = "intaglio.develop.open";
@@ -61,6 +62,7 @@ export function DevelopSections() {
   return (
     <>
       <LookSection {...props("look")} onBrowse={() => { shell.setLeftTab("looks"); shell.setLeftOpen(true); }} />
+      {!dev.local && <CreativeEffectsSection open={open.has("creative")} onToggle={toggle("creative")} />}
       <BasicSection {...props("basic")} />
       <ToneCurveSection {...props("curve")} />
       <ColorMixerSection {...props("mixer")} />

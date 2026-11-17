@@ -36,7 +36,7 @@ interface ShellState {
   setSplitPosition: (position: number) => void;
   /** Temporary settings shown while hovering a look or history step; never saved. */
   preview: EditorSettings | null;
-  setPreview: (settings: EditorSettings | null) => void;
+  setPreview: React.Dispatch<React.SetStateAction<EditorSettings | null>>;
   /** Mask component being edited on the canvas (inside the active adjustment). */
   selectedComponentId: string | null;
   setSelectedComponentId: (id: string | null) => void;
