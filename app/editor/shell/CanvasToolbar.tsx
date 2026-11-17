@@ -9,6 +9,7 @@ import { MenuItem, Popover } from "../../ui/Popover";
 import { Tooltip } from "../../ui/Tooltip";
 import { SURROUND_COLORS, useShell, type Surround } from "./useShell";
 import { useCrop } from "../crop/useCrop";
+import { formatScale, MAX_SCALE, stepScale, ZOOM_STOPS } from "./loupe";
 
 const GRID_MODES: ReadonlyArray<{ id: GridOverlayMode; label: string }> = [
   { id: "none", label: "None" },
@@ -32,7 +33,13 @@ function Divider() {
 }
 
 /** Floating view controls: compare, clipping, overlays, zoom, surround. */
-export function CanvasToolbar({ zoom, onZoom }: { zoom: number; onZoom: (zoom: number) => void }) {
+export function CanvasToolbar({ scale, fit, onZoom }: {
+  /** Device pixels per image pixel; null is Fit. */
+  scale: number | null;
+  /** The scale at which the photo fits the window. */
+  fit: number;
+  onZoom: (scale: number | null) => void;
+}) {
   const { gridOverlayMode, setGridOverlayMode } = useEditorState();
   const shell = useShell();
   const { open: openCrop } = useCrop();
@@ -104,19 +111,37 @@ export function CanvasToolbar({ zoom, onZoom }: { zoom: number; onZoom: (zoom: n
 
       <Divider />
 
-      <IconButton label="Zoom out" shortcut="⌘−" tooltipSide="top" onClick={() => onZoom(zoom / 1.5)} disabled={zoom <= 0.25}>
+      <IconButton label="Zoom out" shortcut="⌘−" tooltipSide="top" onClick={() => scale !== null && onZoom(stepScale(scale, fit, -1))} disabled={scale === null}>
         <IconMinus size={16} stroke={1.8} />
       </IconButton>
-      <Tooltip content="Fit to window" shortcut="⌘0" side="top">
-        <button
-          type="button"
-          onClick={() => onZoom(1)}
-          className="ui-focus ui-num h-8 min-w-[52px] rounded-[8px] px-2 text-[11.5px] font-medium text-[var(--ui-text-2)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
-        >
-          {zoom === 1 ? "Fit" : `${Number(zoom.toFixed(2))}×`}
-        </button>
-      </Tooltip>
-      <IconButton label="Zoom in" shortcut="⌘+" tooltipSide="top" onClick={() => onZoom(zoom * 1.5)} disabled={zoom >= 8}>
+      <Popover
+        width={180}
+        trigger={({ open, toggle }) => (
+          <Tooltip content="Zoom · Z toggles Fit and 100%" side="top">
+            <button
+              type="button"
+              aria-label={`Zoom level ${formatScale(scale)}`}
+              aria-expanded={open}
+              onClick={toggle}
+              className={`ui-focus ui-num h-8 min-w-[56px] rounded-[8px] px-2 text-[11.5px] font-medium transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)] ${open ? "bg-white/[0.08] text-[var(--ui-text)]" : "text-[var(--ui-text-2)]"}`}
+            >
+              {formatScale(scale)}
+            </button>
+          </Tooltip>
+        )}
+      >
+        {(close) => (
+          <>
+            <MenuItem selected={scale === null} hint={formatScale(fit)} onSelect={() => { onZoom(null); close(); }}>Fit</MenuItem>
+            {ZOOM_STOPS.filter((stop) => stop > fit * 1.001).map((stop) => (
+              <MenuItem key={stop} selected={scale !== null && Math.abs(scale - stop) < 1e-3} hint={stop === 1 ? "Actual pixels" : undefined} onSelect={() => { onZoom(stop); close(); }}>
+                {formatScale(stop)}
+              </MenuItem>
+            ))}
+          </>
+        )}
+      </Popover>
+      <IconButton label="Zoom in" shortcut="⌘+" tooltipSide="top" onClick={() => onZoom(stepScale(scale ?? fit, fit, 1))} disabled={scale !== null && scale >= MAX_SCALE}>
         <IconPlus size={16} stroke={1.8} />
       </IconButton>
     </div>

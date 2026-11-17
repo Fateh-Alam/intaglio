@@ -7,7 +7,7 @@ import React, {
   useMemo,
 } from "react";
 import { Canvas } from "@react-three/fiber";
-import ImagePlane from "./ImagePlane";
+import ImagePlane, { type LoupeView } from "./ImagePlane";
 import type { LinearSourceBuffer } from "../editor/render/sourceTexture";
 import CinematicTextOverlay, {
   TextOverlaySettings,
@@ -41,7 +41,16 @@ export default function CinematicEditor({
   split = -1,
   showClipping = false,
   rawSource = null,
+  view,
+  onOutputSize,
 }: {
+  /**
+   * Loupe view. The parent zooms its DOM overlays with a CSS transform about
+   * the center (translate(pan) scale(zoom)); the WebGL canvas cancels that
+   * transform and renders real image pixels for the visible region instead.
+   */
+  view?: LoupeView & { pan: { x: number; y: number } };
+  onOutputSize?: (width: number, height: number) => void;
   gradeGraph?: import("../types/document").GradeGraph;
   settings: EditorSettings;
   imageUrl: string;
@@ -60,11 +69,15 @@ export default function CinematicEditor({
   rawSource?: LinearSourceBuffer | null;
 }) {
   const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null);
-  const dpr = useMemo<[number, number]>(() => {
+  const zoomed = Boolean(view && view.zoom > 1.0001);
+  const dpr = useMemo<number | [number, number]>(() => {
+    // 100% means one image pixel per device pixel, so the loupe needs the
+    // display's true pixel ratio.
+    if (zoomed && typeof window !== "undefined") return Math.min(3, window.devicePixelRatio || 1);
     if (performanceMode === "draft") return [0.75, 1];
     if (performanceMode === "quality") return [1.5, 2];
     return [1, 1.5];
-  }, [performanceMode]);
+  }, [performanceMode, zoomed]);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const { crop } = settings;
@@ -112,6 +125,10 @@ export default function CinematicEditor({
       ref={containerRef}
       className="relative h-full w-full overflow-hidden"
     >
+      <div
+        className="absolute inset-0"
+        style={zoomed && view ? { transform: `scale(${1 / view.zoom}) translate(${-view.pan.x}px, ${-view.pan.y}px)`, transformOrigin: "center" } : undefined}
+      >
       <Canvas
         id="main-editor-canvas"
         flat
@@ -132,9 +149,12 @@ export default function CinematicEditor({
             showClipping={showClipping}
             rawSource={rawSource}
             onStatsUpdate={onStatsUpdate}
+            view={view}
+            onOutputSize={onOutputSize}
           />
         </Suspense>
       </Canvas>
+      </div>
 
       {imageBounds && (
         <CompositionGuideOverlay guide={compositionGuide} bounds={imageBounds} />

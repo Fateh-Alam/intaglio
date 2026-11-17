@@ -256,7 +256,7 @@ Local verification: typecheck, lint, production build and 67 automated tests pas
 
 - [ ] **Performance budgets** enforced in CI: slider-to-photon under 16 ms on a 24 MP proxy (M1 baseline), 100 MP export under 20 s, RAW open to first pixel under 1.5 s (embedded preview) and under 4 s (full develop).
 - [ ] **Viewport-first rendering:** render only visible tiles at screen resolution; refine to 1:1 when zoomed; cancel stale work.
-- [ ] **Loupe:** 100/200/400% with pixel grid, plus a **navigator**.
+- [x] **Loupe:** 100/200/400% with pixel grid, plus a **navigator**. 100% is one image pixel per device pixel. Z or a click toggles Fit/100%; ⌘+/⌘−/⌘0, pinch and the zoom menu step through 25–800%; drag, scroll or Space-drag pans with any tool. The visible tile renders at full resolution (Creative Effects render the whole frame, capped by the GPU texture limit), and histogram, scopes and navigator stay on the whole frame. Browser checks confirm a 1 px checkerboard resolves at 100% and matches the exported PNG with a brush mask and Creative Effects.
 - [ ] **Customizable workspace:** dockable panels, saved layouts ("Grade", "Retouch", "Cull"), and full keyboard customization. The command palette exists; make every action available in it.
 - [ ] **Hardware surfaces** (desktop): MIDI/HID controller mapping (Loupedeck, TourBox, Tangent Ripple/Elements), so colorists can grade with physical wheels.
 - [ ] **Second display "client monitor"** (desktop): a clean full-screen output on another monitor.
