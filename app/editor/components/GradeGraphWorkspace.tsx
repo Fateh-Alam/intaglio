@@ -13,11 +13,12 @@ function GradeNodeCard({ data, selected }: NodeProps<GradeFlowNode>): React.Reac
   const output = nodeOutputPort(node);
   return (
     <div className={`min-w-40 border bg-[#181713] px-3 py-2 shadow-xl ${selected ? "border-[var(--intaglio-brass)]" : "border-white/15"}`} aria-label={`${node.name} ${node.kind} node`}>
-      <Handle type="target" position={Position.Left} id={output} className={output === "mask" ? "!bg-cyan-400" : "!bg-amber-400"} aria-label={`${output} input`} />
+      {node.kind !== 'source' && (output === 'image' || ['mask-add', 'mask-subtract', 'mask-intersect'].includes(node.kind)) && <Handle type="target" position={Position.Left} id={output} className={output === "mask" ? "!bg-cyan-400" : "!bg-amber-400"} aria-label={`${output} input`} />}
+      {node.kind === 'plate-composite' && <Handle type="target" position={Position.Top} id="mask" className="!bg-cyan-400" aria-label="mask input" />}
       <div className="font-mono text-[8px] uppercase tracking-[0.24em] text-white/35">{node.kind}</div>
       <div className="mt-1 text-xs text-white/85">{node.name}</div>
-      <div className="mt-2 font-mono text-[8px] uppercase tracking-widest text-white/35">{node.enabled ? "Active" : "Bypassed"} · {Math.round(node.opacity * 100)}%</div>
-      <Handle type="source" position={Position.Right} id={output} className={output === "mask" ? "!bg-cyan-400" : "!bg-amber-400"} aria-label={`${output} output`} />
+      <div className="mt-2 font-mono text-[8px] uppercase tracking-widest text-white/35">{output === "mask" ? "Mask reference" : `${node.enabled ? "Active" : "Bypassed"} · ${Math.round(node.opacity * 100)}%`}</div>
+      {node.kind !== "output" && <Handle type="source" position={Position.Right} id={output} className={output === "mask" ? "!bg-cyan-400" : "!bg-amber-400"} aria-label={`${output} output`} />}
     </div>
   );
 }
@@ -36,7 +37,7 @@ export function GradeGraphWorkspace({ graph, selectedNodeId, onSelectNode, onMov
         <span>Grade Graph</span><button onClick={() => setExpanded(!expanded)} className="ui-focus rounded px-2 py-1 text-white/80">{expanded ? "Close expanded graph" : "Expand graph"}</button><span className={validation.valid ? "text-emerald-400" : "text-red-400"}>{validation.valid ? "Valid" : `${validation.issues.length} issues`}</span>
       </div>
       <div className="h-[calc(100%-2.5rem)]">
-        <ReactFlow key={String(expanded)} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesConnectable={false} edgesReconnectable={false} elementsSelectable onNodeClick={(_, node) => onSelectNode(node.id)} onNodeDragStop={handleNodeDragStop} fitView minZoom={0.2} maxZoom={2} colorMode="dark" aria-label="Intaglio node graph">
+        <ReactFlow key={String(expanded)} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesConnectable={false} edgesReconnectable={false} elementsSelectable onNodeClick={(_, node) => onSelectNode(node.id)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ nodes: selectedNodeId ? [{ id: selectedNodeId }] : undefined, minZoom: 0.7, maxZoom: 1, padding: 0.4 }} minZoom={0.2} maxZoom={2} colorMode="dark" aria-label="Intaglio node graph">
           <Background color="#ffffff" gap={28} size={0.5} /><MiniMap pannable zoomable nodeColor="#d6a848" /><Controls showInteractive={false} />
         </ReactFlow>
       </div>

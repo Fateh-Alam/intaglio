@@ -26,9 +26,10 @@ test("preview readback and decoded PNG export satisfy the full render contract",
   expect(correctness?.neutralPlate.meanDeltaE, `${testInfo.project.name} neutral plate must be a no-op; ${JSON.stringify(correctness)}`).toBeLessThanOrEqual(0.25);
   expect(correctness?.identityLut.meanDeltaE, `${testInfo.project.name} identity LUT must be a no-op; ${JSON.stringify(correctness)}`).toBeLessThanOrEqual(0.25);
   expect(correctness?.invertedMasterCurve.meanDeltaE, `${testInfo.project.name} master curve must reach export; ${JSON.stringify(correctness)}`).toBeGreaterThanOrEqual(20);
-  for (const key of ['graphDefault', 'graphBypass', 'graphNodeParams', 'graphExport']) {
+  for (const key of ['graphDefault', 'graphBypass', 'graphNodeParams', 'graphExport', 'graphMixerParams']) {
     expect(correctness?.[key].meanDeltaE, `${key}: ${JSON.stringify(correctness)}`).toBeLessThanOrEqual(.25);
   }
+  expect(correctness?.graphMixerChangesPixels.meanDeltaE).toBeGreaterThan(.2);
   expect(correctness?.graphChangesPixels.meanDeltaE).toBeGreaterThan(2);
   expect(correctness?.graphOpacityChangesPixels.meanDeltaE).toBeGreaterThan(1);
   expect(correctness?.graphLutRoundTrip.meanDeltaE).toBeLessThan(1);

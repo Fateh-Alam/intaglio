@@ -155,10 +155,20 @@ These were shipping defects; all are now covered by unit tests and/or the render
 ## 4. Track G — Grading and LUTs (where photographers switch)
 
 ### G1. A node grader that actually renders
-- [ ] **Compile the GradeGraph into the renderer** (the open defect). The existing xyflow UI becomes the real grading surface.
+- [x] **Compile the GradeGraph into the renderer** for the serial image path. Preview, export, proof sheets and batch use saved order, bypass, opacity and supported numeric overrides. Mask side inputs remain owned by the Masks/Plate pipeline; unsupported image branches and node overrides are rejected.
 - [ ] Node types: serial, parallel, layer mixer (with blend modes), splitter/combiner (per-channel), **key mixer**, outside node (inverse of a key), and compound nodes (save a sub-graph as a reusable "macro").
 - [ ] Per-node **key input** (masks/qualifiers), opacity, bypass, solo, and cache-flag.
-- [ ] A simple "Layers" view over the same graph for people who don't want nodes, two-way synced.
+- [x] A simple "Layers" view over the same graph for people who don't want nodes, two-way synced. The optional pro workspace includes an expandable Nodes canvas.
+
+**Initial workspace checkpoint — 18 November 2026**
+
+Open **Pro grading** from the Edit controls. The default Edit, Masks and Text modes keep their current layout. The pro panel reuses the editor's neutral dark surfaces, blue selection accents and compact controls, keeping the photograph dominant. Layers is the default because a complete horizontal graph is unreadable in a narrow sidebar; Nodes can expand across the viewport and initially focus the selected stage at a readable zoom. Graph selection, reordering, bypass and opacity operate on one saved graph. Mask references direct the user to the Masks panel.
+
+The Scopes tab provides luma/RGB waveforms and a vectorscope with graticule and a skin-hue reference. They use the display-referred preview's sampled pixels, with CPU canvas drawing. This is **not yet the GPU/under-2-ms G5 implementation**. The current loupe keeps scope sampling on the whole frame.
+
+LUT Studio imports existing 3D `.cube` looks, opens the LUT author, and bakes the graph's pixel-local color operations to 33³/65³ sRGB `.cube` files. It excludes masks/plates, geometry, bloom, halation, optical/spatial effects, sharpening, creative effects and overlays, and lists those exclusions before export. Shapers, other formats and LUT diagnostics remain open below.
+
+Local verification: typecheck, lint, production build and 67 automated tests passed; eight Chromium/WebKit browser checks passed for grading, render/export parity, cropped masked project reopening and loupe integration. GPU assertions cover graph defaults, bypass, opacity, numeric overrides, actual mixer inputs and LUT round-trip. Visual checks cover 1440, 1024 and 390 px; the 65³ export contains 274,625 finite RGB entries, and scope output remains unchanged at 1:1 loupe zoom. No deployment is implied by these checks.
 
 ### G2. Grading tools (Resolve parity for stills, then beyond)
 - [ ] **Primaries:** lift/gamma/gain/offset wheels and **log wheels** (shadow/midtone/highlight with adjustable ranges), contrast with pivot, temperature/tint in the working space, color boost, and **printer lights** (RGB offset in printer points) for the analog feel.

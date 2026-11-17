@@ -55,3 +55,16 @@ describe('executable grade graph', () => {
     expect(settings.lutTexture).toBe(DEFAULT_SETTINGS.lutTexture);
   });
 });
+
+
+describe('OKLCH node overrides', () => {
+  it('accepts the mixer channel inputs and rejects the unused tealOrange field', () => {
+    const graph = createDefaultGradeGraph();
+    const node = graph.nodes.find(node => node.kind === 'oklch-mixer')!;
+    node.params = { hslOrangeSat: -0.6, hslBlueHue: 0.25 };
+    expect(() => compileGradeGraph(graph)).not.toThrow();
+    expect(gradeNodeSettings(DEFAULT_SETTINGS, node)).toMatchObject({ hslOrangeSat: -0.6, hslBlueHue: 0.25 });
+    node.params = { tealOrange: 0.5 };
+    expect(() => compileGradeGraph(graph)).toThrow(/not a supported node override/);
+  });
+});

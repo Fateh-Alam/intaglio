@@ -4,7 +4,7 @@ import type { EditorSettings } from '../../types/editor';
 /** A node can override grading values, never resources, geometry or other layers. */
 const keys: Record<string, string[]> = {
   develop: ['brightness', 'contrast', 'highlights', 'shadows', 'whites', 'blacks', 'temperature', 'tint', 'vibrance', 'saturation', 'dehaze', 'filmToeStrength', 'filmToeLength', 'filmShoulderStrength', 'filmShoulderLength', 'filmGamma', 'colorCrossover', 'lumaDesat'],
-  'oklch-mixer': ['tealOrange'], lut: ['lutStrength'], film: ['filmEmulationStrength'],
+  'oklch-mixer': ['Red', 'Orange', 'Yellow', 'Green', 'Aqua', 'Blue', 'Purple', 'Magenta'].flatMap(channel => ['Hue', 'Sat', 'Lum'].map(axis => `hsl${channel}${axis}`)), lut: ['lutStrength'], film: ['filmEmulationStrength'],
   halation: ['halation'], bloom: ['bloom'], optical: ['vignette'], sharpen: ['sharpness'],
 };
 export function gradeNodeSettings(settings: EditorSettings, node: GradeNode): EditorSettings {

@@ -33,6 +33,8 @@ export async function gradingChecks(renderer: THREE.WebGLRenderer, source: THREE
     half.nodes.find(node=>node.kind==='develop')!.opacity=.5;
     const local = structuredClone(graph);
     local.nodes.find(node=>node.kind==='develop')!.params={brightness:.7,contrast:.3};
+    const mixer = structuredClone(graph);
+    mixer.nodes.find(node => node.kind === 'oklch-mixer')!.params = { hslOrangeSat: -.8 };
     const png = await engine.exportImage(source,settings,{format:'image/png',width,height,gradeGraph:half});
     const bitmap=await createImageBitmap(png); const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
     const ctx=canvas.getContext('2d')!;ctx.drawImage(bitmap,0,0);bitmap.close();
@@ -42,6 +44,8 @@ export async function gradingChecks(renderer: THREE.WebGLRenderer, source: THREE
     lut=parseCubeLUT(bakeGradeLut(settings,graph,33));
     if(!lut)throw new Error('Baked grade did not parse as a LUT');
     return {
+      graphMixerParams:measureParity(pixels({...DEFAULT_SETTINGS,hslOrangeSat:-.8},graph),pixels(DEFAULT_SETTINGS,mixer)),
+      graphMixerChangesPixels:measureParity(pixels(DEFAULT_SETTINGS,graph),pixels(DEFAULT_SETTINGS,mixer)),
       graphDefault:measureParity(legacy,serial),
       graphBypass:measureParity(pixels(settings,bypass),pixels(settings,zero)),
       graphChangesPixels:measureParity(serial,pixels(settings,bypass)),
