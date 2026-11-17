@@ -5,7 +5,15 @@ import { PingPongTarget } from "./PingPongTarget";
 import { MaskBlendPass } from "./passes/MaskBlendPass";
 import { plateRenderSettings } from "./plateParams";
 
+import type { GradeGraph } from "../../types/document";
+import { DisplayTransformPass } from "./passes/DisplayTransformPass";
+import { gradeNodeSettings } from "./gradeNodeSettings";
+import { compileGradeGraph } from "./compileGradeGraph";
+
 export interface RenderRuntimeResources {
+  gradeGraph?: GradeGraph;
+  /** LUT authoring: evaluate only pixel-local color operations, without dither. */
+  colorOnly?: boolean;
   /** Preview only. Store coverage separately from the photo and its histogram. */
   maskOverlay?: { plateId: string; target: THREE.WebGLRenderTarget };
   /** Preview only. Export reads the committed strokes in the document. */
@@ -21,7 +29,13 @@ export class RenderGraph {
   private readonly plateAccumulationTarget = new PingPongTarget(1, 1);
   private readonly copyScene = new THREE.Scene();
   private readonly copyCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  private readonly copyMaterial = new THREE.MeshBasicMaterial();
+  private readonly copyMaterial = new THREE.ShaderMaterial({
+    uniforms: { map: { value: null }, base: { value: null }, opacity: { value: 1 } },
+    vertexShader: 'varying vec2 vUv; void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
+    fragmentShader: 'uniform sampler2D map; uniform sampler2D base; uniform float opacity; varying vec2 vUv; void main(){gl_FragColor=mix(texture2D(base,vUv),texture2D(map,vUv),opacity);}',
+    depthTest: false, depthWrite: false,
+  });
+  private readonly nodeBase = new PingPongTarget(1, 1);
   private readonly copyGeometry = new THREE.PlaneGeometry(2, 2);
   private readonly copyQuad = new THREE.Mesh(this.copyGeometry, this.copyMaterial);
 
@@ -29,6 +43,7 @@ export class RenderGraph {
 
   setSize(width: number, height: number): void {
     this.pingPongTarget.setSize(width, height);
+    this.nodeBase.setSize(width, height);
     this.plateAccumulationTarget.setSize(width, height);
   }
 
@@ -52,8 +67,10 @@ export class RenderGraph {
     return current;
   }
 
-  private copy(renderer: THREE.WebGLRenderer, input: RenderInput, target: THREE.WebGLRenderTarget): THREE.WebGLRenderTarget {
-    this.copyMaterial.map = textureFromRenderInput(input);
+  private copy(renderer: THREE.WebGLRenderer, input: RenderInput, target: THREE.WebGLRenderTarget | null, base: RenderInput = input, opacity = 1): THREE.WebGLRenderTarget | null {
+    this.copyMaterial.uniforms.map.value = textureFromRenderInput(input);
+    this.copyMaterial.uniforms.base.value = textureFromRenderInput(base);
+    this.copyMaterial.uniforms.opacity.value = opacity;
     renderer.setRenderTarget(target);
     renderer.clear();
     renderer.render(this.copyScene, this.copyCamera);
@@ -61,6 +78,7 @@ export class RenderGraph {
   }
 
   render(renderer: THREE.WebGLRenderer, settings: EditorSettings, inputTexture: THREE.Texture, finalTarget?: THREE.WebGLRenderTarget, runtime: RenderRuntimeResources = {}): void {
+    if (runtime.gradeGraph) { this.renderSaved(renderer, settings, inputTexture, finalTarget, runtime); return; }
     const overlay = runtime.maskOverlay;
     this.maskBlendPass?.pruneBrushes(settings.masks);
     const source = dimensionsFromRenderInput(inputTexture, 1);
@@ -70,7 +88,7 @@ export class RenderGraph {
     accumulator = this.runPasses(renderer, this.platePasses, settings, accumulator);
 
     for (const plate of settings.adjustmentLayers) {
-      const stableBase = this.copy(renderer, accumulator, this.plateAccumulationTarget.read);
+      const stableBase = this.copy(renderer, accumulator, this.plateAccumulationTarget.read)!;
       const plateSettings = plateRenderSettings(settings, plate.params);
       const graded = this.runPasses(renderer, this.platePasses, plateSettings, stableBase);
       if (this.maskBlendPass) {
@@ -98,6 +116,52 @@ export class RenderGraph {
     });
   }
 
+  private renderSaved(renderer: THREE.WebGLRenderer, settings: EditorSettings, input: THREE.Texture, target: THREE.WebGLRenderTarget | undefined, runtime: RenderRuntimeResources): void {
+    const nodes = compileGradeGraph(runtime.gradeGraph!);
+    (this.globalPasses[5] as DisplayTransformPass).setDither(!runtime.colorOnly);
+    const passes = new Map([
+      ['geometry', this.sourcePasses[0]], ['develop', this.platePasses[0]],
+      ['curve', this.platePasses[1]], ['oklch-mixer', this.platePasses[2]],
+      ['color-wheels', this.platePasses[3]], ['lut', this.platePasses[4]],
+      ['film', this.globalPasses[0]], ['halation', this.globalPasses[1]],
+      ['bloom', this.globalPasses[2]], ['optical', this.globalPasses[3]],
+      ['sharpen', this.globalPasses[4]], ['display-transform', this.globalPasses[5]],
+    ]);
+    this.sourcePasses.forEach(pass => pass.setSource(input));
+    this.maskBlendPass?.pruneBrushes(settings.masks);
+    const dimensions = dimensionsFromRenderInput(input, 1);
+    let current: RenderInput = input;
+    for (const node of nodes) {
+      if (!node.enabled || node.opacity === 0 || node.kind === 'source' || node.kind === 'output') continue;
+      if (runtime.colorOnly && ['plate-composite', 'halation', 'bloom', 'optical', 'sharpen'].includes(node.kind)) continue;
+      const base = node.opacity < 1 ? this.copy(renderer, current, this.nodeBase.read)! : current;
+      if (node.kind === 'plate-composite') {
+        for (const plate of settings.adjustmentLayers) {
+          const stableBase = this.copy(renderer, current, this.plateAccumulationTarget.read)!;
+          const graded = this.runPasses(renderer, this.platePasses, plateRenderSettings(settings, plate.params), stableBase);
+          if (this.maskBlendPass) {
+            this.maskBlendPass.updateForPlate(plate, settings.masks, dimensions.width / dimensions.height, settings.crop, Boolean(runtime.liveBrush));
+            this.maskBlendPass.renderBlend(renderer, graded, stableBase, this.pingPongTarget.write);
+            if (runtime.maskOverlay?.plateId === plate.id) this.maskBlendPass.renderCoverage(renderer, stableBase, runtime.maskOverlay.target);
+            this.pingPongTarget.swap();
+            current = this.pingPongTarget.read;
+          }
+        }
+      } else {
+        const pass = passes.get(node.kind)!;
+        if (!(runtime.colorOnly && node.kind === 'geometry')) current = this.runPasses(renderer, [pass], gradeNodeSettings(settings, node), current);
+        if (node.kind === 'geometry') current = this.runPasses(renderer, [this.sourcePasses[1]], settings, current);
+      }
+      if (node.opacity < 1) {
+        this.copy(renderer, current, this.pingPongTarget.write, base, node.opacity);
+        this.pingPongTarget.swap();
+        current = this.pingPongTarget.read;
+      }
+    }
+    if (!runtime.colorOnly) current = this.runPasses(renderer, this.globalPasses.slice(6), settings, current);
+    this.copy(renderer, current, target ?? null);
+  }
+
   setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number): void {
     this.sourcePasses.forEach((pass) => pass.setViewOffset(fullWidth, fullHeight, x, y, width, height));
     this.maskBlendPass?.setViewOffset(fullWidth, fullHeight, x, y, width, height);
@@ -114,6 +178,7 @@ export class RenderGraph {
     [...this.sourcePasses, ...this.platePasses, ...this.globalPasses].forEach((pass) => pass.dispose());
     this.maskBlendPass?.dispose();
     this.pingPongTarget.dispose();
+    this.nodeBase.dispose();
     this.plateAccumulationTarget.dispose();
     this.copyGeometry.dispose();
     this.copyMaterial.dispose();

@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { ProGradingPanel } from "../components/ProGradingPanel";
 import { IconAdjustmentsHorizontal, IconBrush, IconTypography, IconX } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import { DevelopPanel } from "../develop/DevelopPanel";
@@ -91,14 +92,17 @@ function TextMode() {
 }
 
 export function RightPanel() {
+  const [proGrading, setProGrading] = useState(false);
   const shell = useShell();
   const changeMode = useSwitchRightMode();
   const crop = useCrop();
+  if (proGrading && !crop.draft) return <ProGradingPanel onClose={() => setProGrading(false)} />;
   if (crop.draft) return <div className="flex h-full flex-col"><CropControls /></div>;
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-[var(--ui-line)] px-3 py-2.5">
         <Segmented size="md" value={shell.rightMode} onChange={changeMode} options={RIGHT_MODES} />
+        <button onClick={() => setProGrading(true)} className="ui-focus mt-2 w-full rounded py-1 text-[11px] text-[var(--ui-text-3)] hover:text-[var(--ui-text)]">Open pro grading workspace…</button>
       </div>
       <div className="min-h-0 flex-1">
         {shell.rightMode === "develop" && <DevelopPanel />}

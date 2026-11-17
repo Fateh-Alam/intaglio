@@ -302,6 +302,7 @@ export interface WatermarkSettings {
 }
 
 export interface HistogramData {
+  scopeSample?: { pixels: Uint8Array; width: number; height: number };
   rgb: [number[], number[], number[]];
   luma: number[];
   shadowClipPct: number;

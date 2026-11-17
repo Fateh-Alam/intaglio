@@ -26,6 +26,7 @@ const loadTexture = async (blob: Blob): Promise<{ texture: THREE.Texture; url: s
 
 export function BatchExportModal(): React.ReactElement | null {
   const { isBatchExportOpen, setIsBatchExportOpen, settings, exportFormat, exportQuality, exportScale, textOverlay, watermark } = useEditorState();
+  const { gradeGraph } = useEditorState();
   const [items, setItems] = React.useState<QueueItem[]>([]);
   const [isRunning, setIsRunning] = React.useState(false);
   const abortRef = React.useRef<AbortController | null>(null);
@@ -89,7 +90,7 @@ export function BatchExportModal(): React.ReactElement | null {
         const engine = new ExportEngine();
         let output: Blob;
         try {
-          output = await engine.exportImage(texture, settings, { format: exportFormat, quality: exportQuality / 100, scale: exportScale, overlays: { text: textOverlay, watermark }, signal: controller.signal });
+          output = await engine.exportImage(texture, settings, { gradeGraph, format: exportFormat, quality: exportQuality / 100, scale: exportScale, overlays: { text: textOverlay, watermark }, signal: controller.signal });
         } finally {
           engine.dispose();
         }

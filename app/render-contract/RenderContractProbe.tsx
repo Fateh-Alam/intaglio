@@ -10,6 +10,7 @@ import { ensureOverlayFonts, renderOverlays } from "../editor/render/overlayComp
 import { measureParity, type ParityMetrics } from "../lib/parityMetrics";
 import { parseCubeLUT } from "../utils/lutParser";
 import type { EditorSettings, WatermarkSettings } from "../types/editor";
+import { gradingChecks } from "./gradingChecks";
 import { createEffect } from "../editor/effects/settings";
 
 const WIDTH = 192;
@@ -208,7 +209,7 @@ async function runProbe(): Promise<ProbeMetrics> {
         webp90: measureParity(previewPixels, await pixelsFromBlob(webp90)),
         signatures: { png: await signature(png, 8), jpeg: await signature(jpeg90, 3), webp: await signature(webp90, 12) },
         stages: { ...stages, croppedCreative: measureParity(croppedPreview, await exportPixels(croppedCreative)) },
-        correctness,
+        correctness: { ...correctness, ...await gradingChecks(renderer, sourceTexture, WIDTH, HEIGHT) },
       };
     } finally {
       exportEngine.dispose();

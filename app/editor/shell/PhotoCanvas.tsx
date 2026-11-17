@@ -22,6 +22,7 @@ const MAX_ZOOM = 8;
 export function PhotoCanvas() {
   const editor = useEditorState();
   const shell = useShell();
+  const { gradeGraph } = useEditorState();
   const crop = useCrop();
   const {
     settings, imageSrc, rawSource, setHistogram, textOverlay, setTextOverlay, watermark,
@@ -131,6 +132,7 @@ export function PhotoCanvas() {
           }}
         >
           <CinematicEditor
+            gradeGraph={gradeGraph}
             settings={displaySettings}
             imageUrl={imageSrc}
             rawSource={rawSource}

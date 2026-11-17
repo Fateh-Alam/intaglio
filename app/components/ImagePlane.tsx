@@ -85,6 +85,7 @@ const finalDisplayFragmentShader = `
 export default function ImagePlane({
   imageUrl,
   settings,
+  gradeGraph,
   split = -1,
   showClipping = false,
   maskOverlayPlateId = null,
@@ -94,6 +95,7 @@ export default function ImagePlane({
   onStatsUpdate,
 }: {
   imageUrl: string;
+  gradeGraph?: import("../types/document").GradeGraph;
   settings: EditorSettings;
   /** −1 off, 0…1 split position (before on the left), 2 full before. */
   split?: number;
@@ -222,7 +224,7 @@ export default function ImagePlane({
   // The canvas renders on demand; request a frame whenever an input changes.
   useEffect(() => {
     invalidate();
-  }, [invalidate, settings, split, showClipping, maskOverlayPlateId, pickingMaskColor, texture, finalTarget]);
+  }, [invalidate, gradeGraph, settings, split, showClipping, maskOverlayPlateId, pickingMaskColor, texture, finalTarget]);
 
   // Histogram/palette stats come from the rendered image itself (not the
   // letterboxed canvas), read back once rendering settles.
@@ -260,7 +262,7 @@ export default function ImagePlane({
       const pixels = new Uint8Array(width * height * 4);
       gl.readRenderTargetPixels(stats.target, 0, 0, width, height, pixels);
       gl.setRenderTarget(previous);
-      onStatsUpdate({ ...computeHistogramMetrics(pixels), palette: extractDominantColors(pixels, 5, 10) });
+      onStatsUpdate({ ...computeHistogramMetrics(pixels), palette: extractDominantColors(pixels, 5, 10), scopeSample: { pixels, width, height } });
     }, STATS_DELAY_MS);
   };
 
@@ -276,6 +278,7 @@ export default function ImagePlane({
       renderer: gl,
       sourceTexture: texture,
       settings,
+      gradeGraph,
       target: finalTarget,
       width: finalTarget.width,
       height: finalTarget.height,

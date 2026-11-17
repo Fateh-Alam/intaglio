@@ -26,6 +26,7 @@ import type {
 
 export default function CinematicEditor({
   settings,
+  gradeGraph,
   imageUrl,
   onStatsUpdate,
   textOverlay,
@@ -41,6 +42,7 @@ export default function CinematicEditor({
   showClipping = false,
   rawSource = null,
 }: {
+  gradeGraph?: import("../types/document").GradeGraph;
   settings: EditorSettings;
   imageUrl: string;
   onStatsUpdate: (data: HistogramData) => void;
@@ -122,6 +124,7 @@ export default function CinematicEditor({
           <ImagePlane
             imageUrl={imageUrl}
             settings={settings}
+            gradeGraph={gradeGraph}
             maskOverlayPlateId={maskOverlayPlateId}
             maskColorSamplerRef={maskColorSamplerRef}
             pickingMaskColor={pickingMaskColor}

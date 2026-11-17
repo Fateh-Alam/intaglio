@@ -1,0 +1,35 @@
+import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+
+test('opt-in grading controls, scopes and color-grade LUT export', async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/editor');
+  await page.getByText('Sample Photograph', { exact: true }).click();
+  await expect(page.getByRole('slider', { name: 'Exposure', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pro grading', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open pro grading workspace…' }).click();
+  await page.getByLabel('Selected grade node').selectOption('develop');
+  await page.getByLabel('Enabled', { exact: true }).uncheck();
+  await expect(page.getByLabel('Enabled', { exact: true })).not.toBeChecked();
+  await page.getByLabel('Enabled', { exact: true }).check();
+  await page.getByRole('button', { name: 'Move later', exact: true }).click();
+  await page.screenshot({ path: testInfo.outputPath('grading-graph.png') });
+  await page.getByRole('radio', { name: 'Scopes', exact: true }).click();
+  await expect(page.getByText('Display-referred', { exact: false })).toBeVisible();
+  await page.getByLabel('Scope type').selectOption('vectorscope');
+  await page.screenshot({ path: testInfo.outputPath('grading-scopes.png') });
+  await page.getByRole('radio', { name: 'LUT Studio', exact: true }).click();
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export color grade .cube', exact: true }).click();
+  const download = await downloaded;
+  const cube = await readFile((await download.path())!, 'utf8');
+  expect(cube).toContain('LUT_3D_SIZE 33');
+  expect(cube.split('\n').filter(line => /^-?\d+\.\d+ /.test(line))).toHaveLength(33**3);
+  expect(cube).not.toMatch(/NaN|Infinity/);
+  await page.screenshot({ path: testInfo.outputPath('grading-lut.png') });
+  await page.getByRole('button', { name: 'Back to Edit', exact: true }).click();
+  await expect(page.getByRole('slider', { name: 'Exposure', exact: true })).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -17,6 +17,7 @@ import { DEFAULT_RAW_DEVELOP_STATE, type AssetReference, type GradeGraph, type I
 import { createRuntimeAssetStore, createIntaglioDocument } from "../../lib/intaglioDocument";
 import { createIntaglioContainer, openIntaglioContainer, triggerContainerDownload } from "../../lib/intaglioContainer";
 import { sha256Hex } from "../../lib/crypto";
+import { compileGradeGraph } from "../render/compileGradeGraph";
 import { createDefaultGradeGraph } from "../../lib/gradeGraph";
 import { cropSize } from "../../lib/cropGeometry";
 import { decodeRawFile, isRawFile, STILL_FILE_ACCEPT } from "../../lib/rawDecoder";
@@ -735,6 +736,7 @@ function useEditorStateController() {
       if (!file.name.toLowerCase().endsWith(`.${FORMAT.recipeExtension}`)) throw new Error("Only portable .int V2 recipes are supported.");
       const { manifest, runtime } = await openIntaglioContainer(file);
       if (manifest.kind !== "recipe") throw new Error("Choose an .int recipe, not an .intaglio project.");
+      compileGradeGraph(manifest.document.graph);
       const recipeSettings = await hydratePortableAssets(hydrateEditorSettings(manifest.document.editorSettingsSnapshot), manifest.document.assets, runtime);
       const mergedSettings: EditorSettings = {
         ...settings,
@@ -912,6 +914,7 @@ function useEditorStateController() {
   }, [activeExportRecipeId, assetMetadata, documentAssets, exportFormat, exportQuality, exportScale, gradeGraph, rawDevelop, settings.lutStrength, settings.lutTexture, textOverlay, watermark]);
 
   const restoreProjectSession = useCallback(async (document: IntaglioDocumentV2, runtime: RuntimeAssetStore) => {
+    compileGradeGraph(document.graph);
     const restoredSettings = await hydratePortableAssets(hydrateEditorSettings({
       ...document.editorSettingsSnapshot,
       crop: document.editorSettingsSnapshot.crop ?? document.geometry.crop,
@@ -1143,6 +1146,7 @@ function useEditorStateController() {
       const exportEngine = new ExportEngine();
       const format = exportFormat as 'image/jpeg' | 'image/png' | 'image/webp';
       const blob = await exportEngine.exportImage(texture, settings, {
+        gradeGraph,
         format,
         quality: exportQuality / 100,
         scale: exportScale,
@@ -1197,7 +1201,7 @@ function useEditorStateController() {
       }, { ...baseOpts, overlays: undefined });
 
       // 2. Final Edit Slide
-      const afterBlob = await exportEngine.exportImage(texture, settings, baseOpts);
+      const afterBlob = await exportEngine.exportImage(texture, settings, { ...baseOpts, gradeGraph });
 
       exportEngine.dispose();
       texture.dispose();

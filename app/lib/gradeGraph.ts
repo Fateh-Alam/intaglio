@@ -92,7 +92,7 @@ export function createDefaultGradeGraph(): GradeGraph {
   const kinds: Array<[string, GradeNodeKind, string]> = [
     ["source", "source", "Source"], ["geometry", "geometry", "Geometry"],
     ["develop", "develop", "Develop"], ["curve", "curve", "Tone Curve"],
-    ["oklch", "oklch-mixer", "OKLCH Mixer"], ["wheels", "color-wheels", "Color Wheels"], ["plates", "plate-composite", "Plate Composite"],
+    ["oklch", "oklch-mixer", "OKLCH Mixer"], ["wheels", "color-wheels", "Color Wheels"], ["lut", "lut", "Creative LUT"], ["plates", "plate-composite", "Plate Composite"],
     ["film", "film", "Film"], ["halation", "halation", "Halation"],
     ["bloom", "bloom", "Bloom"], ["optical", "optical", "Optical"],
     ["sharpen", "sharpen", "Sharpen"], ["display", "display-transform", "Display"],

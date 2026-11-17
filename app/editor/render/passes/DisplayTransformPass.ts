@@ -12,6 +12,7 @@ void main() {
 const fragmentShader = `
 uniform sampler2D tDiffuse;
 uniform float uTime;
+uniform float uDither;
 uniform vec2 uFullSize;
 uniform vec2 uTileOffset;
 uniform vec2 uTileSize;
@@ -42,7 +43,7 @@ float triangularDither(vec2 uv, float seed) {
 
 vec3 applyDither(vec3 srgb, vec2 uv, float seed) {
   float d = triangularDither(uv, seed) / 255.0;
-  return srgb + vec3(d);
+  return srgb + vec3(d * uDither);
 }
 
 void main() {
@@ -74,6 +75,7 @@ export class DisplayTransformPass extends RenderPass {
       fragmentShader,
       uniforms: {
         tDiffuse: { value: null },
+        uDither: { value: 1 },
         uTime: { value: 0.0 },
         uFullSize: { value: new THREE.Vector2(1, 1) },
         uTileOffset: { value: new THREE.Vector2(0, 0) },
@@ -82,6 +84,8 @@ export class DisplayTransformPass extends RenderPass {
     });
     this.fsQuad.material = this.material;
   }
+
+  setDither(enabled: boolean): void { this.material.uniforms.uDither.value = enabled ? 1 : 0; }
 
   public setup() {
     // Shaders inline

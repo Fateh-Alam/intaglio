@@ -9,6 +9,7 @@ import { hasCreativeEffects } from '../effects/settings';
 import { cropSize } from '../../lib/cropGeometry';
 
 export interface ExportOptions {
+  gradeGraph?: import("../../types/document").GradeGraph;
   format: 'image/jpeg' | 'image/png' | 'image/webp';
   quality?: number; // 0 to 1
   scale?: number;   // multiplier relative to original image size
@@ -99,6 +100,7 @@ export class ExportEngine {
         renderer,
         sourceTexture,
         settings,
+        gradeGraph: options.gradeGraph,
         target: null,
         width: targetWidth,
         height: targetHeight,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Background, Controls, Handle, MiniMap, Position, ReactFlow, type Node, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { GradeNode, GradeGraph } from "../../types/document";
@@ -25,17 +25,18 @@ function GradeNodeCard({ data, selected }: NodeProps<GradeFlowNode>): React.Reac
 const nodeTypes = { grade: GradeNodeCard };
 
 export function GradeGraphWorkspace({ graph, selectedNodeId, onSelectNode, onMoveNode }: { graph: GradeGraph; selectedNodeId: string | null; onSelectNode: (id: string) => void; onMoveNode: (id: string, position: { x: number; y: number }) => void }): React.ReactElement {
+  const [expanded, setExpanded] = useState(false);
   const validation = useMemo(() => validateGradeGraph(graph), [graph]);
   const nodes = useMemo<GradeFlowNode[]>(() => graph.nodes.map((gradeNode, index) => ({ id: gradeNode.id, type: "grade", position: gradeNode.position ?? { x: index * 190, y: 80 }, selected: gradeNode.id === selectedNodeId, data: { gradeNode } })), [graph.nodes, selectedNodeId]);
   const edges = useMemo(() => graph.edges.map((edge) => ({ id: edge.id, source: edge.sourceNodeId, target: edge.targetNodeId, sourceHandle: edge.sourcePort, targetHandle: edge.targetPort, animated: false, style: { stroke: edge.sourcePort === "mask" ? "#67e8f9" : "#d6a848", opacity: 0.7 } })), [graph.edges]);
   const handleNodeDragStop = useCallback((_: MouseEvent | TouchEvent, node: GradeFlowNode) => onMoveNode(node.id, node.position), [onMoveNode]);
   return (
-    <section className="h-[32rem] border border-white/10 bg-[#10100e]" aria-label="Advanced grade graph">
+    <section className={expanded ? "fixed inset-4 z-[80] border border-white/10 bg-[#10100e] shadow-2xl" : "h-[22rem] border border-white/10 bg-[#10100e]"} aria-label="Advanced grade graph">
       <div className="flex h-10 items-center justify-between border-b border-white/10 px-3 font-mono text-[9px] uppercase tracking-[0.22em] text-white/45">
-        <span>Grade Graph · V2</span><span className={validation.valid ? "text-emerald-400" : "text-red-400"}>{validation.valid ? "Valid" : `${validation.issues.length} issues`}</span>
+        <span>Grade Graph</span><button onClick={() => setExpanded(!expanded)} className="ui-focus rounded px-2 py-1 text-white/80">{expanded ? "Close expanded graph" : "Expand graph"}</button><span className={validation.valid ? "text-emerald-400" : "text-red-400"}>{validation.valid ? "Valid" : `${validation.issues.length} issues`}</span>
       </div>
       <div className="h-[calc(100%-2.5rem)]">
-        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesConnectable={false} edgesReconnectable={false} elementsSelectable onNodeClick={(_, node) => onSelectNode(node.id)} onNodeDragStop={handleNodeDragStop} fitView minZoom={0.2} maxZoom={2} colorMode="dark" aria-label="Intaglio node graph">
+        <ReactFlow key={String(expanded)} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesConnectable={false} edgesReconnectable={false} elementsSelectable onNodeClick={(_, node) => onSelectNode(node.id)} onNodeDragStop={handleNodeDragStop} fitView minZoom={0.2} maxZoom={2} colorMode="dark" aria-label="Intaglio node graph">
           <Background color="#ffffff" gap={28} size={0.5} /><MiniMap pannable zoomable nodeColor="#d6a848" /><Controls showInteractive={false} />
         </ReactFlow>
       </div>

@@ -19,6 +19,7 @@ export function ProofSheetModal() {
     isProofSheetOpen,
     setIsProofSheetOpen,
     settings,
+    gradeGraph,
     updateSetting,
     imageSrc,
     textOverlay,
@@ -75,6 +76,7 @@ export function ProofSheetModal() {
           const targetValue = currentValue + step;
           variationSettings[activeVariable.key as keyof EditorSettings] = targetValue as never;
           const blob = await engineRef.current.exportImage(texture, variationSettings, {
+            gradeGraph,
             format: 'image/jpeg', quality: 0.9, width: proofWidth, height: proofHeight,
             overlays: { text: textOverlay, watermark }, signal: controller.signal,
           });
@@ -101,7 +103,7 @@ export function ProofSheetModal() {
       // cleanup object urls on unmount/change
       generatedUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [isProofSheetOpen, activeVariable, imageInfo, imageSrc, settings, textOverlay, watermark]);
+  }, [gradeGraph, isProofSheetOpen, activeVariable, imageInfo, imageSrc, settings, textOverlay, watermark]);
 
   useEffect(() => () => engineRef.current?.dispose(), []);
 
