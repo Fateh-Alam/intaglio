@@ -4,6 +4,7 @@ import { IconX, IconLayoutGrid } from '@tabler/icons-react';
 import { useEditorState } from '../hooks/useEditorState';
 import { ExportEngine } from '../render/ExportEngine';
 import { EditorSettings } from '../../types/editor';
+import { cropSize } from '../../lib/cropGeometry';
 
 const VARIABLES = [
   { id: 'exposure', label: 'Exposure (Brightness)', key: 'brightness', steps: [-0.15, -0.05, 0, 0.05, 0.15] },
@@ -62,9 +63,10 @@ export function ProofSheetModal() {
 
         const sourceWidth = imageInfo?.width ?? ((texture.image as { width?: number }).width ?? 600);
         const sourceHeight = imageInfo?.height ?? ((texture.image as { height?: number }).height ?? 600);
-        const proofScale = 600 / Math.max(sourceWidth, sourceHeight);
-        const proofWidth = Math.max(1, Math.round(sourceWidth * proofScale));
-        const proofHeight = Math.max(1, Math.round(sourceHeight * proofScale));
+        const cropped = cropSize(sourceWidth, sourceHeight, settings.crop);
+        const proofScale = 600 / Math.max(cropped.width, cropped.height);
+        const proofWidth = Math.max(1, Math.round(cropped.width * proofScale));
+        const proofHeight = Math.max(1, Math.round(cropped.height * proofScale));
 
         // Generate five non-destructive deltas through the same render request as export.
         for (const step of activeVariable.steps) {

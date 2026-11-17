@@ -6,6 +6,7 @@ import type { WatermarkSettings } from '../../types/editor';
 import { ensureOverlayFonts, renderOverlays } from './overlayCompositor';
 import { encodeCanvasWasm } from './wasmCodecs';
 import { hasCreativeEffects } from '../effects/settings';
+import { cropSize } from '../../lib/cropGeometry';
 
 export interface ExportOptions {
   format: 'image/jpeg' | 'image/png' | 'image/webp';
@@ -71,8 +72,9 @@ export class ExportEngine {
     const imgWidth = img?.width || 1920;
     const imgHeight = img?.height || 1080;
 
-    const targetWidth = options.width || Math.round(imgWidth * (options.scale || 1.0));
-    const targetHeight = options.height || Math.round(imgHeight * (options.scale || 1.0));
+    const cropped = cropSize(imgWidth, imgHeight, settings.crop, options.scale || 1.0);
+    const targetWidth = options.width || cropped.width;
+    const targetHeight = options.height || cropped.height;
 
     const renderer = this.getRenderer(targetWidth, targetHeight);
     const hardwareLimit = renderer.capabilities.maxTextureSize || 4096;

@@ -91,7 +91,7 @@ const LEGACY_HUE_STRIP = `linear-gradient(90deg, ${Array.from({ length: 13 }, (_
 
 function ComponentEditor({ mask }: { mask: MaskLayer }) {
   const { updateComponent } = useMasks();
-  const { brushSize, setBrushSize, brushFeather, setBrushFeather, brushErasing, setBrushErasing, imageBounds } = useEditorState();
+  const { brushSize, setBrushSize, brushFeather, setBrushFeather, brushErasing, setBrushErasing, imageInfo } = useEditorState();
   const shell = useShell();
   const set = <T extends MaskLayer>(patch: Partial<T["params"]>, label: string) =>
     updateComponent(mask.id, (current) => ({ ...current, params: { ...current.params, ...patch } } as MaskLayer), label);
@@ -126,7 +126,7 @@ function ComponentEditor({ mask }: { mask: MaskLayer }) {
       );
     case "radial": {
       const p = mask.params;
-      const g = radialGeometry(p, imageBounds && imageBounds.height > 0 ? imageBounds.width / imageBounds.height : 1);
+      const g = radialGeometry(p, imageInfo ? imageInfo.width / imageInfo.height : 1);
       const change = (patch: Partial<typeof p>, label: string) => set({
         center: { x: g.cx, y: g.cy }, radiusX: g.rx, radiusY: g.ry, feather: g.feather, ...patch,
       }, label);

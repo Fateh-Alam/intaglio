@@ -1,6 +1,9 @@
 import type * as THREE from "three";
 import type { CreativeEffect } from "../editor/effects/settings";
 
+/** Normalized, top-left rectangle on the full transformed photo. */
+export type PhotoCrop = { x: number; y: number; width: number; height: number };
+
 export interface CurvePoint {
   x: number;
   y: number;
@@ -228,6 +231,7 @@ export interface EditorSettings {
   hueShift: number;
   rotate: number;
   zoom: number;
+  crop: PhotoCrop;
 
   creativeEffects: CreativeEffect[];
 

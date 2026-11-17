@@ -74,7 +74,7 @@ export class RenderGraph {
       const plateSettings = plateRenderSettings(settings, plate.params);
       const graded = this.runPasses(renderer, this.platePasses, plateSettings, stableBase);
       if (this.maskBlendPass) {
-        this.maskBlendPass.updateForPlate(plate, settings.masks, sourceAspect, Boolean(runtime.liveBrush));
+        this.maskBlendPass.updateForPlate(plate, settings.masks, sourceAspect, settings.crop, Boolean(runtime.liveBrush));
         this.maskBlendPass.renderBlend(renderer, graded, stableBase, this.pingPongTarget.write);
         if (overlay?.plateId === plate.id) this.maskBlendPass.renderCoverage(renderer, stableBase, overlay.target);
         this.pingPongTarget.swap();

@@ -1,4 +1,5 @@
-import type { LinearMaskParams, MaskLayer, RadialMaskParams } from "../types/editor";
+import type { LinearMaskParams, MaskLayer, PhotoCrop, RadialMaskParams } from "../types/editor";
+import { cropCenter, isFullCrop, rotatePhotoPoint } from "./cropGeometry";
 
 /**
  * Canonical mask geometry shared by the shader uniforms and the on-canvas
@@ -130,4 +131,41 @@ export function createMaskComponent(kind: MaskKind, mode: MaskLayer["blendMode"]
     case "brush":
       return { ...base, type: "brush", params: { strokes: [] } };
   }
+}
+
+/** Straighten the existing spatial masks with the photo. Range masks follow pixels. */
+export function rotateMasks(masks: MaskLayer[], angle: number, aspect: number): MaskLayer[] {
+  if (angle === 0) return masks;
+  return masks.map((mask) => {
+    if (mask.type === "radial") {
+      const g = radialGeometry(mask.params, aspect);
+      return { ...mask, params: { ...mask.params, center: rotatePhotoPoint({ x: g.cx, y: g.cy }, angle, aspect),
+        radiusX: g.rx, radiusY: g.ry, angle: g.angle * 180 / Math.PI + angle, feather: g.feather } };
+    }
+    if (mask.type === "linear") {
+      const g = linearGeometry(mask.params, aspect);
+      return { ...mask, params: { ...mask.params, start: rotatePhotoPoint(g.start, angle, aspect), end: rotatePhotoPoint(g.end, angle, aspect) } };
+    }
+    if (mask.type === "brush") {
+      return { ...mask, params: { strokes: mask.params.strokes.map((stroke) => ({
+        ...stroke,
+        points: stroke.points.map((point) => ({ ...point, ...rotatePhotoPoint(point, angle, aspect) })),
+      })) } };
+    }
+    return mask;
+  });
+}
+
+export function placeMaskInCrop(mask: MaskLayer, crop: PhotoCrop, aspect: number): MaskLayer {
+  if (isFullCrop(crop)) return mask;
+  if (mask.type === "radial") {
+    const radius = 0.3 * Math.min(crop.width * aspect, crop.height);
+    return { ...mask, params: { ...mask.params, center: cropCenter(crop), radiusX: radius, radiusY: radius } };
+  }
+  if (mask.type === "linear") return {
+    ...mask, params: { ...mask.params,
+      start: { x: crop.x + crop.width / 2, y: crop.y + crop.height * 0.2 },
+      end: { x: crop.x + crop.width / 2, y: crop.y + crop.height * 0.55 } },
+  };
+  return mask;
 }

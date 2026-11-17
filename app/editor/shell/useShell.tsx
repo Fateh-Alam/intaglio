@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
 import { readPreference, writePreference } from "../../ui/storage";
 import type { EditorSettings } from "../../types/editor";
+import type { CropDraft } from "../crop/useCrop";
 
 export type LeftTab = "looks" | "history" | "versions" | "info";
 export type RightMode = "develop" | "masks" | "text";
@@ -24,6 +25,8 @@ interface ShellState {
   toggleLeft: (tab: LeftTab) => void;
   rightMode: RightMode;
   setRightMode: (mode: RightMode) => void;
+  cropDraft: CropDraft | null;
+  setCropDraft: React.Dispatch<React.SetStateAction<CropDraft | null>>;
   panelsHidden: boolean;
   setPanelsHidden: (hidden: boolean) => void;
   showClipping: boolean;
@@ -56,6 +59,7 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
   const [leftOpen, setLeftOpen] = useState(false);
   const [leftTab, setLeftTab] = useState<LeftTab>("looks");
   const [rightMode, setRightMode] = useState<RightMode>("develop");
+  const [cropDraft, setCropDraft] = useState<CropDraft | null>(null);
   const [panelsHidden, setPanelsHidden] = useState(false);
   const [showClipping, setShowClipping] = useState(false);
   const [surround, setSurroundState] = useState<Surround>(() =>
@@ -81,6 +85,8 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     },
     rightMode,
     setRightMode,
+    cropDraft,
+    setCropDraft,
     panelsHidden,
     setPanelsHidden,
     showClipping,
@@ -102,7 +108,7 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     setShowMaskOverlay,
     picking,
     setPicking,
-  }), [leftOpen, leftTab, rightMode, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking]);
+  }), [leftOpen, leftTab, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking]);
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }

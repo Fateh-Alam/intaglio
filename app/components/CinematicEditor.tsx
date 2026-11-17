@@ -14,6 +14,7 @@ import CinematicTextOverlay, {
 } from "./CinematicTextOverlay";
 import RenderedOverlayCanvas from "./RenderedOverlayCanvas";
 import type { MaskColorSampler } from "../lib/maskGeometry";
+import { cropSize, fitPhoto } from "../lib/cropGeometry";
 import type {
   CompositionGuide,
   EditorSettings,
@@ -64,6 +65,7 @@ export default function CinematicEditor({
   }, [performanceMode]);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const { crop } = settings;
 
   // Image bounds drive every DOM overlay (brush, guides, compare). Recompute
   // whenever the container changes size, not only on window resize, so side
@@ -77,12 +79,7 @@ export default function CinematicEditor({
       if (!aspect || cancelled) return;
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
-      let displayWidth = containerWidth * 0.9;
-      let displayHeight = displayWidth / aspect;
-      if (displayHeight > containerHeight * 0.9) {
-        displayHeight = containerHeight * 0.9;
-        displayWidth = displayHeight * aspect;
-      }
+      const { width: displayWidth, height: displayHeight } = fitPhoto(containerWidth * 0.9, containerHeight * 0.9, aspect);
       const bounds = {
         width: displayWidth,
         height: displayHeight,
@@ -94,7 +91,8 @@ export default function CinematicEditor({
     };
     const img = new Image();
     img.onload = () => {
-      aspect = img.width / img.height;
+      const dimensions = cropSize(img.naturalWidth, img.naturalHeight, crop);
+      aspect = dimensions.width / dimensions.height;
       measure();
     };
     img.src = imageUrl;
@@ -104,7 +102,7 @@ export default function CinematicEditor({
       cancelled = true;
       observer.disconnect();
     };
-  }, [imageUrl, onBoundsChange]);
+  }, [crop, imageUrl, onBoundsChange]);
 
   return (
     <div

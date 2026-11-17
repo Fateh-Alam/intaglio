@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
-import { IconColumns2, IconGridDots, IconMinus, IconPhoto, IconPlus, IconSquareHalf, IconSunHigh } from "@tabler/icons-react";
+import { IconColumns2, IconCrop, IconGridDots, IconMinus, IconPhoto, IconPlus, IconSquareHalf, IconSunHigh } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import type { GridOverlayMode } from "../../types/editor";
 import { IconButton } from "../../ui/Controls";
 import { MenuItem, Popover } from "../../ui/Popover";
 import { Tooltip } from "../../ui/Tooltip";
 import { SURROUND_COLORS, useShell, type Surround } from "./useShell";
+import { useCrop } from "../crop/useCrop";
 
 const GRID_MODES: ReadonlyArray<{ id: GridOverlayMode; label: string }> = [
   { id: "none", label: "None" },
@@ -34,6 +35,7 @@ function Divider() {
 export function CanvasToolbar({ zoom, onZoom }: { zoom: number; onZoom: (zoom: number) => void }) {
   const { gridOverlayMode, setGridOverlayMode } = useEditorState();
   const shell = useShell();
+  const { open: openCrop } = useCrop();
 
   return (
     <div className="ui-glass absolute bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center rounded-[14px] p-1">
@@ -67,6 +69,9 @@ export function CanvasToolbar({ zoom, onZoom }: { zoom: number; onZoom: (zoom: n
 
       <Divider />
 
+      <IconButton label="Crop & Straighten" shortcut="R" tooltipSide="top" onClick={openCrop}>
+        <IconCrop size={17} stroke={1.6} />
+      </IconButton>
       <Popover
         width={200}
         trigger={({ open, toggle }) => (

@@ -2,6 +2,7 @@ import type { EditorSettings, CompositionGuide, PerformanceMode, SerializableEdi
 import { IconCircle, IconCircles, IconChartLine, IconLayersIntersect, IconMovie, IconBrush, IconPhoto, IconInfoCircle, IconTypography, IconArrowsMaximize, IconSparkles, IconHistory, IconCamera, IconPalette } from "@tabler/icons-react";
 import { TextOverlaySettings } from "../components/CinematicTextOverlay";
 import { FORMAT } from "../lib/brand";
+import { FULL_CROP, normalizeCrop } from "../lib/cropGeometry";
 import { normalizeCreativeEffects } from "./effects/settings";
 
 import { HistoryState } from "../components/HistoryPanel";
@@ -119,6 +120,7 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   // Transform
   rotate: 0.0,
   zoom: 1.0,
+  crop: FULL_CROP,
 
   creativeEffects: [],
 
@@ -403,6 +405,7 @@ export const hydrateEditorSettings = (
 ): EditorSettings => ({
   ...DEFAULT_SETTINGS,
   ...partialSettings,
+  crop: normalizeCrop(partialSettings.crop),
   creativeEffects: normalizeCreativeEffects(partialSettings.creativeEffects),
   curvePoints: cloneJson(
     partialSettings.curvePoints ?? DEFAULT_SETTINGS.curvePoints

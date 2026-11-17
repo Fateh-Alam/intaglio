@@ -10,6 +10,7 @@ import { ensureOverlayFonts, renderOverlays } from "../editor/render/overlayComp
 import { measureParity, type ParityMetrics } from "../lib/parityMetrics";
 import { parseCubeLUT } from "../utils/lutParser";
 import type { EditorSettings, WatermarkSettings } from "../types/editor";
+import { createEffect } from "../editor/effects/settings";
 
 const WIDTH = 192;
 const HEIGHT = 128;
@@ -166,6 +167,13 @@ async function runProbe(): Promise<ProbeMetrics> {
         geometry: await tilePair({ ...DEFAULT_SETTINGS, rotate: settings.rotate, zoom: settings.zoom, keystoneH: settings.keystoneH, lensDistortion: settings.lensDistortion }),
         lut: await tilePair({ ...DEFAULT_SETTINGS, lutTexture: lut, lutStrength: settings.lutStrength }),
         plateMasks: await tilePair({ ...DEFAULT_SETTINGS, adjustmentLayers: settings.adjustmentLayers, masks: settings.masks }),
+        croppedMasks: await tilePair({
+          ...DEFAULT_SETTINGS,
+          crop: { x: 0.17, y: 0.1, width: 0.75, height: 0.75 },
+          rotate: settings.rotate,
+          adjustmentLayers: settings.adjustmentLayers,
+          masks: settings.masks,
+        }),
         grain: await tilePair({ ...DEFAULT_SETTINGS, grain: settings.grain }),
       };
       const decodedRaster = await createImageBitmap(rasterPng);
@@ -179,17 +187,27 @@ async function runProbe(): Promise<ProbeMetrics> {
       renderOverlays(decodedContext, WIDTH, HEIGHT, overlays);
       const previewPixels = previewContext.getImageData(0, 0, WIDTH, HEIGHT).data;
       const pngPixels = await pixelsFromBlob(png);
+      const pngRoundTrip = measureParity(previewPixels, await pixelsFromBlob(await canvasBlob(previewComposite)));
+      const croppedCreative = {
+        ...settings,
+        crop: { x: 0.17, y: 0.1, width: 0.75, height: 0.75 },
+        creativeEffects: [createEffect("fluted-glass", "parity-glass"), createEffect("color-overlay", "parity-color")],
+      };
+      intaglioRenderer.render({ renderer, sourceTexture, settings: croppedCreative, target: null, width: WIDTH, height: HEIGHT });
+      previewContext.clearRect(0, 0, WIDTH, HEIGHT);
+      previewContext.drawImage(previewCanvas, 0, 0);
+      const croppedPreview = previewContext.getImageData(0, 0, WIDTH, HEIGHT).data;
       return {
         combined: measureParity(previewPixels, pngPixels),
         raster: measureParity(previewRaster, await pixelsFromBlob(rasterPng)),
-        pngRoundTrip: measureParity(previewPixels, await pixelsFromBlob(await canvasBlob(previewComposite))),
+        pngRoundTrip,
         decodedRasterOverlay: measureParity(decodedContext.getImageData(0, 0, WIDTH, HEIGHT).data, pngPixels),
         tiled: measureParity(pngPixels, await pixelsFromBlob(tiledPng)),
         tiledNeutral: measureParity(await pixelsFromBlob(neutralPng), await pixelsFromBlob(neutralTiledPng)),
         jpeg90: measureParity(previewPixels, await pixelsFromBlob(jpeg90)),
         webp90: measureParity(previewPixels, await pixelsFromBlob(webp90)),
         signatures: { png: await signature(png, 8), jpeg: await signature(jpeg90, 3), webp: await signature(webp90, 12) },
-        stages,
+        stages: { ...stages, croppedCreative: measureParity(croppedPreview, await exportPixels(croppedCreative)) },
         correctness,
       };
     } finally {

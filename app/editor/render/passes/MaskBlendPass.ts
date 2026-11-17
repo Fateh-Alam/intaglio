@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { RenderPass, type RenderInput, dimensionsFromRenderInput, textureFromRenderInput } from '../RenderPass';
-import type { AdjustmentLayer, MaskLayer } from '../../../types/editor';
+import { RenderPass, type RenderInput, textureFromRenderInput } from '../RenderPass';
+import type { AdjustmentLayer, MaskLayer, PhotoCrop } from '../../../types/editor';
 import { OKLAB_GLSL_CHUNK } from '../shaders/oklabChunk';
+import { CROP_GLSL } from '../shaders/geometryChunk';
 import { linearGeometry, MAX_BRUSH_PARTS, MAX_MASK_PARTS, radialGeometry } from '../../../lib/maskGeometry';
 import { BrushTextureCache } from '../brushTextures';
 
@@ -29,6 +30,7 @@ uniform sampler2D tBrush3;
 uniform float uPlateOpacity;
 uniform int uMaskCount;
 uniform float uAspect;
+uniform vec4 uCrop;
 uniform vec2 uFullSize;
 uniform vec2 uTileOffset;
 uniform vec2 uTileSize;
@@ -53,6 +55,7 @@ uniform int uMaskBrushSlot[MAX_MASKS];
 varying vec2 vUv;
 
 ${OKLAB_GLSL_CHUNK}
+${CROP_GLSL}
 
 vec2 hueAndSaturation(vec3 c) {
   vec4 k = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -124,10 +127,10 @@ float evaluateMask(int i, vec3 baseColor, vec2 p, vec2 glUv) {
 void main() {
   vec4 baseColor = texture2D(tBase, vUv);
   vec4 gradedColor = texture2D(tDiffuse, vUv);
-  vec2 glUv = vec2(
+  vec2 glUv = uncropUv(vec2(
     (uTileOffset.x + vUv.x * uTileSize.x) / uFullSize.x,
     (uFullSize.y - uTileOffset.y - uTileSize.y + vUv.y * uTileSize.y) / uFullSize.y
-  );
+  ), uCrop);
   vec2 p = vec2(glUv.x, 1.0 - glUv.y);
 
   float finalMask = 1.0;
@@ -153,7 +156,6 @@ const MASK_TYPE: Record<MaskLayer["type"], number> = { radial: 1, linear: 2, lum
 
 export class MaskBlendPass extends RenderPass {
   private material: THREE.ShaderMaterial;
-  private tiled = false;
   private plate: AdjustmentLayer | null = null;
   private masks: MaskLayer[] = [];
   private readonly brushTextures = new BrushTextureCache();
@@ -178,6 +180,7 @@ export class MaskBlendPass extends RenderPass {
         uPlateOpacity: { value: 1.0 },
         uMaskCount: { value: 0 },
         uAspect: { value: 1 },
+        uCrop: { value: new THREE.Vector4(0, 0, 1, 1) },
         uFullSize: { value: new THREE.Vector2(1, 1) },
         uTileOffset: { value: new THREE.Vector2(0, 0) },
         uTileSize: { value: new THREE.Vector2(1, 1) },
@@ -207,14 +210,12 @@ export class MaskBlendPass extends RenderPass {
   public updateUniforms() {}
 
   override setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number): void {
-    this.tiled = true;
     this.material.uniforms.uFullSize.value.set(fullWidth, fullHeight);
     this.material.uniforms.uTileOffset.value.set(x, y);
     this.material.uniforms.uTileSize.value.set(width, height);
   }
 
   override clearViewOffset(): void {
-    this.tiled = false;
     this.material.uniforms.uFullSize.value.set(1, 1);
     this.material.uniforms.uTileOffset.value.set(0, 0);
     this.material.uniforms.uTileSize.value.set(1, 1);
@@ -224,7 +225,7 @@ export class MaskBlendPass extends RenderPass {
     this.brushTextures.retain(masks);
   }
 
-  updateForPlate(plate: AdjustmentLayer, masks: MaskLayer[], sourceAspect: number, includeLiveBrush: boolean) {
+  updateForPlate(plate: AdjustmentLayer, masks: MaskLayer[], sourceAspect: number, crop: PhotoCrop, includeLiveBrush: boolean) {
     this.plate = plate;
     this.masks = plate.maskIds
       .map((id) => masks.find((mask) => mask.id === id))
@@ -232,6 +233,7 @@ export class MaskBlendPass extends RenderPass {
       .slice(0, MAX_MASK_PARTS);
     this.includeLiveBrush = includeLiveBrush;
     this.sourceAspect = sourceAspect;
+    this.material.uniforms.uCrop.value.set(crop.x, crop.y, crop.width, crop.height);
     this.material.uniforms.uPlateOpacity.value = plate.enabled === false ? 0 : plate.opacity;
   }
 
@@ -290,9 +292,7 @@ export class MaskBlendPass extends RenderPass {
 
   private draw(renderer: THREE.WebGLRenderer, graded: RenderInput, base: RenderInput, outputBuffer: THREE.WebGLRenderTarget | null, coverageOnly: boolean) {
     if (!this.plate) return;
-    const fullSize = this.material.uniforms.uFullSize.value as THREE.Vector2;
-    const { width, height } = this.tiled ? { width: fullSize.x, height: fullSize.y } : dimensionsFromRenderInput(base, 1);
-    this.bindMasks(width / Math.max(height, 1));
+    this.bindMasks(this.sourceAspect);
     this.material.uniforms.uCoverageOnly.value = coverageOnly;
     this.material.uniforms.tDiffuse.value = textureFromRenderInput(graded);
     this.material.uniforms.tBase.value = textureFromRenderInput(base);

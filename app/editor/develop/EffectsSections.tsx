@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { IconChevronDown } from "@tabler/icons-react";
+import { IconChevronDown, IconCrop } from "@tabler/icons-react";
 import { Section, SubHeading } from "../../ui/Section";
-import { Switch } from "../../ui/Controls";
+import { Button, Switch } from "../../ui/Controls";
 import { Param, type Develop, type DevelopKey } from "./useDevelop";
-import { formatDegrees, parseNumber } from "./tracks";
+import { parseNumber } from "./tracks";
+import { useCrop } from "../crop/useCrop";
 
 interface SectionProps {
   dev: Develop;
@@ -52,13 +53,13 @@ export function DetailSection({ dev, open, onToggle }: SectionProps) {
   );
 }
 
-export const GEOMETRY_KEYS: readonly DevelopKey[] = ["rotate", "zoom", "lensDistortion", "keystoneV", "keystoneH", "anamorphicDistortion"];
+export const GEOMETRY_KEYS: readonly DevelopKey[] = ["zoom", "lensDistortion", "keystoneV", "keystoneH", "anamorphicDistortion"];
 
 export function GeometrySection({ dev, open, onToggle }: SectionProps) {
+  const crop = useCrop();
   return (
     <Section title="Geometry" open={open} onToggle={onToggle} modified={!dev.isDefault(GEOMETRY_KEYS)} onReset={() => dev.reset(GEOMETRY_KEYS, "Reset Geometry")}>
-      <Param dev={dev} k="rotate" label="Straighten" min={-45} max={45} step={0.1} format={formatDegrees} parse={parseNumber}
-        hint="Levels a tilted horizon. Hold Alt while dragging for tenth-of-a-degree precision." />
+      <Button className="mb-2 w-full" icon={<IconCrop size={15} />} onClick={crop.open}>Open Crop &amp; Straighten</Button>
       <Param dev={dev} k="zoom" label="Scale" min={1} max={3} defaultValue={1} step={0.01}
         format={(value) => `${Math.round(value * 100)}%`} parse={(text) => { const parsed = parseNumber(text); return parsed === null ? null : parsed / 100; }}
         hint="Enlarges the photo to hide empty corners after straightening or perspective fixes." />

@@ -10,6 +10,8 @@ import { onBrushTexturesChanged } from "../editor/render/brushTextures";
 import type { MaskColorSampler } from "../lib/maskGeometry";
 import { computeHistogramMetrics } from "../utils/histogram";
 import { extractDominantColors } from "../utils/swatch";
+import { cropSize, fitPhoto, isFullCrop } from "../lib/cropGeometry";
+import { CROP_GLSL, GEOMETRY_GLSL } from "../editor/render/shaders/geometryChunk";
 
 const STATS_WIDTH = 192;
 const STATS_DELAY_MS = 120;
@@ -47,12 +49,26 @@ const finalDisplayFragmentShader = `
   uniform bool uShowMask;
   uniform float uSplit;
   uniform float uClipping;
+  uniform vec4 uCrop;
+  uniform vec4 uGeometry;
+  uniform vec3 uPerspective;
+  uniform bool uMatchCrop;
   varying vec2 vUv;
+
+  ${CROP_GLSL}
+  ${GEOMETRY_GLSL}
 
   void main() {
     vec4 after = texture2D(uTexture, vUv);
     bool showBefore = uSplit >= 1.5 || (uSplit >= 0.0 && vUv.x < uSplit);
-    vec4 color = showBefore ? texture2D(uOriginalTexture, vUv) : after;
+    vec4 color = after;
+    if (showBefore) {
+      vec2 uv = vUv;
+      if (uMatchCrop) uv = sourceUv(uncropUv(vUv, uCrop), uGeometry.x, uGeometry.y,
+        uGeometry.z, uGeometry.w, uPerspective.x, uPerspective.y, uPerspective.z);
+      color = texture2D(uOriginalTexture, uv);
+      if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) color = vec4(0.0);
+    }
     if (uClipping > 0.5 && !showBefore) {
       float brightest = max(after.r, max(after.g, after.b));
       if (brightest >= 0.994) color.rgb = vec3(1.0, 0.2, 0.16);
@@ -98,21 +114,13 @@ export default function ImagePlane({
   );
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
-  const aspect = useMemo(() => {
-    if (!texture.image) return 1;
-    return texture.image.width / texture.image.height;
-  }, [texture]);
+  const { crop } = settings;
+  const croppedSize = useMemo(() => cropSize(texture.image.width, texture.image.height, crop), [crop, texture]);
+  const aspect = croppedSize.width / croppedSize.height;
 
   const scale = useMemo(() => {
-    const maxWidth = viewport.width * 0.9;
-    const maxHeight = viewport.height * 0.9;
-    let w = maxWidth;
-    let h = w / aspect;
-    if (h > maxHeight) {
-      h = maxHeight;
-      w = h * aspect;
-    }
-    return new THREE.Vector3(w, h, 1);
+    const { width, height } = fitPhoto(viewport.width * 0.9, viewport.height * 0.9, aspect);
+    return new THREE.Vector3(width, height, 1);
   }, [viewport, aspect]);
 
   // Created once: three.js caches uniform objects per compiled program, so a
@@ -124,6 +132,10 @@ export default function ImagePlane({
     uShowMask: { value: false },
     uSplit: { value: -1 },
     uClipping: { value: 0 },
+    uCrop: { value: new THREE.Vector4() },
+    uGeometry: { value: new THREE.Vector4() },
+    uPerspective: { value: new THREE.Vector3() },
+    uMatchCrop: { value: false },
   }), []);
 
   // Pro-Grade Render Graph Pipeline
@@ -172,35 +184,14 @@ export default function ImagePlane({
 
   // Handle Resize & Proxy Resolution
   useEffect(() => {
-    if (texture.image) {
-      // Proxy Rendering: Use the CSS pixel size of the canvas instead of world units.
-      const pixelRatio = gl.getPixelRatio();
-      
-      // The image occupies at most 90% of the canvas in either dimension
-      const cssWidth = size.width * 0.9;
-      const cssHeight = size.height * 0.9;
-      
-      // Calculate logical pixel size
-      const proxyWidth = Math.min(cssWidth * pixelRatio, 2560);
-      const proxyHeight = Math.min(cssHeight * pixelRatio, 2560);
-      
-      // Maintain exact aspect ratio
-      const imageAspect = texture.image.width / texture.image.height;
-      let targetWidth = proxyWidth;
-      let targetHeight = proxyWidth / imageAspect;
-      
-      if (targetHeight > proxyHeight) {
-        targetHeight = proxyHeight;
-        targetWidth = targetHeight * imageAspect;
-      }
-      
-      // Ensure we don't upscale a low-res image
-      targetWidth = Math.min(targetWidth, texture.image.width);
-      targetHeight = Math.min(targetHeight, texture.image.height);
-
-      finalTarget.setSize(Math.floor(targetWidth), Math.floor(targetHeight));
-    }
-  }, [texture, size, gl, finalTarget]);
+    const ratio = gl.getPixelRatio() * 0.9;
+    const { width, height } = fitPhoto(
+      Math.min(size.width * ratio, croppedSize.width, 2560),
+      Math.min(size.height * ratio, croppedSize.height, 2560),
+      aspect,
+    );
+    finalTarget.setSize(Math.max(1, Math.round(width)), Math.max(1, Math.round(height)));
+  }, [aspect, croppedSize, size, gl, finalTarget]);
 
   // Live brush painting updates mask textures outside React; redraw on change.
   useEffect(() => onBrushTexturesChanged(() => invalidate()), [invalidate]);
@@ -317,6 +308,11 @@ export default function ImagePlane({
       materialRef.current.uniforms.uShowMask.value = inspectMask && !pickingMaskColor;
       materialRef.current.uniforms.uSplit.value = split;
       materialRef.current.uniforms.uClipping.value = showClipping ? 1.0 : 0.0;
+      materialRef.current.uniforms.uCrop.value.set(crop.x, crop.y, crop.width, crop.height);
+      materialRef.current.uniforms.uGeometry.value.set(texture.image.width / texture.image.height,
+        THREE.MathUtils.degToRad(settings.rotate), settings.zoom, settings.anamorphicDistortion);
+      materialRef.current.uniforms.uPerspective.value.set(settings.keystoneH, settings.keystoneV, settings.lensDistortion);
+      materialRef.current.uniforms.uMatchCrop.value = !settings.compareTexture && !isFullCrop(crop);
     }
   });
 

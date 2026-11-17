@@ -18,6 +18,7 @@ import { createRuntimeAssetStore, createIntaglioDocument } from "../../lib/intag
 import { createIntaglioContainer, openIntaglioContainer, triggerContainerDownload } from "../../lib/intaglioContainer";
 import { sha256Hex } from "../../lib/crypto";
 import { createDefaultGradeGraph } from "../../lib/gradeGraph";
+import { cropSize } from "../../lib/cropGeometry";
 import { decodeRawFile, isRawFile, STILL_FILE_ACCEPT } from "../../lib/rawDecoder";
 
 // We need to import all types and constants from page.tsx or extract them.
@@ -236,13 +237,14 @@ function useEditorStateController() {
   );
   const exportSafetyWarnings = useMemo<ExportSafetyWarning[]>(() => {
     const warnings: ExportSafetyWarning[] = [];
-    const exportWidth = imageInfo
-      ? imageInfo.width * exportScale
+    const cropped = imageInfo ? cropSize(imageInfo.width, imageInfo.height, settings.crop, exportScale) : null;
+    const exportWidth = cropped
+      ? cropped.width
       : imageBounds
         ? imageBounds.width * exportScale
         : null;
-    const exportHeight = imageInfo
-      ? imageInfo.height * exportScale
+    const exportHeight = cropped
+      ? cropped.height
       : imageBounds
         ? imageBounds.height * exportScale
         : null;
@@ -340,6 +342,7 @@ function useEditorStateController() {
     histogram,
     imageBounds,
     imageInfo,
+    settings.crop,
     watermark.enabled,
   ]);
   const diffVirtualCopy = useMemo(
@@ -497,6 +500,14 @@ function useEditorStateController() {
       scheduleHistoryEntry(next, label);
       return next;
     });
+  };
+
+  /** Commits a completed tool session as a discrete edit. */
+  const commitSettings = (patch: Partial<EditorSettings>, label: string) => {
+    const next = { ...settings, ...patch };
+    flushPendingHistory();
+    setSettings(next);
+    addToHistory(next, label);
   };
 
   /** Applies params to one adjustment plate as one edit. */
@@ -728,6 +739,7 @@ function useEditorStateController() {
       const mergedSettings: EditorSettings = {
         ...settings,
         ...recipeSettings,
+        crop: manifest.document.editorSettingsSnapshot.crop === undefined ? settings.crop : recipeSettings.crop,
         compareTexture: settings.compareTexture,
       };
       setSettings(mergedSettings);
@@ -900,7 +912,10 @@ function useEditorStateController() {
   }, [activeExportRecipeId, assetMetadata, documentAssets, exportFormat, exportQuality, exportScale, gradeGraph, rawDevelop, settings.lutStrength, settings.lutTexture, textOverlay, watermark]);
 
   const restoreProjectSession = useCallback(async (document: IntaglioDocumentV2, runtime: RuntimeAssetStore) => {
-    const restoredSettings = await hydratePortableAssets(hydrateEditorSettings(document.editorSettingsSnapshot), document.assets, runtime);
+    const restoredSettings = await hydratePortableAssets(hydrateEditorSettings({
+      ...document.editorSettingsSnapshot,
+      crop: document.editorSettingsSnapshot.crop ?? document.geometry.crop,
+    }), document.assets, runtime);
     const restoredExport = document.exportProfiles.find((profile) => profile.id === document.activeExportProfileId) ?? document.exportProfiles[0];
     const source = document.source;
     if (!source || !runtime.sourceFile) throw new Error("This project does not contain its original photograph.");
@@ -1175,7 +1190,11 @@ function useEditorStateController() {
 
       // 1. Before Slide (Original)
       const { DEFAULT_SETTINGS } = await import('../pageTypes');
-      const beforeBlob = await exportEngine.exportImage(texture, { ...settings, ...DEFAULT_SETTINGS }, { ...baseOpts, overlays: undefined });
+      const beforeBlob = await exportEngine.exportImage(texture, {
+        ...DEFAULT_SETTINGS, crop: settings.crop, rotate: settings.rotate, zoom: settings.zoom,
+        keystoneH: settings.keystoneH, keystoneV: settings.keystoneV,
+        lensDistortion: settings.lensDistortion, anamorphicDistortion: settings.anamorphicDistortion,
+      }, { ...baseOpts, overlays: undefined });
 
       // 2. Final Edit Slide
       const afterBlob = await exportEngine.exportImage(texture, settings, baseOpts);
@@ -1581,6 +1600,7 @@ function useEditorStateController() {
     cancelRawDecode: () => rawAbortRef.current?.abort(),
     updateSetting,
     updateSettings,
+    commitSettings,
     updatePlateParams,
     handleUndo,
     handleRedo,

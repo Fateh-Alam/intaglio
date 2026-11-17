@@ -3,13 +3,13 @@
 import type { AdjustmentLayer, EditorSettings, MaskLayer } from "../../types/editor";
 import { useEditorState } from "../hooks/useEditorState";
 import { useShell } from "../shell/useShell";
-import { createMaskComponent, MASK_KIND_LABEL, type MaskKind } from "../../lib/maskGeometry";
+import { createMaskComponent, MASK_KIND_LABEL, placeMaskInCrop, type MaskKind } from "../../lib/maskGeometry";
 
 let plateCounter = 0;
 
 /** Mask (adjustment plate) operations. Every action is one undo step. */
 export function useMasks() {
-  const { settings, activePlateId, setActivePlateId, updateSettings, setBrushErasing } = useEditorState();
+  const { settings, imageInfo, activePlateId, setActivePlateId, updateSettings, setBrushErasing } = useEditorState();
   const shell = useShell();
   const plates = settings.adjustmentLayers;
   const activePlate = plates.find((plate) => plate.id === activePlateId) ?? null;
@@ -19,9 +19,12 @@ export function useMasks() {
 
   const commit = (patch: Partial<EditorSettings>, label: string) => updateSettings(patch, label);
   const setBrushToPaint = (kind: MaskKind) => { if (kind === "brush") setBrushErasing(false); };
+  const makeComponent = (kind: MaskKind, mode?: MaskLayer["blendMode"]) => placeMaskInCrop(
+    createMaskComponent(kind, mode), settings.crop, imageInfo ? imageInfo.width / imageInfo.height : 1,
+  );
 
   const createMask = (kind: MaskKind) => {
-    const component = createMaskComponent(kind);
+    const component = makeComponent(kind);
     const names = new Set(plates.map((plate) => plate.name));
     let number = 1;
     while (names.has(`Mask ${number}`)) number += 1;
@@ -42,7 +45,7 @@ export function useMasks() {
   };
 
   const addComponent = (plateId: string, kind: MaskKind, mode: MaskLayer["blendMode"]) => {
-    const component = createMaskComponent(kind, mode);
+    const component = makeComponent(kind, mode);
     commit({
       masks: [...settings.masks, component],
       adjustmentLayers: plates.map((plate) => plate.id === plateId ? { ...plate, maskIds: [...plate.maskIds, component.id] } : plate),

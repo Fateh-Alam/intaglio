@@ -3,16 +3,19 @@
 import type { AppCommand } from "../../types/editor";
 import { useShell, type LeftTab } from "./useShell";
 import { useSwitchRightMode } from "./useSwitchRightMode";
+import { useCrop } from "../crop/useCrop";
 
 /** View commands for the ⌘K palette; they mirror the shell's keyboard shortcuts. */
 export function useShellCommands(): AppCommand[] {
   const shell = useShell();
   const switchMode = useSwitchRightMode();
+  const crop = useCrop();
   const openLeft = (tab: LeftTab) => () => {
     shell.setLeftTab(tab);
     shell.setLeftOpen(true);
   };
   return [
+    { id: "view-crop", title: crop.draft ? "Apply Crop" : "Crop & Straighten", section: "Develop", shortcut: "R", keywords: ["horizon", "aspect", "frame"], run: () => { if (crop.draft) crop.apply(); else crop.open(); } },
     { id: "view-before", title: "Show Before", section: "View", shortcut: "\\", keywords: ["compare", "original"], run: () => shell.setCompare(shell.compare === "before" ? "off" : "before") },
     { id: "view-split", title: "Before / After Split", section: "View", shortcut: "Y", keywords: ["compare", "wipe"], run: () => shell.setCompare(shell.compare === "split" ? "off" : "split") },
     { id: "view-clipping", title: shell.showClipping ? "Hide Clipping" : "Show Clipping", section: "View", shortcut: "J", keywords: ["highlights", "shadows", "blown"], run: () => shell.setShowClipping(!shell.showClipping) },

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEditorState } from "../hooks/useEditorState";
@@ -8,7 +8,10 @@ import { GridOverlay } from "../components/GridOverlay";
 import { SURROUND_COLORS, useShell } from "./useShell";
 import { CanvasToolbar } from "./CanvasToolbar";
 import { MaskCanvasTools } from "../masks/MaskCanvasTools";
-import type { MaskColorSampler } from "../../lib/maskGeometry";
+import { rotateMasks, type MaskColorSampler } from "../../lib/maskGeometry";
+import { FULL_CROP, isFullCrop } from "../../lib/cropGeometry";
+import { useCrop } from "../crop/useCrop";
+import { CropOverlay } from "../crop/CropOverlay";
 
 const CinematicEditor = dynamic(() => import("../../components/CinematicEditor"), { ssr: false });
 
@@ -19,6 +22,7 @@ const MAX_ZOOM = 8;
 export function PhotoCanvas() {
   const editor = useEditorState();
   const shell = useShell();
+  const crop = useCrop();
   const {
     settings, imageSrc, rawSource, setHistogram, textOverlay, setTextOverlay, watermark,
     performanceMode, compositionGuide, activePlateId, imageBounds, setImageBounds, gridOverlayMode,
@@ -33,10 +37,19 @@ export function PhotoCanvas() {
   const splitDragRef = useRef(false);
   const maskColorSamplerRef = useRef<MaskColorSampler | null>(null);
 
-  const split = shell.compare === "split" ? shell.splitPosition : shell.compare === "before" ? 2 : -1;
-  const masksMode = shell.rightMode === "masks";
+  const cropping = crop.draft !== null;
+  const cropRotation = crop.draft?.rotation;
+  const cropPreview = useMemo(() => cropRotation === undefined ? null : {
+    ...settings,
+    crop: FULL_CROP,
+    rotate: cropRotation,
+    masks: rotateMasks(settings.masks, cropRotation - settings.rotate, crop.aspect),
+  }, [cropRotation, settings, crop.aspect]);
+  const split = cropping ? -1 : shell.compare === "split" ? shell.splitPosition : shell.compare === "before" ? 2 : -1;
+  const masksMode = !cropping && shell.rightMode === "masks";
   const maskOverlayPlateId = masksMode && (shell.showMaskOverlay || shell.picking) && !shell.preview && activePlateId !== "base" ? activePlateId : null;
-  const displaySettings = shell.preview ?? settings;
+  const displaySettings = cropPreview ?? shell.preview ?? settings;
+  const displayedCrop = displaySettings.crop;
 
   const zoomTo = (next: number) => {
     const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
@@ -45,6 +58,7 @@ export function PhotoCanvas() {
   };
 
   const onWheel = (event: React.WheelEvent) => {
+    if (cropping) return;
     if (event.metaKey || event.ctrlKey) {
       event.preventDefault();
       zoomTo(zoom * Math.exp(-event.deltaY * 0.01));
@@ -54,7 +68,7 @@ export function PhotoCanvas() {
   };
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (masksMode || roiMode !== "none" || event.button !== 0 || zoom === 1) return;
+    if (cropping || masksMode || roiMode !== "none" || event.button !== 0 || zoom === 1) return;
     panRef.current = { x: event.clientX - pan.x, y: event.clientY - pan.y };
     setPanning(true);
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -112,7 +126,7 @@ export function PhotoCanvas() {
         <div
           className="relative h-full w-full origin-center"
           style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transform: cropping ? undefined : `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             cursor: zoom > 1 ? (panning ? "grabbing" : "grab") : "default",
           }}
         >
@@ -121,13 +135,13 @@ export function PhotoCanvas() {
             imageUrl={imageSrc}
             rawSource={rawSource}
             split={split}
-            showClipping={shell.showClipping}
+            showClipping={!cropping && shell.showClipping}
             onStatsUpdate={setHistogram}
-            textOverlay={textOverlay}
+            textOverlay={cropping ? undefined : textOverlay}
             setTextOverlay={setTextOverlay}
             watermark={watermark}
             performanceMode={performanceMode}
-            compositionGuide={compositionGuide}
+            compositionGuide={cropping ? "off" : compositionGuide}
             onBoundsChange={setImageBounds}
             maskOverlayPlateId={maskOverlayPlateId}
             maskColorSamplerRef={maskColorSamplerRef}
@@ -137,19 +151,35 @@ export function PhotoCanvas() {
           {imageBounds && (
             <div
               ref={frameRef}
+              data-testid="photo-frame"
               className="pointer-events-none absolute"
               style={{ left: imageBounds.left, top: imageBounds.top, width: imageBounds.width, height: imageBounds.height }}
             >
-              {masksMode && !shell.preview && <MaskCanvasTools size={{ width: imageBounds.width, height: imageBounds.height }} sampleColor={maskColorSamplerRef} />}
+              {cropping && <CropOverlay crop={crop} />}
+              {masksMode && !shell.preview && (
+                <div className={isFullCrop(displayedCrop) ? "absolute inset-0" : "absolute inset-0 overflow-hidden"}>
+                  <div className="absolute" style={{
+                    left: -imageBounds.width * displayedCrop.x / displayedCrop.width,
+                    top: -imageBounds.height * displayedCrop.y / displayedCrop.height,
+                    width: imageBounds.width / displayedCrop.width,
+                    height: imageBounds.height / displayedCrop.height,
+                  }}>
+                    <MaskCanvasTools
+                      size={{ width: imageBounds.width / displayedCrop.width, height: imageBounds.height / displayedCrop.height }}
+                      sampleColor={maskColorSamplerRef} crop={displayedCrop}
+                    />
+                  </div>
+                </div>
+              )}
               <AnimatePresence>
-                {shell.compare !== "off" && (
+                {!cropping && shell.compare !== "off" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-x-0 top-3 flex justify-between px-3">
                     <span className="ui-glass rounded-full px-2.5 py-1 text-[11px] font-medium text-[var(--ui-text)]">Before</span>
                     {shell.compare === "split" && <span className="ui-glass rounded-full px-2.5 py-1 text-[11px] font-medium text-[var(--ui-text)]">After</span>}
                   </motion.div>
                 )}
               </AnimatePresence>
-              {shell.compare === "split" && (
+              {!cropping && shell.compare === "split" && (
                 <div
                   role="slider"
                   tabIndex={0}
@@ -187,9 +217,9 @@ export function PhotoCanvas() {
             </div>
           )}
 
-          <GridOverlay mode={gridOverlayMode} bounds={imageBounds} />
+          {!cropping && <GridOverlay mode={gridOverlayMode} bounds={imageBounds} />}
 
-          {imageBounds && roiMode === "source" && (
+          {!cropping && imageBounds && roiMode === "source" && (
             <div
               className="absolute z-20 cursor-crosshair ring-1 ring-inset ring-[var(--ui-accent)]/60"
               style={{ left: imageBounds.left, top: imageBounds.top, width: imageBounds.width, height: imageBounds.height }}
@@ -208,7 +238,7 @@ export function PhotoCanvas() {
       )}
 
       <AnimatePresence>
-        {shell.preview && (
+        {!cropping && shell.preview && (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -235,7 +265,7 @@ export function PhotoCanvas() {
         </div>
       )}
 
-      {imageSrc && !shell.panelsHidden && <CanvasToolbar zoom={zoom} onZoom={zoomTo} />}
+      {imageSrc && !shell.panelsHidden && !cropping && <CanvasToolbar zoom={zoom} onZoom={zoomTo} />}
     </div>
   );
 }

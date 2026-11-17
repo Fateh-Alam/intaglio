@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useShell } from "./useShell";
 import { useSwitchRightMode } from "./useSwitchRightMode";
+import { useCrop } from "../crop/useCrop";
 
 const isTypingTarget = (target: EventTarget | null) => {
   const element = target as HTMLElement | null;
@@ -13,6 +14,7 @@ const isTypingTarget = (target: EventTarget | null) => {
 export function useShellShortcuts(enabled: boolean) {
   const shell = useShell();
   const switchMode = useSwitchRightMode();
+  const crop = useCrop();
 
   useEffect(() => {
     if (!enabled) return;
@@ -23,6 +25,12 @@ export function useShellShortcuts(enabled: boolean) {
         event.preventDefault();
         action();
       };
+      if (key === "r") return run(crop.draft ? crop.apply : crop.open);
+      if (crop.draft) {
+        if (key === "escape" && !event.defaultPrevented) return run(crop.close);
+        if (key === "enter" && !(event.target as HTMLElement | null)?.closest("button")) return run(crop.apply);
+        return;
+      }
       if (event.key === "\\") return run(() => shell.setCompare(shell.compare === "before" ? "off" : "before"));
       if (key === "y") return run(() => shell.setCompare(shell.compare === "split" ? "off" : "split"));
       if (key === "j") return run(() => shell.setShowClipping(!shell.showClipping));
@@ -37,5 +45,5 @@ export function useShellShortcuts(enabled: boolean) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [enabled, shell, switchMode]);
+  }, [enabled, shell, switchMode, crop]);
 }

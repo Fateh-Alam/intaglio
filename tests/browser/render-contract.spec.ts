@@ -13,6 +13,11 @@ test("preview readback and decoded PNG export satisfy the full render contract",
   expect(result.metrics?.tiled.ssim, `${testInfo.project.name} tiled SSIM; diagnostics ${JSON.stringify(result.metrics)}`).toBeGreaterThanOrEqual(0.9995);
   expect(result.metrics?.tiled.meanDeltaE, `${testInfo.project.name} tiled mean CIEDE2000; diagnostics ${JSON.stringify(result.metrics)}`).toBeLessThanOrEqual(0.25);
   expect(result.metrics?.tiled.p99DeltaE, `${testInfo.project.name} tiled p99 CIEDE2000; diagnostics ${JSON.stringify(result.metrics)}`).toBeLessThanOrEqual(0.75);
+  const stages = result.metrics?.stages as Record<string, { ssim: number; meanDeltaE: number }>;
+  for (const key of ["croppedMasks", "croppedCreative"]) {
+    expect(stages[key]?.ssim, key).toBeGreaterThanOrEqual(0.9995);
+    expect(stages[key]?.meanDeltaE, key).toBeLessThanOrEqual(0.25);
+  }
   expect(result.metrics?.jpeg90.ssim, `${testInfo.project.name} MozJPEG SSIM; diagnostics ${JSON.stringify(result.metrics)}`).toBeGreaterThanOrEqual(0.995);
   expect(result.metrics?.jpeg90.meanDeltaE, `${testInfo.project.name} MozJPEG mean CIEDE2000; diagnostics ${JSON.stringify(result.metrics)}`).toBeLessThanOrEqual(1);
   expect(result.metrics?.webp90.ssim, `${testInfo.project.name} WebP SSIM; diagnostics ${JSON.stringify(result.metrics)}`).toBeGreaterThanOrEqual(0.995);

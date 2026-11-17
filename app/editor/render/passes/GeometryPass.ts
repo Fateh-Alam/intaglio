@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import type { EditorSettings } from "../../../types/editor";
 import { RenderPass, type RenderInput, dimensionsFromRenderInput, textureFromRenderInput } from "../RenderPass";
+import { isFullCrop } from "../../../lib/cropGeometry";
+import { CROP_GLSL, GEOMETRY_GLSL } from "../shaders/geometryChunk";
 
 const vertexShader = `
 varying vec2 vUv;
@@ -18,31 +20,22 @@ uniform float uKeystoneH;
 uniform float uKeystoneV;
 uniform float uAnamorphic;
 uniform float uAspect;
+uniform vec4 uCrop;
 uniform vec2 uFullSize;
 uniform vec2 uTileOffset;
 uniform vec2 uTileSize;
 varying vec2 vUv;
+
+${CROP_GLSL}
+${GEOMETRY_GLSL}
 
 void main() {
   vec2 globalUv = vec2(
     (uTileOffset.x + vUv.x * uTileSize.x) / uFullSize.x,
     (uFullSize.y - uTileOffset.y - uTileSize.y + vUv.y * uTileSize.y) / uFullSize.y
   );
-  // Work in height-normalized units so rotation is rigid and lens distortion is
-  // radial on non-square images; distortion radius is normalized to the
-  // half-diagonal so its strength does not depend on aspect ratio.
-  vec2 scale = vec2(uAspect, 1.0);
-  vec2 p = (globalUv - 0.5) * scale;
-  float c = cos(-uRotation);
-  float s = sin(-uRotation);
-  p = mat2(c, -s, s, c) * p;
-  p /= max(uZoom, 0.01);
-  p.x /= max(1.0 + uAnamorphic, 0.05);
-  p.x += uKeystoneH * p.y;
-  p.y += uKeystoneV * p.x;
-  float radius2 = dot(p, p) / max(dot(scale * 0.5, scale * 0.5), 1e-6) * 0.5;
-  p *= 1.0 + uLensDistortion * radius2;
-  vec2 uv = p / scale + 0.5;
+  vec2 uv = sourceUv(uncropUv(globalUv, uCrop), uAspect, uRotation, uZoom,
+    uAnamorphic, uKeystoneH, uKeystoneV, uLensDistortion);
   if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
     gl_FragColor = vec4(0.0);
   } else {
@@ -68,6 +61,7 @@ export class GeometryPass extends RenderPass {
         uKeystoneV: { value: 0 },
         uAnamorphic: { value: 0 },
         uAspect: { value: 1 },
+        uCrop: { value: new THREE.Vector4(0, 0, 1, 1) },
         uFullSize: { value: new THREE.Vector2(1, 1) },
         uTileOffset: { value: new THREE.Vector2(0, 0) },
         uTileSize: { value: new THREE.Vector2(1, 1) },
@@ -79,13 +73,15 @@ export class GeometryPass extends RenderPass {
   setup(): void {}
 
   updateUniforms(settings: EditorSettings): void {
+    const { crop } = settings;
+    this.material.uniforms.uCrop.value.set(crop.x, crop.y, crop.width, crop.height);
     this.material.uniforms.uRotation.value = THREE.MathUtils.degToRad(settings.rotate);
     this.material.uniforms.uZoom.value = settings.zoom || 1;
     this.material.uniforms.uLensDistortion.value = settings.lensDistortion;
     this.material.uniforms.uKeystoneH.value = settings.keystoneH;
     this.material.uniforms.uKeystoneV.value = settings.keystoneV;
     this.material.uniforms.uAnamorphic.value = settings.anamorphicDistortion;
-    this.enabled = this.tiled || settings.rotate !== 0 || settings.zoom !== 1 || settings.lensDistortion !== 0 || settings.keystoneH !== 0 || settings.keystoneV !== 0 || settings.anamorphicDistortion !== 0;
+    this.enabled = this.tiled || !isFullCrop(crop) || settings.rotate !== 0 || settings.zoom !== 1 || settings.lensDistortion !== 0 || settings.keystoneH !== 0 || settings.keystoneV !== 0 || settings.anamorphicDistortion !== 0;
   }
 
   override setSource(texture: THREE.Texture): void {

@@ -1,4 +1,4 @@
-import type { SerializableEditorSettings } from "./editor";
+import type { PhotoCrop, SerializableEditorSettings } from "./editor";
 
 export const INTAGLIO_APP_ID = "intaglio-darkroom" as const;
 export const INTAGLIO_FORMAT_VERSION = "2.0.0" as const;
@@ -47,7 +47,7 @@ export interface RawDevelopState {
 }
 
 export interface GeometryState {
-  crop: { x: number; y: number; width: number; height: number };
+  crop: PhotoCrop;
   rotationDegrees: number;
   zoom: number;
   lensDistortion: number;

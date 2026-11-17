@@ -124,6 +124,7 @@ export async function createIntaglioDocument(input: DocumentAdapterInput): Promi
     rawDevelop: input.rawDevelop ?? { ...DEFAULT_RAW_DEVELOP_STATE },
     geometry: {
       ...DEFAULT_GEOMETRY_STATE,
+      crop: input.settings.crop,
       rotationDegrees: input.settings.rotate,
       zoom: Math.max(0.01, input.settings.zoom || 1),
       lensDistortion: input.settings.lensDistortion,

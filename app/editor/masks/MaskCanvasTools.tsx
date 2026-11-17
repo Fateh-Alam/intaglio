@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import type { BrushStroke, LinearMaskParams, MaskLayer, RadialMaskParams } from "../../types/editor";
+import type { BrushStroke, LinearMaskParams, MaskLayer, PhotoCrop, RadialMaskParams } from "../../types/editor";
 import { linearGeometry, radialGeometry, type MaskColorSampler } from "../../lib/maskGeometry";
 import { setLiveBrushStroke } from "../render/brushTextures";
 import { linearSrgbToOklab } from "../../utils/oklab";
@@ -286,7 +286,7 @@ function hsvHue(r: number, g: number, b: number, high: number, chroma: number) {
 }
 
 /** On-photo editing for the selected mask part: handles, brush, or eyedropper. */
-export function MaskCanvasTools({ size, sampleColor }: { size: Size; sampleColor: React.RefObject<MaskColorSampler | null> }) {
+export function MaskCanvasTools({ size, sampleColor, crop }: { size: Size; sampleColor: React.RefObject<MaskColorSampler | null>; crop: PhotoCrop }) {
   const shell = useShell();
   const masks = useMasks();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -302,7 +302,7 @@ export function MaskCanvasTools({ size, sampleColor }: { size: Size; sampleColor
           if (!event.isPrimary || event.button !== 0) return;
           event.stopPropagation();
           const point = toImage(event.currentTarget, event.clientX, event.clientY);
-          const rgb = await sampleColor.current?.(point.x, point.y);
+          const rgb = await sampleColor.current?.((point.x - crop.x) / crop.width, (point.y - crop.y) / crop.height);
           if (!rgb) return;
           const [r, g, b] = rgb.map((channel) => Math.max(0, channel));
           const [lightness, a, yellow] = linearSrgbToOklab(r, g, b);
