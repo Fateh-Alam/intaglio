@@ -14,7 +14,7 @@ declare const self: ServiceWorkerGlobalScope;
 const APP_ROUTE = /^\/(?:$|editor(?:\/|$)|presets(?:\/|$)|changelog(?:\/|$)|offline(?:\/|$))/;
 
 const serwist = new Serwist({
-  cacheId: "intaglio",
+  cacheId: "etch",
   precacheEntries: self.__SW_MANIFEST,
   clientsClaim: true,
   skipWaiting: false,
@@ -27,13 +27,17 @@ const serwist = new Serwist({
   runtimeCaching: [
     {
       matcher: ({ request, url }) => request.mode === "navigate" && url.origin === self.location.origin && APP_ROUTE.test(url.pathname),
-      handler: new NetworkFirst({ cacheName: "intaglio-pages", networkTimeoutSeconds: 3 }),
+      handler: new NetworkFirst({ cacheName: "etch-pages", networkTimeoutSeconds: 3 }),
     },
   ],
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => /^ormond-/.test(key)).map((key) => caches.delete(key)))));
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => /^(?:ormond|intaglio)-/.test(key)).map((key) => caches.delete(key)))
+    )
+  );
 });
 
 serwist.addEventListeners();

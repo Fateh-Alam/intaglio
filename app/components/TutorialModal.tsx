@@ -532,11 +532,11 @@ function OrganicDemo({
   if (featureId === "films") {
     const offset = (time * 30) % 200;
     const films = [
-      { name: "Portra", bg: "#c4a35a" },
-      { name: "Velvia", bg: "#3f6b35" },
-      { name: "CineStill", bg: "#8b2835" },
-      { name: "Ektar", bg: "#2a4a5a" },
-      { name: "Pro400H", bg: "#4a5a2a" },
+      { name: "Portrait 400", bg: "#c4a35a" },
+      { name: "Velvet 50", bg: "#3f6b35" },
+      { name: "Tungsten 800T", bg: "#8b2835" },
+      { name: "Vivid 100", bg: "#2a4a5a" },
+      { name: "Sage 400H", bg: "#4a5a2a" },
     ];
 
     return (

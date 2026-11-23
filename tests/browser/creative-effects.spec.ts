@@ -36,7 +36,7 @@ test("preview, edit, reorder and save a creative effect stack", async ({ page })
   await expect(stack.getByRole("button", { name: "Show Fluted Glass" })).toBeVisible();
 
   await page.getByRole("button", { name: "File" }).click();
-  await page.getByRole("menuitem", { name: "Save look as .int…" }).click();
+  await page.getByRole("menuitem", { name: "Save look as .etchlook…" }).click();
   await page.getByLabel("Recipe Name").fill("Creative Fixture");
   await page.getByText("Next: Select Settings").click();
   await page.getByText("Next", { exact: true }).click();

@@ -4,6 +4,7 @@ import {
   INTAGLIO_FORMAT_VERSION,
   MAX_CONTAINER_BYTES,
   MAX_CONTAINER_ENTRIES,
+  SUPPORTED_CONTAINER_APP_IDS,
   type AssetReference,
   type IntaglioContainerManifest,
   type IntaglioDocumentV2,
@@ -68,11 +69,11 @@ function inspectZipIndex(bytes: Uint8Array): ZipIndexEntry[] {
   for (let offset = bytes.byteLength - minimumEocd; offset >= Math.max(0, bytes.byteLength - 65_557); offset -= 1) {
     if (view.getUint32(offset, true) === 0x06054b50) { eocd = offset; break; }
   }
-  if (eocd < 0) throw new IntaglioContainerError("invalid-zip", "This is not a valid packaged Intaglio file.");
+  if (eocd < 0) throw new IntaglioContainerError("invalid-zip", "This is not a valid packaged Etch file.");
   const count = view.getUint16(eocd + 10, true);
   const centralSize = view.getUint32(eocd + 12, true);
   const centralOffset = view.getUint32(eocd + 16, true);
-  if (count === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff) throw new IntaglioContainerError("zip64", "ZIP64 containers are outside the Intaglio public-beta contract.");
+  if (count === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff) throw new IntaglioContainerError("zip64", "ZIP64 containers are outside the Etch public-beta contract.");
   if (count > MAX_CONTAINER_ENTRIES || centralOffset + centralSize > bytes.byteLength) throw new IntaglioContainerError("entry-limit", "The container has too many or invalid entries.");
   const decoder = new TextDecoder();
   const entries: ZipIndexEntry[] = [];
@@ -199,7 +200,7 @@ async function createStreamingZip(entries: readonly StreamEntry[], mimeType: str
     if (outputBytes > MAX_CONTAINER_BYTES) {
       settled = true;
       archive.terminate();
-      rejectDone(new IntaglioContainerError("too-large", "The packaged file exceeds Intaglio's 1 GB public-beta limit."));
+      rejectDone(new IntaglioContainerError("too-large", "The packaged file exceeds Etch's 1 GB public-beta limit."));
       return;
     }
     // fflate may reuse its callback buffer; Blob parts must own their bytes.
@@ -240,7 +241,7 @@ export async function createIntaglioContainer(kind: "recipe" | "project", docume
   validatePortableJson(document);
   const includedAssets = document.assets.filter((asset) => kind === "project" || asset.kind === "lut" || asset.kind === "font");
   const estimatedBytes = includedAssets.reduce((total, asset) => total + asset.byteLength, 0) + (thumbnail?.size ?? 0) + 4 * 1024 * 1024;
-  if (estimatedBytes > MAX_CONTAINER_BYTES) throw new IntaglioContainerError("too-large", "The estimated packaged file exceeds Intaglio's 1 GB public-beta limit.");
+  if (estimatedBytes > MAX_CONTAINER_BYTES) throw new IntaglioContainerError("too-large", "The estimated packaged file exceeds Etch's 1 GB public-beta limit.");
   const storage = await preflightContainerStorage(Math.min(MAX_CONTAINER_BYTES, Math.ceil(estimatedBytes * 1.05)));
   const manifest: IntaglioContainerManifest = {
     appId: INTAGLIO_APP_ID,
@@ -295,21 +296,21 @@ function parseChecksums(text: string): Map<string, string> {
 }
 
 export async function openIntaglioContainer(file: Blob): Promise<{ manifest: IntaglioContainerManifest; runtime: RuntimeAssetStore }> {
-  if (file.size > MAX_CONTAINER_BYTES) throw new IntaglioContainerError("too-large", "This project exceeds Intaglio's 1 GB public-beta limit.");
+  if (file.size > MAX_CONTAINER_BYTES) throw new IntaglioContainerError("too-large", "This project exceeds Etch's 1 GB public-beta limit.");
   const archiveBytes = new Uint8Array(await file.arrayBuffer());
   const index = inspectZipIndex(archiveBytes);
   const indexedExpandedBytes = index.reduce((total, entry) => total + entry.uncompressedSize, 0);
   const indexedCompressedBytes = index.reduce((total, entry) => total + entry.compressedSize, 0);
-  if (indexedExpandedBytes > MAX_CONTAINER_BYTES) throw new IntaglioContainerError("expanded-size", "The expanded project exceeds Intaglio's 1 GB limit.");
+  if (indexedExpandedBytes > MAX_CONTAINER_BYTES) throw new IntaglioContainerError("expanded-size", "The expanded project exceeds Etch's 1 GB limit.");
   if (indexedCompressedBytes > 0 && indexedExpandedBytes / indexedCompressedBytes > 200) throw new IntaglioContainerError("compression-ratio", "The container has an unsafe compression ratio.");
   let entries: Record<string, Uint8Array>;
   try { entries = unzipSync(archiveBytes); }
-  catch { throw new IntaglioContainerError("invalid-zip", "This is not a valid packaged Intaglio file."); }
+  catch { throw new IntaglioContainerError("invalid-zip", "This is not a valid packaged Etch file."); }
   const paths = Object.keys(entries);
   if (paths.length > MAX_CONTAINER_ENTRIES) throw new IntaglioContainerError("entry-limit", "The container has too many entries.");
   if (paths.some((path) => !safePath(path))) throw new IntaglioContainerError("unsafe-path", "The container contains an unsafe path.");
   const totalBytes = Object.values(entries).reduce((total, bytes) => total + bytes.byteLength, 0);
-  if (totalBytes > MAX_CONTAINER_BYTES) throw new IntaglioContainerError("expanded-size", "The expanded project exceeds Intaglio's 1 GB limit.");
+  if (totalBytes > MAX_CONTAINER_BYTES) throw new IntaglioContainerError("expanded-size", "The expanded project exceeds Etch's 1 GB limit.");
   if (file.size > 0 && totalBytes / file.size > 200) throw new IntaglioContainerError("compression-ratio", "The container has an unsafe compression ratio.");
   if (!entries["manifest.json"] || !entries["checksums.sha256"]) throw new IntaglioContainerError("manifest", "The container is missing its manifest or checksums.");
   const checksums = parseChecksums(strFromU8(entries["checksums.sha256"]));
@@ -321,8 +322,8 @@ export async function openIntaglioContainer(file: Blob): Promise<{ manifest: Int
   }
   let manifest: IntaglioContainerManifest;
   try { manifest = JSON.parse(strFromU8(entries["manifest.json"])) as IntaglioContainerManifest; }
-  catch { throw new IntaglioContainerError("manifest-json", "The Intaglio manifest is not valid JSON."); }
-  if (manifest.appId !== INTAGLIO_APP_ID || manifest.formatVersion !== INTAGLIO_FORMAT_VERSION || !["recipe", "project"].includes(manifest.kind)) throw new IntaglioContainerError("unsupported-version", "Only Intaglio V2 packaged files are supported.");
+  catch { throw new IntaglioContainerError("manifest-json", "The Etch manifest is not valid JSON."); }
+  if (!SUPPORTED_CONTAINER_APP_IDS.has(manifest.appId) || manifest.formatVersion !== INTAGLIO_FORMAT_VERSION || !["recipe", "project"].includes(manifest.kind)) throw new IntaglioContainerError("unsupported-version", "Only Etch V2 packaged files are supported.");
   const unsupportedCapability = manifest.requiredCapabilities?.find((capability) => !SUPPORTED_CAPABILITIES.has(capability));
   if (!Array.isArray(manifest.requiredCapabilities) || unsupportedCapability) throw new IntaglioContainerError("unsupported-capability", `This file requires an unsupported capability${unsupportedCapability ? `: ${unsupportedCapability}` : ""}.`);
   if (manifest.document.schemaVersion !== 2 || !validateGradeGraph(manifest.document.graph).valid) throw new IntaglioContainerError("document", "The packaged document or grade graph is invalid.");

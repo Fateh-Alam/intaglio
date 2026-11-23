@@ -1,6 +1,13 @@
 import type { PhotoCrop, SerializableEditorSettings } from "./editor";
 
-export const INTAGLIO_APP_ID = "intaglio-darkroom" as const;
+export const ETCH_APP_ID = "etch-darkroom" as const;
+export const LEGACY_INTAGLIO_APP_ID = "intaglio-darkroom" as const;
+export const INTAGLIO_APP_ID = ETCH_APP_ID;
+export const SUPPORTED_CONTAINER_APP_IDS = new Set<string>([
+  ETCH_APP_ID,
+  LEGACY_INTAGLIO_APP_ID,
+]);
+export type ContainerAppId = typeof ETCH_APP_ID | typeof LEGACY_INTAGLIO_APP_ID;
 export const INTAGLIO_FORMAT_VERSION = "2.0.0" as const;
 export const MAX_CONTAINER_BYTES = 1_073_741_824;
 export const MAX_CONTAINER_ENTRIES = 10_000;
@@ -243,7 +250,7 @@ export interface IntaglioDocumentV2 {
 }
 
 export interface IntaglioContainerManifest {
-  appId: typeof INTAGLIO_APP_ID;
+  appId: ContainerAppId;
   formatVersion: typeof INTAGLIO_FORMAT_VERSION;
   kind: "recipe" | "project";
   createdAt: string;

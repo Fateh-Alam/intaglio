@@ -301,7 +301,7 @@ export default function PresetCreatorModal({
             <IconDeviceFloppy className="intaglio-icon"/>
           </div>
           <h2 className="text-2xl font-light text-white mb-2">
-            Create Intaglio Print Recipe
+            Create Etch Look Recipe
           </h2>
           <p className="text-sm font-mono uppercase tracking-[0.2em] text-amber-500 mb-4">
             {step === 1
@@ -325,9 +325,9 @@ export default function PresetCreatorModal({
                     <strong className="text-amber-400">
                       .{FORMAT.recipeExtension}
                     </strong>{" "}
-                    file is an Intaglio Print Recipe. It stores selected edit
+                    file is an Etch Look Recipe. It stores selected edit
                     settings so you can carry the same treatment to other
-                    photographs. Use an Intaglio Archive{" "}
+                    photographs. Use an Etch Project{" "}
                     <strong className="text-cyan-300">
                       .{FORMAT.archiveExtension}
                     </strong>{" "}
@@ -508,7 +508,7 @@ export default function PresetCreatorModal({
                 </code>{" "}
                 file. To apply it later, choose Load .{FORMAT.recipeExtension}{" "}
                 in the sidebar or drag the file onto the editor. Full sessions
-                are saved as Intaglio Archive{" "}
+                are saved as Etch Project{" "}
                 <code className="bg-blue-500/20 px-1 rounded">
                   .{FORMAT.archiveExtension}
                 </code>{" "}

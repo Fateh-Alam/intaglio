@@ -31,6 +31,6 @@ export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
   ],
   globIgnores: [
     "**/test-results/**",
-    "**/*.{int,intaglio,cube,dng,cr2,cr3,nef,arw,raf,orf,rw2,zip,woff,ttf,otf}",
+    "**/*.{etch,etchlook,int,intaglio,cube,dng,cr2,cr3,nef,arw,raf,orf,rw2,zip,woff,ttf,otf}",
   ],
 });

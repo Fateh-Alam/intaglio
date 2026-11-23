@@ -70,7 +70,7 @@ export default function StartScreen({ onOpenImage, onOpenArchive, onTrySample, o
       <header className="relative z-10 flex h-14 items-center justify-between px-5">
         <Link href="/" className="ui-focus flex items-center gap-2.5 rounded-[8px] px-1 text-[var(--ui-text)]">
           <BrandMark size={20} />
-          <span className="text-[13px] font-semibold tracking-[-0.01em]">Intaglio</span>
+          <span className="text-[13px] font-semibold tracking-[-0.01em]">Etch</span>
         </Link>
         <Link href="/changelog" className="ui-focus rounded-[8px] px-2.5 py-1.5 text-[12px] text-[var(--ui-text-3)] transition-colors hover:text-[var(--ui-text)]">
           What’s new
@@ -125,7 +125,7 @@ export default function StartScreen({ onOpenImage, onOpenArchive, onTrySample, o
               </button>
               <button
                 type="button"
-                aria-label="Open Archive .intaglio project"
+                aria-label="Open Etch .etch project"
                 onClick={onOpenArchive}
                 className="ui-focus group flex items-center gap-3 rounded-[14px] bg-white/[0.025] p-2.5 text-left ring-1 ring-inset ring-white/[0.05] transition-colors hover:bg-white/[0.05]"
               >
@@ -134,7 +134,7 @@ export default function StartScreen({ onOpenImage, onOpenArchive, onTrySample, o
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[12.5px] font-medium text-[var(--ui-text)]">Open a project</span>
-                  <span className="block text-[11.5px] text-[var(--ui-text-3)]">Continue an .intaglio file</span>
+                  <span className="block text-[11.5px] text-[var(--ui-text-3)]">Continue an .etch file</span>
                 </span>
                 <IconArrowRight size={15} className="mr-1 text-[var(--ui-text-3)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--ui-text-2)]" />
               </button>

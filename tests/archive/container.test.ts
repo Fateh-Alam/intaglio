@@ -18,7 +18,7 @@ const replaceManifest = async (archive: Blob, update: (manifest: Record<string, 
   return new Blob([zipSync(entries).slice().buffer]);
 };
 
-describe("Intaglio V2 containers", () => {
+describe("Etch V2 containers", () => {
   it("preflights storage with deterministic size-specific failures", async () => {
     expect(() => assertContainerStorageCapacity(80 * 1024 * 1024, 120 * 1024 * 1024)).not.toThrow();
     expect(() => assertContainerStorageCapacity(80 * 1024 * 1024, null)).not.toThrow();
@@ -58,10 +58,38 @@ describe("Intaglio V2 containers", () => {
   });
 
   it("rejects legacy JSON and traversal entries", async () => {
-    await expect(openIntaglioContainer(new Blob(["{}"]))).rejects.toThrow(/packaged Intaglio/i);
+    await expect(openIntaglioContainer(new Blob(["{}"]))).rejects.toThrow(/packaged Etch/i);
     const malicious = zipSync({ "../escape": strToU8("bad"), "manifest.json": strToU8("{}"), "checksums.sha256": strToU8("") });
     expect(Object.keys(unzipSync(malicious))).toContain("../escape");
     await expect(openIntaglioContainer(new Blob([malicious.slice().buffer]))).rejects.toThrow(/unsafe path/i);
+  });
+
+  it("opens legacy intaglio-darkroom V2 archives alongside etch-darkroom archives", async () => {
+    const runtime = createRuntimeAssetStore();
+    const document = await createIntaglioDocument({
+      title: "Legacy Compat Recipe",
+      sourceFile: null,
+      sourceName: "",
+      imageInfo: null,
+      settings: { ...DEFAULT_SETTINGS, filmEmulation: "wes_anderson" },
+      textOverlay: DEFAULT_TEXT_OVERLAY,
+      watermark: DEFAULT_WATERMARK,
+      metadata: DEFAULT_ASSET_METADATA,
+      exportFormat: "image/png",
+      exportQuality: 100,
+      exportScale: 1,
+      exportRecipeId: null,
+    });
+    const currentArchive = await createIntaglioContainer("recipe", document, runtime);
+    const currentRestored = await openIntaglioContainer(currentArchive);
+    expect(currentRestored.manifest.appId).toBe("etch-darkroom");
+
+    const legacyArchive = await replaceManifest(currentArchive, (manifest) => {
+      manifest.appId = "intaglio-darkroom";
+    });
+    const legacyRestored = await openIntaglioContainer(legacyArchive);
+    expect(legacyRestored.manifest.appId).toBe("intaglio-darkroom");
+    expect(legacyRestored.manifest.document.editorSettingsSnapshot.filmEmulation).toBe("wes_anderson");
   });
 
   it("rejects unknown required capabilities before restoring the document", async () => {

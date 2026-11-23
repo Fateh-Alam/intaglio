@@ -13,7 +13,7 @@ import {
   IconUpload,
   IconX,
 } from "@tabler/icons-react";
-import { BRAND, FORMAT, STORAGE_KEYS } from "../lib/brand";
+import { BRAND, FORMAT, RECIPE_FILE_ACCEPT, STORAGE_KEYS, isRecipeFilename } from "../lib/brand";
 
 import { PRESETS } from "../lib/presets";
 import { IntaglioRecipe } from "../types/recipe";
@@ -38,18 +38,18 @@ const PresetCard: React.FC<PresetCardProps> = ({
   onToggleFavorite,
   isFavorite,
 }) => {
-  const isIntaglio = preset.tags.includes("Intaglio-0");
+  const isEtchSignature = preset.tags.includes("Etch Signatures");
 
   return (
-  <article className={`group relative border transition-all duration-500 ${isIntaglio ? "border-[var(--intaglio-brass)]/30 bg-[#0d0c0a] hover:border-[var(--intaglio-brass)]" : "border-white/10 bg-[#080808] hover:bg-[#0a0a0a] hover:border-amber-500/30"} p-6`}>
+  <article className={`group relative border transition-all duration-500 ${isEtchSignature ? "border-[var(--intaglio-brass)]/30 bg-[#0d0c0a] hover:border-[var(--intaglio-brass)]" : "border-white/10 bg-[#080808] hover:bg-[#0a0a0a] hover:border-amber-500/30"} p-6`}>
     {/* Hover glow */}
     <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-      <div className={`absolute -inset-24 bg-radial ${isIntaglio ? "from-[var(--intaglio-brass)]/10" : "from-amber-900/20"} via-transparent to-transparent blur-3xl`} />
+      <div className={`absolute -inset-24 bg-radial ${isEtchSignature ? "from-[var(--intaglio-brass)]/10" : "from-amber-900/20"} via-transparent to-transparent blur-3xl`} />
     </div>
 
     <div className="relative z-10">
       <div className="mb-4 flex items-start justify-between">
-        <h3 className={`font-mono text-xl font-light tracking-wide ${isIntaglio ? "text-[var(--intaglio-paper)]" : "text-white"}`}>
+        <h3 className={`font-mono text-xl font-light tracking-wide ${isEtchSignature ? "text-[var(--intaglio-paper)]" : "text-white"}`}>
           {preset.name}
         </h3>
         <div className="flex gap-2">
@@ -79,7 +79,7 @@ const PresetCard: React.FC<PresetCardProps> = ({
         </div>
       </div>
 
-      <p className={`mb-4 text-sm font-light leading-relaxed transition-colors ${isIntaglio ? "font-serif italic text-white/70 group-hover:text-[rgba(231,223,208,0.9)]" : "text-gray-500 group-hover:text-gray-400"}`}>
+      <p className={`mb-4 text-sm font-light leading-relaxed transition-colors ${isEtchSignature ? "font-serif italic text-white/70 group-hover:text-[rgba(231,223,208,0.9)]" : "text-gray-500 group-hover:text-gray-400"}`}>
         {preset.description}
       </p>
 
@@ -92,7 +92,7 @@ const PresetCard: React.FC<PresetCardProps> = ({
         {preset.tags.map((tag: string) => (
           <span
             key={tag}
-            className={`border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] ${tag === "Intaglio-0" ? "border-[var(--intaglio-brass)]/40 bg-[var(--intaglio-brass)]/10 text-[var(--intaglio-brass)] font-bold" : "border-white/10 bg-black/40 text-gray-500"}`}
+            className={`border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.25em] ${tag === "Etch Signatures" ? "border-[var(--intaglio-brass)]/40 bg-[var(--intaglio-brass)]/10 text-[var(--intaglio-brass)] font-bold" : "border-white/10 bg-black/40 text-gray-500"}`}
           >
             {tag}
           </span>
@@ -104,13 +104,13 @@ const PresetCard: React.FC<PresetCardProps> = ({
 };
 
 const readPresetFile = async (file: File): Promise<IntaglioRecipe> => {
-  if (!file.name.toLowerCase().endsWith(`.${FORMAT.recipeExtension}`)) throw new Error("Only portable .int V2 recipes are supported.");
+  if (!isRecipeFilename(file.name)) throw new Error(`Only portable .${FORMAT.recipeExtension} or legacy .int V2 recipes are supported.`);
   const { manifest } = await openIntaglioContainer(file);
-  if (manifest.kind !== "recipe") throw new Error("Choose an .int recipe, not an .intaglio project.");
+  if (manifest.kind !== "recipe") throw new Error(`Choose a .${FORMAT.recipeExtension} recipe, not a project file.`);
   return {
     id: manifest.document.id,
     name: manifest.document.title,
-    description: "Imported portable Intaglio Print Recipe.",
+    description: "Imported portable Etch Look Recipe.",
     tags: ["Imported"],
     settings: { raw: Object.fromEntries(Object.entries(manifest.document.editorSettingsSnapshot)) },
     intensityDefault: 1,
@@ -205,7 +205,7 @@ export default function PresetsPage() {
       exportRecipeId: null,
     });
     const archive = await createIntaglioContainer("recipe", document, createRuntimeAssetStore());
-    triggerContainerDownload(archive, `intaglio-${preset.id}.${FORMAT.recipeExtension}`);
+    triggerContainerDownload(archive, `etch-${preset.id}.${FORMAT.recipeExtension}`);
   };
 
   const handlePreview = (preset: IntaglioRecipe) => {
@@ -257,7 +257,7 @@ export default function PresetsPage() {
               <div className="relative h-8 w-8">
                 <Image
                   src="/logo.svg"
-                  alt="Intaglio Logo"
+                  alt="Etch Logo"
                   fill
                   className="object-contain opacity-80 transition-opacity duration-300 group-hover:opacity-100"
                 />
@@ -282,15 +282,15 @@ export default function PresetsPage() {
           {/* Header */}
           <div className="mb-16 text-center">
             <span className="mb-6 inline-block border border-[var(--intaglio-line)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[var(--intaglio-brass)]">
-              Intaglio Collections
+              Etch Collections
             </span>
             <h1 className="font-intaglio-serif mb-8 text-5xl font-light text-[var(--intaglio-paper)] md:text-7xl">
-              Print Recipes
+              Look Recipes
             </h1>
             <p className="mx-auto max-w-2xl text-lg font-light leading-relaxed text-[rgba(231,223,208,0.62)]">
               Quiet starting points inspired by eras, weather, paper, and
               rooms. Search by mood, keep your staples, import packs, and
-              download native .{FORMAT.recipeExtension} Print Recipes.
+              download native .{FORMAT.recipeExtension} Look Recipes.
             </p>
           </div>
 
@@ -321,7 +321,7 @@ export default function PresetsPage() {
                 Import .{FORMAT.recipeExtension}
                 <input
                   type="file"
-                  accept={`.${FORMAT.recipeExtension},${FORMAT.recipeMimeType}`}
+                  accept={RECIPE_FILE_ACCEPT}
                   multiple
                   onChange={handleImportPreset}
                   className="hidden"

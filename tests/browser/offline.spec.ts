@@ -23,7 +23,7 @@ test("installed shell caches the editor for offline restart", async ({ page, con
     return response ? { status: response.status, html: await response.text() } : null;
   });
   expect(cachedEditor?.status).toBe(200);
-  expect(cachedEditor?.html).toContain("Intaglio");
+  expect(cachedEditor?.html).toContain("Etch");
 
   // Playwright WebKit blocks inspector-driven reloads once interception is
   // active. Chromium exercises the complete restart here; actual Safari's

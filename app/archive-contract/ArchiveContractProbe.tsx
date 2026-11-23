@@ -48,5 +48,5 @@ export default function ArchiveContractProbe(): React.ReactElement {
   useEffect(() => {
     void runProbe().then((evidence) => setResult({ status: "passed", evidence })).catch((error: unknown) => setResult({ status: "failed", error: error instanceof Error ? error.message : String(error) }));
   }, []);
-  return <main className="min-h-screen bg-black p-8 font-mono text-white"><h1>Intaglio archive contract probe</h1><output data-testid="archive-contract-result" data-status={result.status}>{JSON.stringify(result)}</output></main>;
+  return <main className="min-h-screen bg-black p-8 font-mono text-white"><h1>Etch archive contract probe</h1><output data-testid="archive-contract-result" data-status={result.status}>{JSON.stringify(result)}</output></main>;
 }

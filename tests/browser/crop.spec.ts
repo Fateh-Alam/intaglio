@@ -156,8 +156,8 @@ test("crop and straighten remain identical on save, reopen and export with a bru
 
   await page.reload();
   const open = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: /^Open Archive \.intaglio/ }).click();
-  await (await open).setFiles({ name: "crop-fixture.intaglio", mimeType: "application/zip", buffer: archive });
+  await page.getByRole("button", { name: /^Open Etch \.etch/ }).click();
+  await (await open).setFiles({ name: "crop-fixture.etch", mimeType: "application/zip", buffer: archive });
   await expect(cropTool).toBeVisible();
   await expect.poll(async () => {
     const { width, height } = (await photo.boundingBox())!;

@@ -37,7 +37,7 @@ export function GradeGraphWorkspace({ graph, selectedNodeId, onSelectNode, onMov
         <span>Grade Graph</span><button onClick={() => setExpanded(!expanded)} className="ui-focus rounded px-2 py-1 text-white/80">{expanded ? "Close expanded graph" : "Expand graph"}</button><span className={validation.valid ? "text-emerald-400" : "text-red-400"}>{validation.valid ? "Valid" : `${validation.issues.length} issues`}</span>
       </div>
       <div className="h-[calc(100%-2.5rem)]">
-        <ReactFlow key={String(expanded)} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesConnectable={false} edgesReconnectable={false} elementsSelectable onNodeClick={(_, node) => onSelectNode(node.id)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ nodes: selectedNodeId ? [{ id: selectedNodeId }] : undefined, minZoom: 0.7, maxZoom: 1, padding: 0.4 }} minZoom={0.2} maxZoom={2} colorMode="dark" aria-label="Intaglio node graph">
+        <ReactFlow key={String(expanded)} nodes={nodes} edges={edges} nodeTypes={nodeTypes} nodesConnectable={false} edgesReconnectable={false} elementsSelectable onNodeClick={(_, node) => onSelectNode(node.id)} onNodeDragStop={handleNodeDragStop} fitView fitViewOptions={{ nodes: selectedNodeId ? [{ id: selectedNodeId }] : undefined, minZoom: 0.7, maxZoom: 1, padding: 0.4 }} minZoom={0.2} maxZoom={2} colorMode="dark" aria-label="Etch node graph">
           <Background color="#ffffff" gap={28} size={0.5} /><MiniMap pannable zoomable nodeColor="#d6a848" /><Controls showInteractive={false} />
         </ReactFlow>
       </div>

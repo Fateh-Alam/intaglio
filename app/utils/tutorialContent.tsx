@@ -97,11 +97,11 @@ export const TUTORIAL_CONTENT: Record<string, TutorialContent> = {
     title: "Film Emulations",
     subtitle: "Analog Soul",
     description:
-      "Recreate the look of classic film stocks instantly. From Kodak Portra's warm skin tones to CineStill's halation — bring analog character to digital images.",
+      "Recreate the look of classic film stocks instantly. From Portrait 400's warm skin tones to Tungsten 800T's halation — bring analog character to digital images.",
     tips: [
-      "Portra 400: Warm, creamy skin tones",
-      "CineStill 800T: Tungsten halation",
-      "Velvia 50: Punchy, saturated landscapes",
+      "Portrait 400: Warm, creamy skin tones",
+      "Tungsten 800T: Night tungsten halation",
+      "Velvet 50: Punchy, saturated landscapes",
     ],
     icon: <IconMovie className="intaglio-icon"/>,
     accentColor: "#f97316",

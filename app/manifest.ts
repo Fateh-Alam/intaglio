@@ -30,6 +30,7 @@ export default function manifest(): MetadataRoute.Manifest {
         action: "/editor",
         accept: {
           [FORMAT.archiveMimeType]: [`.${FORMAT.archiveExtension}`],
+          [FORMAT.legacyArchiveMimeType]: FORMAT.legacyArchiveExtensions.map((ext) => `.${ext}`),
         },
         icons: [
           {
@@ -44,7 +45,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: `Open ${ROUTE_LABELS.editor}`,
         short_name: ROUTE_LABELS.editor,
-        description: "Open the Intaglio darkroom.",
+        description: `Open the ${BRAND.name} darkroom.`,
         url: "/editor",
         icons: [{ src: "/logo.svg", sizes: "any", type: "image/svg+xml" }],
       },

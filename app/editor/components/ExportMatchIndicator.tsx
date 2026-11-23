@@ -31,7 +31,7 @@ export function ExportMatchIndicator() {
     >
       <IconCheck size={14} className="shrink-0" />
       <span className="text-[10px] font-mono tracking-widest uppercase">
-        Intaglio will export image exactly as edited
+        Etch will export image exactly as edited
       </span>
     </div>
   );

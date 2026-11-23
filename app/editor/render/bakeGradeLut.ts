@@ -27,7 +27,7 @@ export function bakeGradeLut(settings: EditorSettings, graph: GradeGraph, size: 
     pipeline.render({ renderer, sourceTexture: texture, settings, gradeGraph: graph, colorOnly: true, target, width, height });
     const output = new Float32Array(width * height * 4);
     renderer.readRenderTargetPixels(target, 0, 0, width, height, output);
-    const lines = ['TITLE "Intaglio Color Grade"', '# sRGB encoded input/output; spatial effects, masks, geometry and creative effects excluded', `LUT_3D_SIZE ${size}`, 'DOMAIN_MIN 0 0 0', 'DOMAIN_MAX 1 1 1'];
+    const lines = ['TITLE "Etch Color Grade"', '# sRGB encoded input/output; spatial effects, masks, geometry and creative effects excluded', `LUT_3D_SIZE ${size}`, 'DOMAIN_MIN 0 0 0', 'DOMAIN_MAX 1 1 1'];
     for (let i = 0; i < count; i++) {
       const color = [output[i*4], output[i*4+1], output[i*4+2]];
       if (color.some(value => !Number.isFinite(value))) throw new Error('The grade produced a non-finite color. Check node settings.');

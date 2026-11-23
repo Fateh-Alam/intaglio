@@ -163,8 +163,8 @@ function ProjectVisual() {
       <div className="flex items-center gap-3">
         <span className="grid h-10 w-10 place-items-center rounded-[10px] bg-white/[0.05] text-white/70 ring-1 ring-inset ring-white/[0.08]"><IconArchive size={19} stroke={1.5} /></span>
         <div>
-          <p className="text-[12.5px] font-medium text-white/90">Firebird.intaglio</p>
-          <p className="text-[11px] text-white/40">One file. Opens anywhere Intaglio runs.</p>
+          <p className="text-[12.5px] font-medium text-white/90">Firebird.etch</p>
+          <p className="text-[11px] text-white/40">One file. Opens anywhere Etch runs.</p>
         </div>
       </div>
       <ul className="mt-3.5 space-y-1.5">
@@ -227,7 +227,7 @@ const FEATURES = [
   {
     icon: IconArchive,
     title: "Projects that travel",
-    body: "Save everything into one .intaglio file. Open it later, on another computer, and pick up exactly where you stopped.",
+    body: "Save everything into one .etch file. Open it later, on another computer, and pick up exactly where you stopped.",
     visual: <ProjectVisual />,
   },
 ];
@@ -258,7 +258,7 @@ export function Landing() {
         <nav className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-4 sm:px-6" aria-label="Main">
           <Link href="/" className="ui-focus flex items-center gap-2.5 rounded-[8px]">
             <BrandMark size={20} />
-            <span className="text-[14px] font-semibold tracking-[-0.01em]">Intaglio</span>
+            <span className="text-[14px] font-semibold tracking-[-0.01em]">Etch</span>
           </Link>
           <div className="flex items-center gap-1">
             <a href="#features" className="ui-focus hidden rounded-full px-3 py-1.5 text-[13px] text-white/60 transition-colors hover:text-white sm:block">Features</a>
@@ -296,10 +296,10 @@ export function Landing() {
                 after="/landing/frame-warm.jpg"
                 beforeLabel="Original"
                 afterLabel="Warm film"
-                alt="A dark green Firebird parked against a pale wall, graded with a warm film look in Intaglio"
+                alt="A dark green Firebird parked against a pale wall, graded with a warm film look in Etch"
                 priority
               />
-              <p className="mt-4 text-center text-[12.5px] text-white/40">Drag to compare. Exported from Intaglio, only resized for the web.</p>
+              <p className="mt-4 text-center text-[12.5px] text-white/40">Drag to compare. Exported from Etch, only resized for the web.</p>
             </Reveal>
           </div>
         </section>
@@ -333,7 +333,7 @@ export function Landing() {
             <Eyebrow>Looks</Eyebrow>
             <SectionTitle className="mt-4">One photograph.<br /><em className="text-white/70">Every mood.</em></SectionTitle>
             <p className="mt-5 text-[16px] leading-[1.65] text-white/55">
-              Film stocks, cinematic looks and creative effects, all non-destructive. Every frame here is the same sample photo, exported from Intaglio.
+              Film stocks, cinematic looks and creative effects, all non-destructive. Every frame here is the same sample photo, exported from Etch.
             </p>
           </Reveal>
           <Reveal><LookSwitcher looks={LOOKS} /></Reveal>
@@ -353,7 +353,7 @@ export function Landing() {
             <Reveal delay={0.05} className="mt-14">
               <figure className="overflow-hidden rounded-[16px] bg-[#0c0c0d] shadow-[0_60px_160px_-50px_rgba(0,0,0,1),0_0_0_1px_rgba(255,255,255,0.08)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/landing/editor.jpg" alt="The Intaglio editor with the sample photo, the Edit panel and its histogram" width={2880} height={1800} className="h-auto w-full" loading="lazy" />
+                <img src="/landing/editor.jpg" alt="The Etch editor with the sample photo, the Edit panel and its histogram" width={2880} height={1800} className="h-auto w-full" loading="lazy" />
               </figure>
               <figcaption className="mt-4 text-center text-[12.5px] text-white/40">A real screenshot of the editor.</figcaption>
             </Reveal>
@@ -439,7 +439,7 @@ export function Landing() {
         <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-2.5 text-white/80">
             <BrandMark size={18} />
-            <span className="text-[13px] font-semibold">Intaglio</span>
+            <span className="text-[13px] font-semibold">Etch</span>
             <span className="text-[13px] text-white/35">· Photos stay on your device.</span>
           </div>
           <nav aria-label="Footer" className="flex gap-5 text-[13px] text-white/45">

@@ -225,5 +225,5 @@ async function runProbe(): Promise<ProbeMetrics> {
 export default function RenderContractProbe(): React.ReactElement {
   const [result, setResult] = useState<{ status: "running" | "passed" | "failed"; metrics?: ProbeMetrics; error?: string }>({ status: "running" });
   useEffect(() => { void runProbe().then((metrics) => setResult({ status: "passed", metrics })).catch((error: unknown) => setResult({ status: "failed", error: error instanceof Error ? error.message : String(error) })); }, []);
-  return <main className="min-h-screen bg-black p-8 font-mono text-white"><h1>Intaglio render contract probe</h1><output data-testid="render-contract-result" data-status={result.status}>{JSON.stringify({ ...result, features: FEATURES })}</output></main>;
+  return <main className="min-h-screen bg-black p-8 font-mono text-white"><h1>Etch render contract probe</h1><output data-testid="render-contract-result" data-status={result.status}>{JSON.stringify({ ...result, features: FEATURES })}</output></main>;
 }

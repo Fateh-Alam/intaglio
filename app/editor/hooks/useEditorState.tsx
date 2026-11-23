@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useRef, useEffect, useLayou
 import { DEFAULT_TEXT_OVERLAY, TextOverlaySettings } from "../../components/CinematicTextOverlay";
 import { applyRecipe } from "../../lib/recipeEngine";
 import { PRESETS } from "../../lib/presets";
-import { FORMAT, STORAGE_KEYS } from "../../lib/brand";
+import { ARCHIVE_FILE_ACCEPT, FORMAT, STORAGE_KEYS, isArchiveFilename, isRecipeFilename } from "../../lib/brand";
 import * as THREE from "three";
 import { createLut3DTexture, parseCubeData, parseCubeLUT, serializeCubeLUT, type CubeLutData } from "../../utils/lutParser";
 import { generatePaletteMatchLut } from "../../utils/colorTransfer";
@@ -651,7 +651,7 @@ function useEditorStateController() {
   };
 
   const handleFontUpload = async (file: File) => {
-    if (!/\.(woff2|ttf|otf)$/i.test(file.name)) throw new Error("Intaglio embeds .woff2, .ttf, or .otf fonts only.");
+    if (!/\.(woff2|ttf|otf)$/i.test(file.name)) throw new Error("Etch embeds .woff2, .ttf, or .otf fonts only.");
     const sha256 = await sha256Hex(file);
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "woff2";
     const family = `Intaglio-${sha256.slice(0, 12)}`;
@@ -732,14 +732,14 @@ function useEditorStateController() {
     [settings]
   );
 
-  // Load a portable Intaglio V2 recipe. JSON and legacy formats are deliberately unsupported.
+  // Load a portable Etch V2 recipe (.etchlook or legacy .int). Generic JSON is unsupported.
   const handleLoadPreset = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      if (!file.name.toLowerCase().endsWith(`.${FORMAT.recipeExtension}`)) throw new Error("Only portable .int V2 recipes are supported.");
+      if (!isRecipeFilename(file.name)) throw new Error(`Only portable .${FORMAT.recipeExtension} or legacy .int V2 recipes are supported.`);
       const { manifest, runtime } = await openIntaglioContainer(file);
-      if (manifest.kind !== "recipe") throw new Error("Choose an .int recipe, not an .intaglio project.");
+      if (manifest.kind !== "recipe") throw new Error(`Choose a .${FORMAT.recipeExtension} recipe, not a project file.`);
       compileGradeGraph(manifest.document.graph);
       const recipeSettings = await hydratePortableAssets(hydrateEditorSettings(manifest.document.editorSettingsSnapshot), manifest.document.assets, runtime);
       const mergedSettings: EditorSettings = {
@@ -755,8 +755,8 @@ function useEditorStateController() {
       for (const [id, blob] of runtime.fontFiles) runtimeAssetsRef.current.fontFiles.set(id, blob);
       addToHistory(mergedSettings, `Load Recipe: ${manifest.document.title}`);
     } catch (error) {
-      console.error("Failed to load Intaglio recipe:", error);
-      alert(error instanceof Error ? error.message : "Invalid or unsupported .int recipe.");
+      console.error("Failed to load Etch recipe:", error);
+      alert(error instanceof Error ? error.message : `Invalid or unsupported .${FORMAT.recipeExtension} recipe.`);
     } finally {
       event.target.value = "";
     }
@@ -859,8 +859,8 @@ function useEditorStateController() {
       const archive = await createIntaglioContainer("project", document, runtimeAssetsRef.current);
       triggerContainerDownload(archive, `${toFileStem(imageName)}_${createTimestampSlug()}.${ARCHIVE_FILE_EXTENSION}`);
     } catch (error) {
-      console.error("Failed to save Intaglio Archive:", error);
-      alert(error instanceof Error ? error.message : "Could not create a portable Intaglio Archive.");
+      console.error("Failed to save Etch Project:", error);
+      alert(error instanceof Error ? error.message : "Could not create a portable Etch project.");
     }
   }, [
     activeExportRecipeId,
@@ -912,8 +912,8 @@ function useEditorStateController() {
       const archive = await createIntaglioContainer("recipe", document, runtimeAssetsRef.current);
       triggerContainerDownload(archive, `${toFileStem(recipe.name || "recipe")}.${FORMAT.recipeExtension}`);
     } catch (error) {
-      console.error("Failed to save Intaglio recipe:", error);
-      alert(error instanceof Error ? error.message : "Could not create a portable Intaglio recipe.");
+      console.error("Failed to save Etch recipe:", error);
+      alert(error instanceof Error ? error.message : "Could not create a portable Etch recipe.");
     }
   }, [activeExportRecipeId, assetMetadata, documentAssets, exportFormat, exportQuality, exportScale, gradeGraph, rawDevelop, settings.lutStrength, settings.lutTexture, textOverlay, watermark]);
 
@@ -1025,26 +1025,26 @@ function useEditorStateController() {
     setDiffVirtualCopyId(null);
     setHistoryState(restoredHistory.length > 0
       ? { entries: restoredHistory, index: Math.min(document.historyIndex, restoredHistory.length - 1) }
-      : { entries: [createHistoryState(restoredSettings, "Restore Intaglio Archive")], index: 0 });
+      : { entries: [createHistoryState(restoredSettings, "Restore Etch Project")], index: 0 });
     setRawProgress(null);
   }, [hydratePortableAssets]);
 
   const openProjectFile = useCallback(async (file: File) => {
     try {
-      if (!file.name.toLowerCase().endsWith(`.${FORMAT.archiveExtension}`)) throw new Error("Only packaged .intaglio V2 projects are supported.");
+      if (!isArchiveFilename(file.name)) throw new Error(`Only packaged .${FORMAT.archiveExtension} or legacy .intaglio V2 projects are supported.`);
       const { manifest, runtime } = await openIntaglioContainer(file);
-      if (manifest.kind !== "project") throw new Error("Choose an .intaglio project, not an .int recipe.");
+      if (manifest.kind !== "project") throw new Error(`Choose an .${FORMAT.archiveExtension} project, not a recipe file.`);
       await restoreProjectSession(manifest.document, runtime);
     } catch (error) {
-      console.error("Failed to restore Intaglio Archive:", error);
-      alert("Invalid or unsupported Intaglio Archive file.");
+      console.error("Failed to restore Etch Project:", error);
+      alert("Invalid or unsupported Etch project file.");
     }
   }, [restoreProjectSession]);
 
   const openProjectPicker = useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = `.${FORMAT.archiveExtension},${FORMAT.archiveMimeType}`;
+    input.accept = ARCHIVE_FILE_ACCEPT;
     input.onchange = (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (file) void openProjectFile(file);
@@ -1054,7 +1054,7 @@ function useEditorStateController() {
 
   /** Drag and drop: projects restore, anything else opens as a photo. */
   const openDroppedFile = useCallback((file: File) => {
-    if (file.name.toLowerCase().endsWith(`.${FORMAT.archiveExtension}`)) void openProjectFile(file);
+    if (isArchiveFilename(file.name)) void openProjectFile(file);
     else void loadImageFile(file);
   }, [openProjectFile, loadImageFile]);
 
@@ -1281,18 +1281,18 @@ function useEditorStateController() {
     },
     {
       id: "load-project-session",
-      title: "Open Intaglio Archive",
-      section: "Archive",
-      keywords: ["restore", "session", "archive", "intaglio"],
+      title: "Open Etch Project",
+      section: "Project",
+      keywords: ["restore", "session", "archive", "etch", "intaglio"],
       run: openProjectPicker,
     },
     {
       id: "save-project-session",
-      title: "Save Intaglio Archive",
-      section: "Archive",
+      title: "Save Etch Project",
+      section: "Project",
       shortcut: "Ctrl+S",
       disabled: !imageSrc,
-      keywords: ["project", "session", "archive", "intaglio"],
+      keywords: ["project", "session", "archive", "etch", "intaglio"],
       run: handleSaveProjectSession,
     },
     {

@@ -4,9 +4,9 @@ import { IntaglioRecipe } from "../types/recipe";
 export const PRESETS: IntaglioRecipe[] = [
   {
     id: "intaglio-poster",
-    name: "Intaglio Poster Mode",
-    description: "The ultimate 4:5 cinematic layout. Heavy film emulation, film borders, and halation, designed to be paired with a Title Overlay.",
-    tags: ["Intaglio Signatures", "Poster", "Cinematic"],
+    name: "Etch Poster",
+    description: "The 4:5 cinematic layout. Film emulation, borders, and halation, designed to pair with a Title Overlay.",
+    tags: ["Etch Signatures", "Poster", "Cinematic"],
     intensityDefault: 1.0,
     settings: {
       film: {
@@ -36,9 +36,9 @@ export const PRESETS: IntaglioRecipe[] = [
   },
   {
     id: "kodak-portra-400",
-    name: "Kodak Portra 400",
-    description: "The gold standard of portrait film. Warm, glowing highlights, soft contrast roll-off, and perfectly protected skin tones.",
-    tags: ["Vintage", "Warm", "Intaglio Signatures", "Portrait"],
+    name: "Portrait 400",
+    description: "The gold standard of portrait film. Warm, glowing highlights, soft contrast roll-off, and protected skin tones.",
+    tags: ["Vintage", "Warm", "Etch Signatures", "Portrait"],
     intensityDefault: 1.0,
     settings: {
       film: {
@@ -72,9 +72,9 @@ export const PRESETS: IntaglioRecipe[] = [
   },
   {
     id: "cinematic-teal-orange",
-    name: "Blockbuster Teal & Orange",
-    description: "Modern cinematic look. Aggressive color separation pushing shadows to teal and highlights to orange.",
-    tags: ["Intaglio Signatures", "Cinematic", "Cool"],
+    name: "Blockbuster",
+    description: "Modern cinematic grade. Deep color separation pushing shadows to teal and highlights to warm amber.",
+    tags: ["Etch Signatures", "Cinematic", "Cool"],
     intensityDefault: 1.0,
     settings: {
       film: {
@@ -105,7 +105,7 @@ export const PRESETS: IntaglioRecipe[] = [
   },
   {
     id: "fuji-superia-400",
-    name: "Fuji Superia 400",
+    name: "90s 400",
     description: "Classic 90s point-and-shoot. Distinct magenta tint, punchy greens, and gritty contrast.",
     tags: ["Vintage", "Cool", "Street"],
     intensityDefault: 1.0,
@@ -140,7 +140,7 @@ export const PRESETS: IntaglioRecipe[] = [
     id: "bleach-bypass",
     name: "Bleach Bypass",
     description: "Gritty, desaturated, extremely high contrast look famous in 90s war films and thrillers.",
-    tags: ["Cinematic", "Intaglio Signatures"],
+    tags: ["Cinematic", "Etch Signatures"],
     intensityDefault: 1.0,
     settings: {
       film: {
@@ -169,8 +169,8 @@ export const PRESETS: IntaglioRecipe[] = [
   },
   {
     id: "ilford-hp5",
-    name: "Ilford HP5 Plus",
-    description: "Classic photojournalism black and white with punchy contrast and beautiful granular noise.",
+    name: "Street 400",
+    description: "Classic photojournalism black and white with punchy contrast and crisp grain.",
     tags: ["Vintage", "B&W", "Monochrome"],
     intensityDefault: 1.0,
     settings: {
@@ -200,7 +200,7 @@ export const PRESETS: IntaglioRecipe[] = [
   },
   {
     id: "cinestill-800t",
-    name: "CineStill 800T",
+    name: "Tungsten 800T",
     description: "Tungsten-balanced night film. Deep blue shadows and glowing red halation.",
     tags: ["Vintage", "Night", "Cinematic"],
     intensityDefault: 1.0,

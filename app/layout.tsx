@@ -43,14 +43,14 @@ const instrumentSerif = Instrument_Serif({
 
 export const metadata: Metadata = {
   metadataBase: new URL(BRAND.domain),
-  title: "Intaglio - A Precision-Machined Digital Darkroom",
+  title: "Etch — A Precision-Machined Digital Darkroom",
   description: BRAND.shortDescription,
   keywords: [
     "digital darkroom",
     "photo editing",
     "photography workflow",
     "local-first editor",
-    "print recipes",
+    "look recipes",
     "photo archive",
     "film emulation",
     "browser photo editor",
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   creator: BRAND.author,
   publisher: BRAND.author,
   openGraph: {
-    title: "Intaglio - A Precision-Machined Digital Darkroom",
+    title: "Etch — A Precision-Machined Digital Darkroom",
     description: BRAND.shortDescription,
     url: BRAND.domain,
     siteName: BRAND.name,
@@ -70,13 +70,13 @@ export const metadata: Metadata = {
         url: "/og-image.svg",
         width: 1200,
         height: 630,
-        alt: "Intaglio - A Precision-Machined Digital Darkroom",
+        alt: "Etch — A Precision-Machined Digital Darkroom",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Intaglio - A Precision-Machined Digital Darkroom",
+    title: "Etch — A Precision-Machined Digital Darkroom",
     description: BRAND.shortDescription,
     images: ["/og-image.svg"],
   },

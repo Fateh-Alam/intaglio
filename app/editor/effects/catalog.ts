@@ -159,7 +159,7 @@ const groups = {
     ["weave", "Weave", [size("Thread spacing", 8), detail("Thread depth", 0.58), angle(45)], colors("#3a273b", "#efccad")],
     ["woodgrain", "Woodgrain", [size("Ring spacing", 20), detail("Grain depth", 0.61), angle(16)], colors("#452016", "#eca860")],
     ["layered-paper", "Layered Paper", [size("Layer spacing", 14), detail("Number of layers", 0.58), angle(35)], colors("#173e4d", "#fae4c4")],
-    ["studio-frame", "Studio Frame", [size("Margin", 24), detail("Layout", 0.48), angle()], type("INTAGLIO", ["#202020", "#eee7d7"], { shadow: "Ink", light: "Paper" })],
+    ["studio-frame", "Studio Frame", [size("Margin", 24), detail("Layout", 0.48), angle()], type("ETCH", ["#202020", "#eee7d7"], { shadow: "Ink", light: "Paper" })],
     ["signal-grid", "Signal Grid", [size("Grid spacing", 38), detail("Sweep", 0.54), phase], colors("#001010", "#63ffaf")],
     ["negative", "Negative", [detail("Color crossover", 0.4)], colors("#10335b", "#ffe6a0")],
     ["scan-slice", "Scan Slice", [size("Viewport", 64), detail("Slice direction", 0.5), angle()], colors("#080c11", "#8ff1eb")],

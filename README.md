@@ -1,14 +1,14 @@
-# Intaglio
+# Etch
 
-Intaglio is a deterministic, non-AI, client-only digital darkroom for still photography. This branch targets a public beta on the current and previous major Chrome and Safari releases on Apple Silicon Macs.
+Etch is a deterministic, non-AI, client-only digital darkroom for still photography. This branch targets a public beta on the current and previous major Chrome and Safari releases on Apple Silicon Macs.
 
 ## Implemented beta boundary
 
 - JPEG, PNG, WebP, and worker-backed supported-camera RAW input. The adapter recognizes `DNG`, `CR2/CR3`, `NEF`, `ARW`, `RAF`, `ORF`, and `RW2`; per-camera fixture qualification is still a release gate.
 - JPEG, PNG, and WebP output through pinned browser WASM codecs, including overlap-cropped tiled rendering.
-- One `IntaglioRenderer` graph shared by preview, proof sheets, exports, and batch jobs, with measured equal-size PNG parity in local Chromium and WebKit automation.
+- One renderer graph (`IntaglioRenderer`) shared by preview, proof sheets, exports, and batch jobs, with measured equal-size PNG parity in local Chromium and WebKit automation.
 - Typed Process Engine, Plate, Mask, and advanced graph contracts.
-- Portable ZIP-based `.int` recipes and `.intaglio` projects with incremental SHA-256, content-addressed source/LUT/font assets, quota preflight, and disk-backed OPFS creation for large archives where supported.
+- Portable ZIP-based `.etchlook` recipes and `.etch` projects (with full backwards-compatible opening for legacy `.int` and `.intaglio` V2 files), incremental SHA-256, content-addressed source/LUT/font assets, quota preflight, and disk-backed OPFS creation for large archives where supported.
 - Local batch ZIP export with deterministic collision-safe names and `batch-manifest.json`.
 - Installable Serwist/Turbopack PWA shell with content-revisioned product assets and post-first-load offline operation.
 

@@ -543,7 +543,7 @@ export const toFileStem = (name: string) =>
     .replace(/\.[^.]+$/, "")
     .replace(/[^a-z0-9_-]+/gi, "_")
     .replace(/^_+|_+$/g, "")
-    .toLowerCase() || "intaglio-session";
+    .toLowerCase() || "etch-session";
 
 export const createTimestampSlug = () =>
   new Date().toISOString().replace(/[:.]/g, "-");

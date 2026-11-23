@@ -7,7 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import { STILL_FILE_ACCEPT } from "../../lib/rawDecoder";
-import { FORMAT } from "../../lib/brand";
+import { FORMAT, RECIPE_FILE_ACCEPT } from "../../lib/brand";
 import { Button, IconButton } from "../../ui/Controls";
 import { Popover } from "../../ui/Popover";
 import { useShell } from "./useShell";
@@ -77,7 +77,7 @@ export function TopBar() {
               <Separator />
               <MenuAction label={`Save look as .${FORMAT.recipeExtension}…`} onSelect={() => { setIsPresetModalOpen(true); close(); }} />
               <MenuAction label={`Apply .${FORMAT.recipeExtension} look…`}>
-                <input type="file" accept={`.${FORMAT.recipeExtension},${FORMAT.recipeMimeType}`} className="hidden" onChange={(event) => { void handleLoadPreset(event); close(); }} />
+                <input type="file" accept={RECIPE_FILE_ACCEPT} className="hidden" onChange={(event) => { void handleLoadPreset(event); close(); }} />
               </MenuAction>
               <MenuAction label="Copy edit settings" onSelect={() => { handleCopySettings(); close(); }} />
               {clipboard && <MenuAction label="Paste edit settings" onSelect={() => { handlePasteSettings(); close(); }} />}

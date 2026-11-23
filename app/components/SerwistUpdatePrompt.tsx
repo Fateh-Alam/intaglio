@@ -11,7 +11,7 @@ export default function SerwistUpdatePrompt() {
     let acceptingUpdate = false;
     const onWaiting = (event: { isUpdate?: boolean }) => {
       if (!event.isUpdate) return;
-      acceptingUpdate = window.confirm("A complete Intaglio update is ready. Reload now?");
+      acceptingUpdate = window.confirm("A complete Etch update is ready. Reload now?");
       if (acceptingUpdate) serwist.messageSkipWaiting();
     };
     const onControlling = () => {

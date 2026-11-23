@@ -6,7 +6,7 @@
   <rect x="134" y="384" width="342" height="112" fill="#14130F"/>
   <circle cx="305" cy="260" r="86" fill="#201D17" stroke="#B08A52" stroke-width="8"/>
   <circle cx="305" cy="260" r="38" fill="#14130F" stroke="#E7DFD0" stroke-opacity="0.65" stroke-width="5"/>
-  <text x="570" y="250" fill="#E7DFD0" font-family="Georgia, serif" font-size="104" font-weight="400">Intaglio</text>
+  <text x="570" y="250" fill="#E7DFD0" font-family="Georgia, serif" font-size="104" font-weight="400">Etch</text>
   <text x="576" y="314" fill="#B08A52" font-family="Arial, sans-serif" font-size="18" letter-spacing="7">A TIMELESS DIGITAL DARKROOM</text>
   <text x="576" y="384" fill="#B9AD98" font-family="Arial, sans-serif" font-size="28">Made for photographs that deserve patience.</text>
   <path d="M576 442H920" stroke="#8F563F" stroke-width="6" stroke-linecap="round"/>

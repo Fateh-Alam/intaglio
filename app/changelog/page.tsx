@@ -7,28 +7,28 @@ import { BRAND, FORMAT } from "../lib/brand";
 
 const entries = [
   {
-    date: "2026-06-25",
-    title: "The Intaglio Rebuild",
+    date: "2026-11-24",
+    title: "Meet Etch",
     icon: IconCamera,
-    body: "Rebuilt the visible product around a quieter editorial darkroom: new name, mark, palette, typography, home page, session desk, and collections language.",
+    body: `Renamed the darkroom to Etch with native .${FORMAT.archiveExtension} projects and .${FORMAT.recipeExtension} look recipes. Existing .intaglio and .int files continue to open seamlessly.`,
   },
   {
     date: "2026-06-25",
-    title: "Archive and Recipe Formats",
+    title: "Portable Archive and Recipe Formats",
     icon: IconArchive,
-    body: `Introduced portable .${FORMAT.archiveExtension} projects and .${FORMAT.recipeExtension} recipes with embedded, checksum-verified assets. Legacy formats are intentionally unsupported.`,
+    body: `Introduced portable .${FORMAT.archiveExtension} projects and .${FORMAT.recipeExtension} recipes with embedded, checksum-verified assets.`,
   },
   {
     date: "2026-06-25",
-    title: "Engine Preserved",
+    title: "Deterministic Local Engine",
     icon: IconBrush,
-    body: "Kept the existing local rendering capabilities intact: light, color, LUTs, masks, history, metadata, text overlays, proof marks, and browser export.",
+    body: "Every control shares one local WebGL pipeline across preview, 1:1 loupe, proof sheets, and browser export: tone, color mixer, wheels, LUTs, masks, geometry, and creative effects.",
   },
   {
     date: "2026-06-25",
     title: "Collections",
     icon: IconFileText,
-    body: "Renamed the preset library into Intaglio Collections with era-led Print Recipes such as Morning Newspaper, Late Autumn, Museum Print, English Rain, and 1968 Rome.",
+    body: "Curated the film room and recipe library with iconic, timeless look profiles ready to apply non-destructively.",
   },
 ];
 
@@ -47,7 +47,7 @@ export default function Changelog() {
             <span className="intaglio-label">Back</span>
           </Link>
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="Intaglio" width={28} height={28} />
+            <Image src="/logo.svg" alt="Etch" width={28} height={28} />
             <span className="font-intaglio-serif text-xl">{BRAND.name}</span>
           </Link>
           <div className="w-12" />
@@ -63,7 +63,7 @@ export default function Changelog() {
             Notes from the darkroom.
           </h1>
           <p className="mt-7 max-w-2xl text-sm leading-7 text-white/60">
-            A concise record of changes that affect how Intaglio feels, reads,
+            A concise record of changes that affect how Etch feels, reads,
             and preserves work. The capability engine remains local-first.
           </p>
         </div>
