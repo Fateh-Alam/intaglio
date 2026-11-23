@@ -43,22 +43,24 @@ varying vec2 vUv;
 
 ${OKLAB_GLSL_CHUNK}
 
-// §13.1 Luminance range weight functions
-// Balance parameter shifts the shadow/highlight crossover point
+// §13.1 Luminance range weight functions (evaluated in perceptual OKLab L)
+// Positive balance moves the split down so highlights cover more of the image.
 
-float shadowWeight(float y, float balance) {
-  float end = mix(0.30, 0.45, balance * 0.5 + 0.5);
-  return 1.0 - smoothstep(0.02, end, y);
+float shadowWeight(float p, float balance) {
+  float b = 0.5 - balance * 0.5;
+  float end = mix(0.25, 0.55, b);
+  return 1.0 - smoothstep(0.05, end, p);
 }
 
-float highlightWeight(float y, float balance) {
-  float start = mix(0.55, 0.70, balance * 0.5 + 0.5);
-  return smoothstep(start, 1.0, y);
+float highlightWeight(float p, float balance) {
+  float b = 0.5 - balance * 0.5;
+  float start = mix(0.42, 0.72, b);
+  return smoothstep(start, 0.95, p);
 }
 
-float midtoneWeight(float y, float balance) {
-  float s = shadowWeight(y, balance);
-  float h = highlightWeight(y, balance);
+float midtoneWeight(float p, float balance) {
+  float s = shadowWeight(p, balance);
+  float h = highlightWeight(p, balance);
   return clamp(1.0 - s - h, 0.0, 1.0);
 }
 
@@ -76,17 +78,15 @@ void main() {
   vec4 texColor = texture2D(tDiffuse, vUv);
   vec3 color = texColor.rgb; // Already linear from previous passes
 
-  // Compute luminance for zone weighting
-  float y = luma709(color);
+  // Convert to OKLAB and weight tonal zones by perceptual lightness L
+  vec3 lab = linearSrgbToOklab(max(color, vec3(0.0)));
+  float p = clamp(lab.x, 0.0, 1.0);
 
   // Compute zone weights
-  float sw = shadowWeight(y, uBalance);
-  float mw = midtoneWeight(y, uBalance);
-  float hw = highlightWeight(y, uBalance);
+  float sw = shadowWeight(p, uBalance);
+  float mw = midtoneWeight(p, uBalance);
+  float hw = highlightWeight(p, uBalance);
   vec3 w = normalizeWeights(sw, mw, hw);
-
-  // Convert to OKLAB
-  vec3 lab = linearSrgbToOklab(max(color, vec3(0.0)));
 
   // Compute and apply weighted a,b offsets from each zone
   // Scale factor of 0.12 maps UI saturation range to reasonable OKLAB a,b offset

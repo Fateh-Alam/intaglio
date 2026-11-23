@@ -19,7 +19,6 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   saturation: 0.0,
 
   // Grading
-  tealOrange: 0.0,
   temperature: 0,
   tint: 0,
   skinProtect: 0,
@@ -39,8 +38,6 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   filmShoulderStrength: 0,
   filmShoulderLength: 1,
   filmGamma: 1,
-  filmBlackLift: 0,
-  filmWhiteRolloff: 0,
   colorCrossover: 0,
   lumaDesat: 0,
 
@@ -89,16 +86,12 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   lensDistortion: 0.0,
   keystoneH: 0.0,
   keystoneV: 0.0,
-  tiltShiftAmount: 0.0,
-  tiltShiftPosition: 0.5,
-  tiltShiftAngle: 0.0,
 
   // LUT
   lutTexture: null,
   lutStrength: 0.0,
 
-  // Black Magic
-  falseColor: false,
+  // Anamorphic
   anamorphicDistortion: 0.0,
   anamorphicStreaks: 0.0,
 
@@ -112,10 +105,6 @@ export const DEFAULT_SETTINGS: EditorSettings = {
   godLightSpecular: 0.0,
   godLightRim: 0.0,
   godLightFalloff: 1.0,
-
-  // HSL
-  targetHue: 0.0,
-  hueShift: 0.0,
 
   // Transform
   rotate: 0.0,
@@ -400,22 +389,57 @@ export const serializeEditorSettings = (
   return serializableSettings as SerializableEditorSettings;
 };
 
+const KNOWN_SETTING_KEYS = new Set<string>(Object.keys(DEFAULT_SETTINGS));
+
+/**
+ * Hydrates saved settings onto DEFAULT_SETTINGS, safely ignoring unknown or
+ * retired legacy keys (e.g. from older .intaglio / .int archives) so saved
+ * projects continue to load cleanly.
+ */
 export const hydrateEditorSettings = (
   partialSettings: Partial<EditorSettings> = {}
-): EditorSettings => ({
-  ...DEFAULT_SETTINGS,
-  ...partialSettings,
-  crop: normalizeCrop(partialSettings.crop),
-  creativeEffects: normalizeCreativeEffects(partialSettings.creativeEffects),
-  curvePoints: cloneJson(
-    partialSettings.curvePoints ?? DEFAULT_SETTINGS.curvePoints
-  ),
-  colorGrading: cloneJson(
-    partialSettings.colorGrading ?? DEFAULT_SETTINGS.colorGrading
-  ),
-  lutTexture: null,
-  compareTexture: null,
-});
+): EditorSettings => {
+  const safe: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(
+    partialSettings as Record<string, unknown>
+  )) {
+    if (KNOWN_SETTING_KEYS.has(key) && value !== undefined) {
+      safe[key] = value;
+    }
+  }
+  const rawLayers = Array.isArray(safe.adjustmentLayers)
+    ? safe.adjustmentLayers
+    : DEFAULT_SETTINGS.adjustmentLayers;
+  const adjustmentLayers = (rawLayers as EditorSettings["adjustmentLayers"]).map(
+    (layer) => {
+      if (!layer || typeof layer !== "object" || !layer.params) return layer;
+      const cleanParams: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(
+        layer.params as Record<string, unknown>
+      )) {
+        if (KNOWN_SETTING_KEYS.has(key) && value !== undefined) {
+          cleanParams[key] = value;
+        }
+      }
+      return { ...layer, params: cleanParams as Partial<EditorSettings> };
+    }
+  );
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(safe as Partial<EditorSettings>),
+    adjustmentLayers,
+    crop: normalizeCrop(partialSettings.crop),
+    creativeEffects: normalizeCreativeEffects(partialSettings.creativeEffects),
+    curvePoints: cloneJson(
+      partialSettings.curvePoints ?? DEFAULT_SETTINGS.curvePoints
+    ),
+    colorGrading: cloneJson(
+      partialSettings.colorGrading ?? DEFAULT_SETTINGS.colorGrading
+    ),
+    lutTexture: null,
+    compareTexture: null,
+  };
+};
 
 export const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {

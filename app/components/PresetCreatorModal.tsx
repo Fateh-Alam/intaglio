@@ -39,7 +39,7 @@ const SETTING_CATEGORIES: SettingCategory[] = [
   {
     id: "exposure",
     label: "Exposure & Tone",
-    description: "Brightness, contrast, highlights, shadows, whites, blacks",
+    description: "Exposure, contrast, highlights, shadows, whites, blacks, highlight protection",
     keys: [
       "brightness",
       "contrast",
@@ -47,13 +47,14 @@ const SETTING_CATEGORIES: SettingCategory[] = [
       "shadows",
       "whites",
       "blacks",
+      "protectHighlights",
     ],
   },
   {
     id: "color",
     label: "Color & Temperature",
-    description: "Temperature, tint, vibrance, teal-orange",
-    keys: ["temperature", "tint", "vibrance", "tealOrange"],
+    description: "Temperature, tint, vibrance, saturation",
+    keys: ["temperature", "tint", "vibrance", "saturation"],
   },
   {
     id: "curves",
@@ -69,11 +70,10 @@ const SETTING_CATEGORIES: SettingCategory[] = [
   },
   {
     id: "hsl",
-    label: "HSL Panel",
-    description: "Per-color hue, saturation, and luminance adjustments",
+    label: "Color Mixer",
+    description: "Per-color hue, saturation, luminance, and skin protection",
     keys: [
-      "targetHue",
-      "hueShift",
+      "safeSkinEnabled",
       "hslRedHue",
       "hslRedSat",
       "hslRedLum",
@@ -116,6 +116,20 @@ const SETTING_CATEGORIES: SettingCategory[] = [
     ],
   },
   {
+    id: "film-response",
+    label: "Film Response",
+    description: "Toe, shoulder, density curve, color crossover, tonal desaturation",
+    keys: [
+      "filmToeStrength",
+      "filmToeLength",
+      "filmShoulderStrength",
+      "filmShoulderLength",
+      "filmGamma",
+      "colorCrossover",
+      "lumaDesat",
+    ],
+  },
+  {
     id: "creative-stack",
     label: "Creative Effect Stack",
     description: "Effect layers, their order, colors and settings",
@@ -137,14 +151,11 @@ const SETTING_CATEGORIES: SettingCategory[] = [
   {
     id: "lens",
     label: "Lens Corrections",
-    description: "Distortion, keystone, tilt-shift",
+    description: "Distortion and perspective keystone",
     keys: [
       "lensDistortion",
       "keystoneH",
       "keystoneV",
-      "tiltShiftAmount",
-      "tiltShiftPosition",
-      "tiltShiftAngle",
     ],
   },
   {

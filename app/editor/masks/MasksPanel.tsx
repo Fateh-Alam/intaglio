@@ -7,6 +7,7 @@ import {
 } from "@tabler/icons-react";
 import type { MaskLayer } from "../../types/editor";
 import { MASK_KIND_LABEL, MAX_BRUSH_PARTS, MAX_MASK_PARTS, radialGeometry, type MaskKind } from "../../lib/maskGeometry";
+import { PLATE_NEUTRAL } from "../render/plateParams";
 import { useEditorState } from "../hooks/useEditorState";
 import { useShell } from "../shell/useShell";
 import { DevelopSections } from "../develop/DevelopPanel";
@@ -118,10 +119,10 @@ function ComponentEditor({ mask }: { mask: MaskLayer }) {
             options={[{ id: "paint", label: "Paint", hint: "Paint the adjustment in" }, { id: "erase", label: "Erase", hint: "Hold Alt or Option while painting to erase" }]}
           />
           <DevSlider label="Size" value={brushSize} defaultValue={0.3} min={0.05} max={3} step={0.01} onChange={setBrushSize} format={(value) => `${Math.round(value * 100)}`}
-            hint="Brush size. Press [ and ] to change it while painting." />
+            hint="Brush size for new strokes. Press [ and ] to change it while painting." />
           <DevSlider label="Feather" value={brushFeather} defaultValue={0.5} min={0} max={1} onChange={setBrushFeather} format={percent}
-            hint="How soft the brush edge is. Shift+[ and Shift+] change it." />
-          <p className="mt-2 text-[11px] leading-relaxed text-[var(--ui-text-2)]">Paint on the photo. Hold Alt or Option to erase.</p>
+            hint="Edge softness for new strokes. Shift+[ and Shift+] change it." />
+          <p className="mt-2 text-[11px] leading-relaxed text-[var(--ui-text-2)]">Paint on the photo. Size and feather apply to new strokes. Hold Alt or Option to erase.</p>
         </>
       );
     case "radial": {
@@ -217,6 +218,13 @@ export function MasksPanel() {
   const parts = plate ? masks.componentsOf(plate) : [];
   const brushLimit = parts.filter((part) => part.type === "brush").length >= MAX_BRUSH_PARTS;
   const partLimit = parts.length >= MAX_MASK_PARTS;
+  const plateHasAdjustments = plate
+    ? (Object.keys(PLATE_NEUTRAL) as Array<keyof typeof PLATE_NEUTRAL>).some((key) => {
+        if (!(key in plate.params) || plate.params[key] === undefined) return false;
+        return JSON.stringify(plate.params[key]) !== JSON.stringify(PLATE_NEUTRAL[key]);
+      })
+    : false;
+  const amountDisabled = plate ? !plateHasAdjustments && plate.opacity === 1 : true;
 
   return (
     <div className="ui-scroll h-full overflow-y-auto">
@@ -306,8 +314,18 @@ export function MasksPanel() {
             </div>
           )}
           <div className="border-b border-[var(--ui-line)] px-4 py-2">
-            <DevSlider label="Amount" value={plate.opacity} defaultValue={1} min={0} max={1} format={percent} onChange={(opacity) => masks.updatePlate(plate.id, { opacity }, "Mask Amount")}
-              hint="How strongly this mask's adjustments apply." />
+            <DevSlider
+              label="Amount"
+              value={plate.opacity}
+              defaultValue={1}
+              min={0}
+              max={1}
+              format={percent}
+              disabled={amountDisabled}
+              disabledHint="Adjust a slider below first"
+              onChange={(opacity) => masks.updatePlate(plate.id, { opacity }, "Mask Amount")}
+              hint="How strongly this mask's adjustments apply."
+            />
           </div>
           <div className="px-4 pb-1 pt-3 text-[10.5px] font-medium uppercase tracking-[0.08em] text-[var(--ui-text-3)]">Adjustments in {plate.name}</div>
           <DevelopSections />

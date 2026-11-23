@@ -96,6 +96,7 @@ export function GradeWheel({ value, size, label, onChange }: GradeWheelProps) {
     dragRef.current = { x: event.clientX, y: event.clientY, start: next };
     setActive(true);
     event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.focus({ preventScroll: true });
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -112,6 +113,30 @@ export function GradeWheel({ value, size, label, onChange }: GradeWheelProps) {
     dragRef.current = null;
     setActive(false);
     event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 0.15 : event.altKey ? 0.01 : 0.05;
+    if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+      event.preventDefault();
+      onChange({ h: value.h, s: Math.min(1, value.s + step) });
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const nextS = Math.max(0, value.s - step);
+      onChange({ h: nextS === 0 ? 0 : value.h, s: nextS });
+    } else if (event.key === "End") {
+      event.preventDefault();
+      onChange({ h: value.h, s: 1 });
+    } else if (event.key === "Home" || event.key === "Backspace" || event.key === "Delete") {
+      event.preventDefault();
+      onChange({ h: 0, s: 0 });
+    } else if (event.key === "PageUp") {
+      event.preventDefault();
+      onChange({ h: (value.h + 1 / 24) % 1, s: value.s || 0.25 });
+    } else if (event.key === "PageDown") {
+      event.preventDefault();
+      onChange({ h: (value.h - 1 / 24 + 1) % 1, s: value.s || 0.25 });
+    }
   };
 
   const hueDegrees = Math.round(value.h * 360);
@@ -132,7 +157,8 @@ export function GradeWheel({ value, size, label, onChange }: GradeWheelProps) {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        onDoubleClick={() => onChange({ h: value.h, s: 0 })}
+        onKeyDown={onKeyDown}
+        onDoubleClick={() => onChange({ h: 0, s: 0 })}
         className="ui-focus group/wheel relative cursor-crosshair touch-none rounded-full"
         style={{ width: size, height: size }}
       >

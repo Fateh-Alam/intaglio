@@ -128,9 +128,9 @@ export const FILM_EMULATIONS: FilmEmulation[] = [
   // ── Heritage Stocks ────────────────────────────────────────
   {
     id: "agfa_apx_100", name: "Agfa APX 100", category: "Heritage Stocks",
-    description: "German fine-grain B&W from the 1990s. Gentle sepia warmth on highlights.",
-    type: "bw", tone: "warm",
-    swatch: "linear-gradient(135deg, #1a1810 0%, #6a6050 50%, #d0c8b8 100%)",
+    description: "German fine-grain B&W from the 1990s. Clean midtones and delicate highlight roll-off.",
+    type: "bw", tone: "neutral",
+    swatch: "linear-gradient(135deg, #161616 0%, #686868 50%, #d4d4d4 100%)",
     bestFor: "Fine art & still life",
   },
   {

@@ -25,11 +25,18 @@ export function ColorGradingSection({ dev, open, onToggle }: SectionProps) {
   const setZone = (zone: Zone, value: Partial<ColorGradingValue>) =>
     update({ ...grading, [zone]: { ...grading[zone], ...value } }, `${ZONE_LABEL[zone]} Grade`);
 
+  const hasZoneEdit =
+    grading.shadows.s > 0 || grading.shadows.l !== 0 ||
+    grading.midtones.s > 0 || grading.midtones.l !== 0 ||
+    grading.highlights.s > 0 || grading.highlights.l !== 0;
+  const balanceDisabled = !hasZoneEdit && grading.balance === 0;
+
   const zone = (id: Zone, size: number) => (
     <div className="flex flex-col" style={{ width: size }}>
       <GradeWheel size={size} label={ZONE_LABEL[id]} value={grading[id]} onChange={(value) => setZone(id, value)} />
       <DevSlider
         label="Lum"
+        ariaLabel={`${ZONE_LABEL[id]} luminance`}
         hint={`Brightens or darkens the ${ZONE_LABEL[id].toLowerCase()}.`}
         value={grading[id].l}
         min={-1}
@@ -54,6 +61,8 @@ export function ColorGradingSection({ dev, open, onToggle }: SectionProps) {
         <DevSlider
           label="Balance"
           hint="Moves the split between shadows and highlights. Positive favours the highlight tint."
+          disabled={balanceDisabled}
+          disabledHint="Adjust a color wheel first"
           value={grading.balance}
           min={-1}
           max={1}

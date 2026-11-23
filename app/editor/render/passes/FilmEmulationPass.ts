@@ -78,11 +78,7 @@ void main() {
   vec4 texel = texture2D(tDiffuse, vUv);
   
   if (uFilmType > 0 && uFilmStrength > 0.0) {
-    if (uFilmType <= 8) {
-      texel.rgb = applyFilmChunk_0(texel.rgb, uFilmType, uFilmStrength);
-    } else {
-      texel.rgb = applyFilmChunk_1(texel.rgb, uFilmType, uFilmStrength);
-    }
+    texel.rgb = applyFilmEmulation(texel.rgb, uFilmType, uFilmStrength);
   }
   
   gl_FragColor = texel;

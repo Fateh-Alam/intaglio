@@ -5,6 +5,8 @@ import { Tooltip } from "./Tooltip";
 
 export interface DevSliderProps {
   label: string;
+  /** Accessible slider name when the visible label is abbreviated (e.g. "Lum"). */
+  ariaLabel?: string;
   value: number;
   min: number;
   max: number;
@@ -22,6 +24,10 @@ export interface DevSliderProps {
   track?: string;
   hint?: string;
   disabled?: boolean;
+  /** Quiet explanation shown when this control depends on another control being active. */
+  disabledHint?: string;
+  /** Render disabledHint inline under the track (defaults to true; set false to avoid repeating on paired sliders). */
+  showDisabledCaption?: boolean;
 }
 
 const FINE_DRAG = 0.1;
@@ -50,6 +56,7 @@ function defaultParse(text: string, min: number, max: number): number | null {
  */
 export function DevSlider({
   label,
+  ariaLabel,
   value,
   min,
   max,
@@ -62,6 +69,8 @@ export function DevSlider({
   track,
   hint,
   disabled,
+  disabledHint,
+  showDisabledCaption = true,
 }: DevSliderProps) {
   const id = useId();
   const trackRef = useRef<HTMLDivElement>(null);
@@ -162,82 +171,90 @@ export function DevSlider({
   const fillWidth = Math.abs(pct - defaultPct);
   const showTick = defaultPct > 0.5 && defaultPct < 99.5;
 
+  const effectiveHint = disabled && disabledHint ? disabledHint : hint;
   const labelNode = (
     <label
       htmlFor={id}
       onDoubleClick={reset}
-      className={`cursor-default truncate text-[12px] transition-colors ${changed ? "text-[var(--ui-text)]" : "text-[var(--ui-text-2)]"} group-hover/slider:text-[var(--ui-text)]`}
+      className={`truncate text-[12px] transition-colors ${disabled ? "cursor-not-allowed text-[var(--ui-text-3)]" : `cursor-default ${changed ? "text-[var(--ui-text)]" : "text-[var(--ui-text-2)]"} group-hover/slider:text-[var(--ui-text)]`}`}
     >
       {label}
     </label>
   );
 
   return (
-    <div className={`group/slider relative py-[3px] ${disabled ? "pointer-events-none opacity-40" : ""}`}>
-      <div className="flex h-[18px] items-center justify-between gap-3">
-        {hint ? <Tooltip content={hint} side="left">{labelNode}</Tooltip> : labelNode}
-        {editing !== null ? (
-          <input
-            autoFocus
-            value={editing}
-            onChange={(event) => setEditing(event.target.value)}
-            onBlur={commitText}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") commitText();
-              if (event.key === "Escape") setEditing(null);
-            }}
-            className="ui-num h-[18px] w-[56px] rounded-[4px] bg-[var(--ui-control)] px-1.5 text-right text-[12px] text-[var(--ui-text)] outline-none ring-1 ring-[var(--ui-accent)]"
-          />
-        ) : (
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setEditing(text.replace(/^\+/, ""))}
-            onDoubleClick={reset}
-            className={`ui-num h-[18px] min-w-[44px] rounded-[4px] px-1 text-right text-[12px] transition-colors hover:bg-white/[0.06] ${changed ? "text-[var(--ui-text)]" : "text-[var(--ui-text-3)]"}`}
-          >
-            {text}
-          </button>
-        )}
-      </div>
-      <div
-        id={id}
-        ref={trackRef}
-        role="slider"
-        tabIndex={disabled ? -1 : 0}
-        aria-label={label}
-        aria-valuemin={min}
-        aria-valuemax={max}
-        aria-valuenow={safeValue}
-        aria-valuetext={text}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onDoubleClick={reset}
-        onKeyDown={onKeyDown}
-        onKeyUp={onKeyUp}
-        className="group/track relative h-[16px] cursor-pointer touch-none outline-none"
-      >
+    <div className="group/slider relative py-[3px]">
+      <div className={disabled ? "opacity-45" : ""}>
+        <div className="flex h-[18px] items-center justify-between gap-3">
+          {effectiveHint ? <Tooltip content={effectiveHint} side="left">{labelNode}</Tooltip> : labelNode}
+          {editing !== null && !disabled ? (
+            <input
+              autoFocus
+              value={editing}
+              onChange={(event) => setEditing(event.target.value)}
+              onBlur={commitText}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") commitText();
+                if (event.key === "Escape") setEditing(null);
+              }}
+              className="ui-num h-[18px] w-[56px] rounded-[4px] bg-[var(--ui-control)] px-1.5 text-right text-[12px] text-[var(--ui-text)] outline-none ring-1 ring-[var(--ui-accent)]"
+            />
+          ) : (
+            <button
+              type="button"
+              tabIndex={-1}
+              disabled={disabled}
+              onClick={() => !disabled && setEditing(text.replace(/^\+/, ""))}
+              onDoubleClick={reset}
+              className={`ui-num h-[18px] min-w-[44px] rounded-[4px] px-1 text-right text-[12px] transition-colors ${disabled ? "cursor-not-allowed text-[var(--ui-text-3)]" : `hover:bg-white/[0.06] ${changed ? "text-[var(--ui-text)]" : "text-[var(--ui-text-3)]"}`}`}
+            >
+              {text}
+            </button>
+          )}
+        </div>
         <div
-          className={`absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-full ${track ? "h-[4px] opacity-80" : "h-[3px] bg-white/[0.09]"}`}
-          style={track ? { background: track } : undefined}
-        />
-        {!track && fillWidth > 0 && (
+          id={id}
+          ref={trackRef}
+          role="slider"
+          tabIndex={disabled ? -1 : 0}
+          aria-label={ariaLabel ?? label}
+          aria-disabled={disabled ? "true" : undefined}
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={safeValue}
+          aria-valuetext={text}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onDoubleClick={reset}
+          onKeyDown={onKeyDown}
+          onKeyUp={onKeyUp}
+          className={`group/track relative h-[16px] touch-none outline-none ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+        >
           <div
-            className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[var(--ui-accent)] opacity-80"
-            style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
+            className={`absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-full ${track ? "h-[4px] opacity-80" : "h-[3px] bg-white/[0.09]"}`}
+            style={track ? { background: track } : undefined}
           />
-        )}
-        {showTick && (
-          <div className="absolute top-1/2 h-[7px] w-px -translate-x-1/2 -translate-y-1/2 bg-white/25" style={{ left: `${defaultPct}%` }} />
-        )}
-        <div
-          data-thumb="true"
-          className={`absolute top-1/2 h-[13px] w-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f5f5f7] shadow-[0_1px_3px_rgba(0,0,0,0.6),0_0_0_0.5px_rgba(0,0,0,0.5)] transition-[transform,box-shadow] duration-150 group-hover/track:scale-110 group-focus-visible/track:ring-2 group-focus-visible/track:ring-[var(--ui-accent)] ${dragging ? "scale-110" : ""}`}
-          style={{ left: `${pct}%`, transitionTimingFunction: "var(--ui-ease)" }}
-        />
+          {!track && fillWidth > 0 && (
+            <div
+              className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[var(--ui-accent)] opacity-80"
+              style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
+            />
+          )}
+          {showTick && (
+            <div className="absolute top-1/2 h-[7px] w-px -translate-x-1/2 -translate-y-1/2 bg-white/25" style={{ left: `${defaultPct}%` }} />
+          )}
+          <div
+            data-thumb="true"
+            className={`absolute top-1/2 h-[13px] w-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f5f5f7] shadow-[0_1px_3px_rgba(0,0,0,0.6),0_0_0_0.5px_rgba(0,0,0,0.5)] transition-[transform,box-shadow] duration-150 ${disabled ? "" : "group-hover/track:scale-110 group-focus-visible/track:ring-2 group-focus-visible/track:ring-[var(--ui-accent)]"} ${dragging ? "scale-110" : ""}`}
+            style={{ left: `${pct}%`, transitionTimingFunction: "var(--ui-ease)" }}
+          />
+        </div>
       </div>
+      {disabled && disabledHint && showDisabledCaption && (
+        <p className="mb-1.5 mt-0.5 text-[10.5px] leading-tight text-[var(--ui-text-3)]">{disabledHint}</p>
+      )}
     </div>
   );
 }

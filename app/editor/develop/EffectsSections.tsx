@@ -93,6 +93,8 @@ const LIGHT_COLORS = [
 export function EffectsSection({ dev, open, onToggle }: SectionProps) {
   const v = dev.values;
   const lightColor = LIGHT_COLORS.find((color) => color.rgb[0] === v.godLightColorR && color.rgb[1] === v.godLightColorG && color.rgb[2] === v.godLightColorB)?.id;
+  const halationInactive = (v.halation ?? 0) <= 0;
+  const bloomInactive = (v.bloom ?? 0) <= 0;
   return (
     <Section title="Effects" open={open} onToggle={onToggle} modified={!dev.isDefault(EFFECTS_KEYS)} onReset={() => dev.reset(EFFECTS_KEYS, "Reset Effects")}>
       <Param dev={dev} k="vignette" label="Vignette" min={0} max={1} format={scaled(100)} parse={unscaled(100)}
@@ -107,11 +109,17 @@ export function EffectsSection({ dev, open, onToggle }: SectionProps) {
         hint="A soft, dreamy glow around the brightest parts of the photo." />
       <More>
         <Param dev={dev} k="halationThreshold" label="Halation threshold" min={0} max={1} defaultValue={0.7} format={scaled(100)} parse={unscaled(100)}
+          disabled={halationInactive} disabledHint="Raise Halation above 0 first" showDisabledCaption={false}
           hint="How bright a highlight must be before it starts to glow." />
         <Param dev={dev} k="halationRadius" label="Halation spread" min={0} max={3} defaultValue={1} step={0.01} format={(value) => value.toFixed(2)} parse={parseNumber}
+          disabled={halationInactive} disabledHint="Raise Halation above 0 first"
           hint="How far the halation glow spreads." />
-        <Param dev={dev} k="bloomThreshold" label="Bloom threshold" min={0} max={1} defaultValue={0.8} format={scaled(100)} parse={unscaled(100)} />
-        <Param dev={dev} k="bloomRadius" label="Bloom spread" min={0} max={3} defaultValue={1} step={0.01} format={(value) => value.toFixed(2)} parse={parseNumber} />
+        <Param dev={dev} k="bloomThreshold" label="Bloom threshold" min={0} max={1} defaultValue={0.8} format={scaled(100)} parse={unscaled(100)}
+          disabled={bloomInactive} disabledHint="Raise Bloom above 0 first" showDisabledCaption={false}
+          hint="How bright a highlight must be before it starts to bloom." />
+        <Param dev={dev} k="bloomRadius" label="Bloom spread" min={0} max={3} defaultValue={1} step={0.01} format={(value) => value.toFixed(2)} parse={parseNumber}
+          disabled={bloomInactive} disabledHint="Raise Bloom above 0 first"
+          hint="How far the bloom glow spreads." />
       </More>
 
       <SubHeading>Lens character</SubHeading>

@@ -16,10 +16,17 @@ uniform sampler2D tDiffuse;
 uniform float uThreshold;
 varying vec2 vUv;
 
+float linearToSrgbScalar(float c) {
+  c = max(c, 0.0);
+  return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
+}
+
 void main() {
   vec4 texColor = texture2D(tDiffuse, vUv);
-  // Halation is characteristically driven by the red channel bleeding
-  float weight = smoothstep(uThreshold, uThreshold + 0.1, texColor.r);
+  // Halation is driven by bright highlights bleeding through the red emulsion layer.
+  // Threshold in perceptual sRGB brightness so 70% corresponds to real display highlights.
+  float rSrgb = linearToSrgbScalar(texColor.r);
+  float weight = smoothstep(max(0.0, uThreshold - 0.08), uThreshold + 0.10, rSrgb);
   gl_FragColor = vec4(texColor.rgb * weight, texColor.a);
 }
 `;
@@ -68,10 +75,11 @@ void main() {
   vec4 haloColor = texture2D(tHalation, vUv);
   
   // Halation produces an orange/red glow
-  vec3 haloTint = vec3(1.0, 0.4, 0.1) * haloColor.r;
+  vec3 haloTint = vec3(1.0, 0.36, 0.08) * haloColor.r;
   
-  // Screen blend mode for the halation
-  vec3 finalColor = 1.0 - (1.0 - baseColor.rgb) * (1.0 - haloTint * uStrength);
+  // HDR-safe screen blend mode so super-bright linear values don't invert
+  vec3 clampedBase = clamp(baseColor.rgb, 0.0, 1.0);
+  vec3 finalColor = baseColor.rgb + haloTint * uStrength * (1.0 - clampedBase);
   
   gl_FragColor = vec4(finalColor, baseColor.a);
 }
@@ -130,11 +138,11 @@ export class HalationPass extends RenderPass {
   public setup() {}
 
   public updateUniforms(settings: EditorSettings) {
-    this.strength = settings.halation || 0.0;
-    this.radius = settings.halationRadius || 1.0;
+    this.strength = settings.halation ?? 0.0;
+    this.radius = settings.halationRadius ?? 1.0;
     this.enabled = this.strength > 0.0;
     
-    this.brightMaterial.uniforms.uThreshold.value = settings.halationThreshold || 0.7;
+    this.brightMaterial.uniforms.uThreshold.value = settings.halationThreshold ?? 0.7;
     this.compositeMaterial.uniforms.uStrength.value = this.strength;
   }
 

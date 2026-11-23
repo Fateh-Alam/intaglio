@@ -773,62 +773,6 @@ function OrganicDemo({
     );
   }
 
-  // FALSE COLOR - Animated exposure heatmap
-  if (featureId === "falseColor") {
-    const colors = [
-      { label: "Under", color: "#3b82f6" }, // Blue
-      { label: "OK", color: "#22c55e" }, // Green
-      { label: "Hot", color: "#eab308" }, // Yellow
-      { label: "Clip", color: "#ef4444" }, // Red
-    ];
-
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-4">
-        {/* Animated gradient bar */}
-        <div className="w-48 h-8 rounded-lg overflow-hidden relative">
-          <div
-            className="absolute inset-0 transition-all duration-300"
-            style={{
-              background: `linear-gradient(90deg, 
-                #3b0764 0%, 
-                #3b82f6 25%, 
-                #22c55e 50%, 
-                #eab308 75%, 
-                #ef4444 100%)`,
-            }}
-          />
-          {/* Scanning line */}
-          <div
-            className="absolute top-0 bottom-0 w-1 bg-white/80"
-            style={{
-              left: `${(Math.sin(time * 0.8) * 0.5 + 0.5) * 100}%`,
-              boxShadow: "0 0 10px rgba(255,255,255,0.8)",
-            }}
-          />
-        </div>
-
-        {/* Legend */}
-        <div className="flex gap-4">
-          {colors.map((c, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-1.5 transition-all duration-300"
-              style={{
-                opacity: 0.6 + (Math.sin(time * 2 + i) * 0.5 + 0.5) * 0.4,
-              }}
-            >
-              <div
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: c.color }}
-              />
-              <span className="text-[10px] text-gray-400">{c.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   // Fallback - gentle pulse
   return (
     <div className="absolute inset-0 flex items-center justify-center">

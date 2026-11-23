@@ -15,14 +15,17 @@ const cells = [size("Cell size", 14), detail("Cell definition", 0.55)];
 const material = [size("Texture size", 15), detail("Texture depth", 0.65)];
 const signal = [size("Band size", 15), detail("Interference", 0.55), phase];
 
+type ColorSlots = { shadow?: string; light?: string };
+
 type EffectRow = readonly [
   id: string, name: string, controls: readonly EffectControl[],
-  options?: { colors?: readonly [string, string]; glyphs?: string; palette?: boolean },
+  options?: { colors?: readonly [string, string]; colorSlots?: ColorSlots; glyphs?: string; palette?: boolean },
 ];
 
-const type = (glyphs: string, colors: readonly [string, string] = ["#0c1015", "#e9efdf"]) =>
-  ({ glyphs, colors });
-const colors = (shadow: string, light: string) => ({ colors: [shadow, light] as const });
+const type = (glyphs: string, colors: readonly [string, string] = ["#0c1015", "#e9efdf"], colorSlots?: ColorSlots) =>
+  colorSlots ? ({ glyphs, colors, colorSlots }) : ({ glyphs, colors });
+const colors = (shadow: string, light: string, colorSlots?: ColorSlots) =>
+  colorSlots ? ({ colors: [shadow, light] as const, colorSlots }) : ({ colors: [shadow, light] as const });
 
 const groups = {
   "ASCII & Text": [
@@ -55,7 +58,7 @@ const groups = {
     ["woodblock", "Woodblock", material, colors("#15223e", "#f0d6a0")],
     ["posterize", "Posterize", [detail("Color levels", 0.23)]],
     ["mezzotint", "Mezzotint", ink, colors("#211c19", "#f0e5d8")],
-    ["pointillize", "Pointillize", ink, colors("#191716", "#efe4d0")],
+    ["pointillize", "Pointillize", ink, colors("#191716", "#efe4d0", { light: "Canvas" })],
     ["crosshatch", "Crosshatch", [...ink, angle(32)], colors("#2b211c", "#f6eee2")],
     ["cmyk-drops", "CMYK Drops", [...ink, angle(0)]],
     ["cyanotype", "Cyanotype", [detail("Print density", 0.6)], colors("#042f64", "#e7f3fd")],
@@ -103,7 +106,7 @@ const groups = {
     ["datamosh", "Datamosh", [size("Block size", 34), detail("Smear", 0.7), phase]],
     ["lofi", "Lofi", signal],
     ["rgb-split", "RGB Split", [size("Channel offset", 8), angle(0)]],
-    ["scanline", "Scanline", [size("Line spacing", 5), detail("Line darkness", 0.56), phase], colors("#09070c", "#ffffff")],
+    ["scanline", "Scanline", [size("Line spacing", 5), detail("Line darkness", 0.56), phase], colors("#09070c", "#ffffff", { shadow: "Line color" })],
     ["thermal", "Thermal", [detail("Heat range", 0.54)]],
     ["beacon", "Beacon", [size("Point spacing", 22), detail("Signal strength", 0.65), phase], colors("#080a19", "#ff6639")],
   ],
@@ -156,7 +159,7 @@ const groups = {
     ["weave", "Weave", [size("Thread spacing", 8), detail("Thread depth", 0.58), angle(45)], colors("#3a273b", "#efccad")],
     ["woodgrain", "Woodgrain", [size("Ring spacing", 20), detail("Grain depth", 0.61), angle(16)], colors("#452016", "#eca860")],
     ["layered-paper", "Layered Paper", [size("Layer spacing", 14), detail("Number of layers", 0.58), angle(35)], colors("#173e4d", "#fae4c4")],
-    ["studio-frame", "Studio Frame", [size("Margin", 24), detail("Layout", 0.48), angle()], type("INTAGLIO", ["#202020", "#eee7d7"])],
+    ["studio-frame", "Studio Frame", [size("Margin", 24), detail("Layout", 0.48), angle()], type("INTAGLIO", ["#202020", "#eee7d7"], { shadow: "Ink", light: "Paper" })],
     ["signal-grid", "Signal Grid", [size("Grid spacing", 38), detail("Sweep", 0.54), phase], colors("#001010", "#63ffaf")],
     ["negative", "Negative", [detail("Color crossover", 0.4)], colors("#10335b", "#ffe6a0")],
     ["scan-slice", "Scan Slice", [size("Viewport", 64), detail("Slice direction", 0.5), angle()], colors("#080c11", "#8ff1eb")],
@@ -164,14 +167,14 @@ const groups = {
     ["neon-tube", "Neon Tube", [size("Tube width", 6), detail("Glow", 0.68)], colors("#220a21", "#f357cc")],
     ["slit-scan", "Slit Scan", [size("Stretch length", 35), detail("Band width", 0.6), angle(90), phase]],
     ["separation", "Separation", [size("Part spacing", 25), detail("Offset", 0.6), angle(15)], colors("#122535", "#c5f7ec")],
-    ["stamp-ink", "Stamp Ink", [size("Impression size", 65), detail("Ink loss", 0.44), angle()], type("PRINTED", ["#8c2037", "#ffebd2"])],
+    ["stamp-ink", "Stamp Ink", [size("Impression size", 65), detail("Ink loss", 0.44), angle()], type("PRINTED", ["#8c2037", "#ffebd2"], { shadow: "Ink" })],
     ["inlay", "Inlay", [size("Facet size", 15), detail("Reflectivity", 0.63), angle(35), phase], colors("#202344", "#bde7dc")],
   ],
   Finishing: [
-    ["vignette", "Vignette", [size("Radius", 60), detail("Feather", 0.55)], colors("#050408", "#ffffff")],
+    ["vignette", "Vignette", [size("Radius", 60), detail("Feather", 0.55)], colors("#050408", "#ffffff", { shadow: "Vignette color" })],
     ["crt-curvature", "CRT Curvature", [detail("Curvature", 0.35)]],
-    ["bloom", "Bloom", [size("Radius", 17), detail("Threshold", 0.48)], colors("#111111", "#fff7dc")],
-    ["character-bloom", "Character Bloom", [size("Radius", 5), detail("Sensitivity", 0.55)], colors("#070708", "#f4ffae")],
+    ["bloom", "Bloom", [size("Radius", 17), detail("Threshold", 0.48)], colors("#111111", "#fff7dc", { light: "Glow color" })],
+    ["character-bloom", "Character Bloom", [size("Radius", 5), detail("Sensitivity", 0.55)], colors("#070708", "#f4ffae", { light: "Glow color" })],
     ["character-chroma", "Character Chroma", [size("Offset", 4), angle(0)]],
     ["film-grain", "Film Grain", [size("Grain size", 2), detail("Color grain", 0.12), phase]],
     ["film-dust", "Film Dust", [size("Particle size", 5), detail("Density", 0.35), phase]],
@@ -196,6 +199,7 @@ export interface EffectDefinition {
   group: keyof typeof groups;
   controls: readonly EffectControl[];
   colors?: readonly [string, string];
+  colorSlots?: ColorSlots;
   glyphs?: string;
   palette?: boolean;
 }

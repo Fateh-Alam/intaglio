@@ -16,10 +16,16 @@ uniform sampler2D tDiffuse;
 uniform float uThreshold;
 varying vec2 vUv;
 
+float linearToSrgbScalar(float c) {
+  c = max(c, 0.0);
+  return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
+}
+
 void main() {
   vec4 texColor = texture2D(tDiffuse, vUv);
-  float luma = dot(texColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-  float weight = smoothstep(uThreshold, uThreshold + 0.1, luma);
+  float luma = dot(max(texColor.rgb, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722));
+  float lumaSrgb = linearToSrgbScalar(luma);
+  float weight = smoothstep(max(0.0, uThreshold - 0.12), uThreshold + 0.08, lumaSrgb);
   gl_FragColor = vec4(texColor.rgb * weight, texColor.a);
 }
 `;
@@ -129,13 +135,13 @@ export class BloomPass extends RenderPass {
   }
 
   public updateUniforms(settings: EditorSettings) {
-    this.strength = settings.bloom || 0.0;
-    this.radius = settings.bloomRadius || 1.0;
+    this.strength = settings.bloom ?? 0.0;
+    this.radius = settings.bloomRadius ?? 1.0;
     
     // Disable pass if strength is 0 to save performance
     this.enabled = this.strength > 0.0;
     
-    this.brightMaterial.uniforms.uThreshold.value = settings.bloomThreshold || 0.8;
+    this.brightMaterial.uniforms.uThreshold.value = settings.bloomThreshold ?? 0.8;
     this.compositeMaterial.uniforms.uStrength.value = this.strength;
   }
 

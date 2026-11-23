@@ -20,7 +20,7 @@ import { IntaglioRecipe } from "../types/recipe";
 import { createIntaglioContainer, openIntaglioContainer, triggerContainerDownload } from "../lib/intaglioContainer";
 import { createIntaglioDocument, createRuntimeAssetStore } from "../lib/intaglioDocument";
 import { applyRecipe } from "../lib/recipeEngine";
-import { DEFAULT_ASSET_METADATA, DEFAULT_SETTINGS, DEFAULT_WATERMARK } from "../editor/pageTypes";
+import { DEFAULT_ASSET_METADATA, DEFAULT_SETTINGS, DEFAULT_WATERMARK, serializeEditorSettings } from "../editor/pageTypes";
 import { DEFAULT_TEXT_OVERLAY } from "../components/CinematicTextOverlay";
 
 interface PresetCardProps {
@@ -209,10 +209,11 @@ export default function PresetsPage() {
   };
 
   const handlePreview = (preset: IntaglioRecipe) => {
-    // Store preset in localStorage and redirect to editor
+    // Flatten the recipe into EditorSettings and store for editor preview
+    const flattened = serializeEditorSettings(applyRecipe(DEFAULT_SETTINGS, preset, preset.intensityDefault ?? 1));
     localStorage.setItem(
       STORAGE_KEYS.presetPreview,
-      JSON.stringify(preset.settings)
+      JSON.stringify(flattened)
     );
     router.push("/editor");
   };

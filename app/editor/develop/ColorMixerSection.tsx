@@ -15,8 +15,12 @@ const PROPERTY_LABEL = { hue: "Hue", sat: "Saturation", lum: "Luminance" } as co
 
 const keyFor = (band: MixerBand, property: keyof typeof PROPERTY) => `hsl${band}${PROPERTY[property]}` as keyof EditorSettings;
 
+const MIXER_BAND_KEYS: readonly DevelopKey[] = MIXER_BANDS.flatMap((band) =>
+  (["hue", "sat", "lum"] as const).map((property) => keyFor(band.id, property))
+);
+
 export const MIXER_KEYS: readonly DevelopKey[] = [
-  ...MIXER_BANDS.flatMap((band) => (["hue", "sat", "lum"] as const).map((property) => keyFor(band.id, property))),
+  ...MIXER_BAND_KEYS,
   "safeSkinEnabled",
   "skinProtect",
 ];
@@ -96,6 +100,8 @@ export function ColorMixerSection({ dev, open, onToggle }: SectionProps) {
           <Switch
             label="Protect skin tones"
             hint="Keeps faces natural while you push oranges and reds. Works on skin hue and chroma, not just a color range."
+            disabled={!dev.values.safeSkinEnabled && dev.isDefault(MIXER_BAND_KEYS)}
+            disabledHint="Adjust a color slider first"
             checked={Boolean(dev.values.safeSkinEnabled)}
             onChange={(value) => dev.set("safeSkinEnabled", value, "Protect Skin Tones")}
           />

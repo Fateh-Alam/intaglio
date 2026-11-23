@@ -11,6 +11,12 @@ export const BASIC_KEYS: readonly DevelopKey[] = [
   "structure", "dehaze", "vibrance", "saturation", "protectHighlights",
 ];
 
+const BASE_DEVELOP_TONE_KEYS: readonly DevelopKey[] = [
+  "temperature", "tint", "brightness", "contrast", "highlights", "shadows", "whites", "blacks",
+  "dehaze", "vibrance", "saturation",
+  "filmToeStrength", "filmShoulderStrength", "filmGamma", "colorCrossover", "lumaDesat",
+];
+
 interface SectionProps {
   dev: Develop;
   open: boolean;
@@ -18,6 +24,7 @@ interface SectionProps {
 }
 
 export function BasicSection({ dev, open, onToggle }: SectionProps) {
+  const protectDisabled = !dev.values.protectHighlights && dev.isDefault(BASE_DEVELOP_TONE_KEYS);
   return (
     <Section title="Basic" open={open} onToggle={onToggle} modified={!dev.isDefault(BASIC_KEYS)} onReset={() => dev.reset(BASIC_KEYS, "Reset Basic")}>
       <SubHeading>White balance</SubHeading>
@@ -43,6 +50,8 @@ export function BasicSection({ dev, open, onToggle }: SectionProps) {
         <Switch
           label="Protect highlights"
           hint="Gently holds back the brightest tones so strong edits don't clip them to white."
+          disabled={protectDisabled}
+          disabledHint="Adjust Exposure or tone first"
           checked={Boolean(dev.values.protectHighlights)}
           onChange={(value) => dev.set("protectHighlights", value, "Protect Highlights")}
         />

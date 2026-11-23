@@ -463,7 +463,11 @@ function useEditorStateController() {
         const presetSettings = JSON.parse(
           presetData
         ) as Partial<EditorSettings>;
-        setSettings((prev) => ({ ...prev, ...presetSettings }));
+        setSettings((prev) => ({
+          ...hydrateEditorSettings({ ...prev, ...presetSettings }),
+          lutTexture: prev.lutTexture,
+          compareTexture: prev.compareTexture,
+        }));
         localStorage.removeItem(STORAGE_KEYS.presetPreview);
       } catch (err) {
         console.error("Failed to load preset:", err);

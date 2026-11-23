@@ -62,12 +62,16 @@ function LayerControls({ layer, definition, change, playing, togglePlayback }: {
           {playing ? "Freeze frame" : "Play effect"}
         </Button>
       )}
-      {definition.colors && (
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          <ColorControl name={layer.effect === "studio-frame" ? "Ink" : "Color 1"} value={layer.shadow} onChange={(shadow) => change({ shadow }, "Color 1")} />
-          <ColorControl name={layer.effect === "studio-frame" ? "Paper" : "Color 2"} value={layer.light} onChange={(light) => change({ light }, "Color 2")} />
-        </div>
-      )}
+      {definition.colors && (() => {
+        const slots = definition.colorSlots ?? { shadow: "Color 1", light: "Color 2" };
+        const dual = Boolean(slots.shadow && slots.light);
+        return (
+          <div className={`mt-2 grid gap-1.5 ${dual ? "grid-cols-2" : "grid-cols-1"}`}>
+            {slots.shadow && <ColorControl name={slots.shadow} value={layer.shadow} onChange={(shadow) => change({ shadow }, slots.shadow!)} />}
+            {slots.light && <ColorControl name={slots.light} value={layer.light} onChange={(light) => change({ light }, slots.light!)} />}
+          </div>
+        );
+      })()}
       {definition.glyphs && (
         <label className="mt-2 flex flex-col gap-1 text-[11px] text-[var(--ui-text-2)]">
           {layer.effect === "studio-frame" || layer.effect === "stamp-ink" ? "Caption" : "Character ramp"}

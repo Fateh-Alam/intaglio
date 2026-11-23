@@ -80,6 +80,7 @@ export function ditherRgba(pixels: Uint8Array, width: number, height: number, la
   const c = Math.cos(theta);
   const s = Math.sin(theta);
   const amplitude = layer.palette === "original" ? 51 : 255;
+  const phaseScale = bayerSizes[layer.dither] ?? 16;
   for (let y = height - 1; y >= 0; y--) {
     const direction = (height - 1 - y) % 2 === 0 ? 1 : -1;
     for (let column = 0; column < width; column++) {
@@ -89,7 +90,7 @@ export function ditherRgba(pixels: Uint8Array, width: number, height: number, la
       if (pixels[i + 3] === 0) continue;
       const v = luma(pixels[i], pixels[i + 1], pixels[i + 2]);
       const workingIndex = index * 3;
-      const bias = working ? 0 : (0.5 - threshold(layer.dither, Math.round(x*c-y*s+layer.phase*16), Math.round(x*s+y*c))) * amplitude * layer.detail;
+      const bias = working ? 0 : (0.5 - threshold(layer.dither, Math.round(x*c-y*s+layer.phase*phaseScale), Math.round(x*s+y*c))) * amplitude * layer.detail;
       let r = (luminanceOnly ? v : pixels[i]) + bias;
       let g = (luminanceOnly ? v : pixels[i + 1]) + bias;
       let b = (luminanceOnly ? v : pixels[i + 2]) + bias;

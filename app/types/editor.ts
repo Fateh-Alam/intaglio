@@ -174,7 +174,6 @@ export interface EditorSettings {
   blacks: number;
   vibrance: number;
   saturation: number;
-  tealOrange: number;
   temperature: number;
   tint: number;
   skinProtect: number;
@@ -192,8 +191,6 @@ export interface EditorSettings {
   filmShoulderStrength: number;
   filmShoulderLength: number;
   filmGamma: number;
-  filmBlackLift: number;
-  filmWhiteRolloff: number;
   colorCrossover: number;
   lumaDesat: number;
   curvePoints: CurvePoints;
@@ -210,12 +207,8 @@ export interface EditorSettings {
   lensDistortion: number;
   keystoneH: number;
   keystoneV: number;
-  tiltShiftAmount: number;
-  tiltShiftPosition: number;
-  tiltShiftAngle: number;
   lutTexture: THREE.Data3DTexture | null;
   lutStrength: number;
-  falseColor: boolean;
   anamorphicDistortion: number;
   anamorphicStreaks: number;
   godLightStrength: number;
@@ -227,8 +220,6 @@ export interface EditorSettings {
   godLightSpecular: number;
   godLightRim: number;
   godLightFalloff: number;
-  targetHue: number;
-  hueShift: number;
   rotate: number;
   zoom: number;
   crop: PhotoCrop;

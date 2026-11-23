@@ -28,7 +28,6 @@ uniform float uGodLightFalloff;
 uniform float uVignette;
 uniform float uAberration;
 uniform float uFilmBorder;
-uniform float uAnamorphicDistortion;
 uniform float uAnamorphicStreaks;
 uniform float uGrainStrength;
 
@@ -36,6 +35,11 @@ varying vec2 vUv;
 
 float getLuma(vec3 color) {
   return dot(color, vec3(0.2126, 0.7152, 0.0722));
+}
+
+float linearToSrgbScalar(float c) {
+  c = max(c, 0.0);
+  return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
 }
 
 float random(vec2 st) {
@@ -56,29 +60,31 @@ void main() {
   
   if (uAnamorphicStreaks > 0.0) {
     vec3 streak = vec3(0.0);
-    float threshold = 0.7;
-    for(int i = -20; i < 20; i++) {
+    for(int i = -20; i <= 20; i++) {
       float offset = float(i) * 0.005;
-      vec3 s = texture2D(tDiffuse, uv + vec2(offset, 0.0)).rgb;
-      float brightness = max(s.r, max(s.g, s.b));
-      if(brightness > threshold) {
-        streak += s * (1.0 - abs(offset * 10.0));
+      vec3 s = texture2D(tDiffuse, clamp(uv + vec2(offset, 0.0), 0.0, 1.0)).rgb;
+      float brightness = linearToSrgbScalar(max(s.r, max(s.g, s.b)));
+      float weight = smoothstep(0.66, 0.84, brightness);
+      if(weight > 0.0) {
+        streak += s * weight * (1.0 - abs(offset * 9.5));
       }
     }
-    streak /= 20.0;
-    streak *= vec3(0.5, 0.8, 1.0); 
+    streak /= 14.0;
+    streak *= vec3(0.45, 0.78, 1.0);
     color += streak * uAnamorphicStreaks;
   }
   
   if (uGodLightStrength > 0.0) {
-    vec2 step = 1.0 / uResolution;
-    float t = getLuma(texture2D(tDiffuse, uv + vec2(0.0, step.y)).rgb);
-    float bot = getLuma(texture2D(tDiffuse, uv + vec2(0.0, -step.y)).rgb);
-    float l = getLuma(texture2D(tDiffuse, uv + vec2(-step.x, 0.0)).rgb);
-    float right = getLuma(texture2D(tDiffuse, uv + vec2(step.x, 0.0)).rgb);
+    // Scale gradient tap spacing to full image size so rim/specular stay consistent across preview and export
+    float tapScale = max(1.0, min(uFullSize.x, uFullSize.y) / 480.0);
+    vec2 step = tapScale / uResolution;
+    float t = linearToSrgbScalar(getLuma(texture2D(tDiffuse, clamp(uv + vec2(0.0, step.y), 0.0, 1.0)).rgb));
+    float bot = linearToSrgbScalar(getLuma(texture2D(tDiffuse, clamp(uv + vec2(0.0, -step.y), 0.0, 1.0)).rgb));
+    float l = linearToSrgbScalar(getLuma(texture2D(tDiffuse, clamp(uv + vec2(-step.x, 0.0), 0.0, 1.0)).rgb));
+    float right = linearToSrgbScalar(getLuma(texture2D(tDiffuse, clamp(uv + vec2(step.x, 0.0), 0.0, 1.0)).rgb));
     
-    float dx = (right - l) * 5.0;
-    float dy = (t - bot) * 5.0;
+    float dx = (right - l) * 4.0;
+    float dy = (t - bot) * 4.0;
     vec3 normal = normalize(vec3(dx, dy, 1.0));
     
     vec3 lightDir = normalize(vec3(uGodLightPos - globalUv, 0.5));
@@ -94,13 +100,14 @@ void main() {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     vec3 specularLight = uGodLightColor * spec * uGodLightSpecular * falloff;
     
-    float rim = 1.0 - max(dot(viewDir, normal), 0.0);
-    rim = pow(rim, 3.0);
-    vec3 rimLight = uGodLightColor * rim * uGodLightRim;
+    float edgeMag = length(vec2(right - l, t - bot));
+    float rimFacing = 0.35 + 0.65 * max(dot(normalize(vec2(right - l, t - bot) + vec2(1e-5)), normalize(uGodLightPos - globalUv + vec2(1e-5))), 0.0);
+    float rim = smoothstep(0.02, 0.22, edgeMag) * rimFacing * falloff;
+    vec3 rimLight = uGodLightColor * rim * uGodLightRim * uGodLightStrength;
     
     color += color * diffuseLight * 0.5;
     color += specularLight * 0.3;
-    color += rimLight * 0.2;
+    color += rimLight * 0.65;
   }
   
   if (uGrainStrength > 0.0) {
@@ -161,7 +168,6 @@ export class OpticalFXPass extends RenderPass {
         uVignette: { value: 0.0 },
         uAberration: { value: 0.0 },
         uFilmBorder: { value: 0.0 },
-        uAnamorphicDistortion: { value: 0.0 },
         uAnamorphicStreaks: { value: 0.0 },
         uGrainStrength: { value: 0.0 }
       }
@@ -175,25 +181,37 @@ export class OpticalFXPass extends RenderPass {
     // Grain is intentionally fixed in output coordinates so preview, proof,
     // tiled export, and repeated exports render the same document pixels.
     this.material.uniforms.uTime.value = 0.0;
-    this.material.uniforms.uGodLightStrength.value = settings.godLightStrength || 0.0;
-    this.material.uniforms.uGodLightPos.value.set(settings.godLightX || 0.5, settings.godLightY || 0.5);
+    const godLightStrength = settings.godLightStrength ?? 0.0;
+    const vignette = settings.vignette ?? 0.0;
+    const aberration = settings.aberration ?? 0.0;
+    const filmBorder = Boolean(settings.filmBorder);
+    const anamorphicStreaks = settings.anamorphicStreaks ?? 0.0;
+    const grain = settings.grain ?? 0.0;
+
+    this.material.uniforms.uGodLightStrength.value = godLightStrength;
+    this.material.uniforms.uGodLightPos.value.set(settings.godLightX ?? 0.5, settings.godLightY ?? 0.5);
     this.material.uniforms.uGodLightColor.value.set(
       settings.godLightColorR ?? 1.0,
       settings.godLightColorG ?? 1.0,
       settings.godLightColorB ?? 1.0
     );
-    this.material.uniforms.uGodLightSpecular.value = settings.godLightSpecular || 0.0;
-    this.material.uniforms.uGodLightRim.value = settings.godLightRim || 0.0;
-    this.material.uniforms.uGodLightFalloff.value = settings.godLightFalloff || 0.0;
+    this.material.uniforms.uGodLightSpecular.value = settings.godLightSpecular ?? 0.0;
+    this.material.uniforms.uGodLightRim.value = settings.godLightRim ?? 0.0;
+    this.material.uniforms.uGodLightFalloff.value = settings.godLightFalloff ?? 1.0;
     
-    this.material.uniforms.uVignette.value = settings.vignette || 0.0;
-    this.material.uniforms.uAberration.value = settings.aberration || 0.0;
-    this.material.uniforms.uFilmBorder.value = settings.filmBorder ? 1.0 : 0.0;
-    this.material.uniforms.uAnamorphicDistortion.value = settings.anamorphicDistortion || 0.0;
-    this.material.uniforms.uAnamorphicStreaks.value = settings.anamorphicStreaks || 0.0;
-    this.material.uniforms.uGrainStrength.value = settings.grain || 0.0;
+    this.material.uniforms.uVignette.value = vignette;
+    this.material.uniforms.uAberration.value = aberration;
+    this.material.uniforms.uFilmBorder.value = filmBorder ? 1.0 : 0.0;
+    this.material.uniforms.uAnamorphicStreaks.value = anamorphicStreaks;
+    this.material.uniforms.uGrainStrength.value = grain;
     
-    this.enabled = true; // Grain requires constant updates, or we can check if anything > 0
+    this.enabled =
+      godLightStrength > 0.0 ||
+      vignette > 0.0 ||
+      aberration > 0.0 ||
+      filmBorder ||
+      anamorphicStreaks > 0.0 ||
+      grain > 0.0;
   }
 
   override setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number): void {

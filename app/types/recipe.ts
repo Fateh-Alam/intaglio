@@ -11,15 +11,13 @@ export type BaseDevelopParams = {
   whites?: number;
   blacks?: number;
   vibrance?: number;
+  saturation?: number;
   temperature?: number;
   tint?: number;
 };
 
-export type OklchMixerParams = {
-  targetHue?: number;
-  hueShift?: number;
-  tealOrange?: number;
-};
+/** Legacy optional color block kept tolerant for older imported recipe files. */
+export type OklchMixerParams = Record<string, number | undefined>;
 
 export type CurvePreset = {
   name?: string;

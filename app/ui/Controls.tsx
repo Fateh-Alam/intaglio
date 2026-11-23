@@ -70,27 +70,58 @@ export function IconButton({ label, shortcut, active, tooltipSide = "bottom", si
   );
 }
 
-export function Switch({ checked, onChange, label, hint, shortcut }: { checked: boolean; onChange: (value: boolean) => void; label: string; hint?: string; shortcut?: string }) {
+export function Switch({
+  checked,
+  onChange,
+  label,
+  hint,
+  shortcut,
+  disabled,
+  disabledHint,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+  hint?: string;
+  shortcut?: string;
+  disabled?: boolean;
+  disabledHint?: string;
+}) {
   const id = useId();
-  const text = <label htmlFor={id} className="cursor-pointer text-[12px] text-[var(--ui-text-2)]">{label}</label>;
+  const effectiveHint = disabled && disabledHint ? disabledHint : hint;
+  const text = (
+    <label
+      htmlFor={id}
+      className={`text-[12px] ${disabled ? "cursor-not-allowed text-[var(--ui-text-3)]" : "cursor-pointer text-[var(--ui-text-2)]"}`}
+    >
+      {label}
+    </label>
+  );
   return (
-    <div className="flex h-8 items-center justify-between">
-      {hint ? <Tooltip content={hint} shortcut={shortcut} side="left">{text}</Tooltip> : text}
-      <button
-        id={id}
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-keyshortcuts={shortcut}
-        onClick={() => onChange(!checked)}
-        className="ui-focus relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors duration-200"
-        style={{ backgroundColor: checked ? "var(--ui-accent)" : "var(--ui-line-strong)" }}
-      >
-        <span
-          className="absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-[left] duration-200"
-          style={{ left: checked ? 14 : 2, transitionTimingFunction: "var(--ui-ease)" }}
-        />
-      </button>
+    <div>
+      <div className={`flex h-8 items-center justify-between ${disabled ? "opacity-45" : ""}`}>
+        {effectiveHint ? <Tooltip content={effectiveHint} shortcut={shortcut} side="left">{text}</Tooltip> : text}
+        <button
+          id={id}
+          type="button"
+          role="switch"
+          disabled={disabled}
+          aria-checked={checked}
+          aria-disabled={disabled ? "true" : undefined}
+          aria-keyshortcuts={shortcut}
+          onClick={() => !disabled && onChange(!checked)}
+          className={`ui-focus relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors duration-200 ${disabled ? "cursor-not-allowed" : ""}`}
+          style={{ backgroundColor: checked ? "var(--ui-accent)" : "var(--ui-line-strong)" }}
+        >
+          <span
+            className="absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-[left] duration-200"
+            style={{ left: checked ? 14 : 2, transitionTimingFunction: "var(--ui-ease)" }}
+          />
+        </button>
+      </div>
+      {disabled && disabledHint && (
+        <p className="-mt-1 pb-1 text-[10.5px] leading-tight text-[var(--ui-text-3)]">{disabledHint}</p>
+      )}
     </div>
   );
 }

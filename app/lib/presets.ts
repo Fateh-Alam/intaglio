@@ -21,9 +21,6 @@ export const PRESETS: IntaglioRecipe[] = [
       texture: {
         grain: 0.12
       },
-      color: {
-        tealOrange: 0.2
-      },
       base: {
         contrast: 0.25,
         temperature: 0.1
@@ -84,9 +81,6 @@ export const PRESETS: IntaglioRecipe[] = [
         filmEmulation: "teal_and_orange",
         filmEmulationStrength: 0.85,
         filmBorder: false
-      },
-      color: {
-        tealOrange: 0.6
       },
       optics: {
         halation: 0.25,
@@ -186,7 +180,6 @@ export const PRESETS: IntaglioRecipe[] = [
         filmBorder: false
       },
       optics: {
-        halation: 0.05,
         vignette: 0.3
       },
       texture: {

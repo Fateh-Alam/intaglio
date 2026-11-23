@@ -59,15 +59,18 @@ export const applyRecipe = (
     applyValue('whites', recipe.settings.base.whites);
     applyValue('blacks', recipe.settings.base.blacks);
     applyValue('vibrance', recipe.settings.base.vibrance);
+    applyValue('saturation', recipe.settings.base.saturation);
     applyValue('temperature', recipe.settings.base.temperature);
     applyValue('tint', recipe.settings.base.tint);
   }
   
-  // 2. Color / OKLCH Mixer
+  // 2. Color / OKLCH Mixer (only apply supported keys so legacy files stay loadable)
   if (recipe.settings.color) {
-    applyValue('targetHue', recipe.settings.color.targetHue);
-    applyValue('hueShift', recipe.settings.color.hueShift);
-    applyValue('tealOrange', recipe.settings.color.tealOrange);
+    for (const [key, value] of Object.entries(recipe.settings.color)) {
+      if (key in DEFAULT_SETTINGS && typeof value === 'number') {
+        applyValue(key as keyof EditorSettings, value);
+      }
+    }
   }
   
   // 3. Optics & Lens
@@ -108,6 +111,7 @@ export const applyRecipe = (
   // 7. Raw Fallback for properties that haven't been structured yet
   if (recipe.settings.raw) {
     for (const [key, value] of Object.entries(recipe.settings.raw)) {
+       if (!(key in DEFAULT_SETTINGS)) continue;
        if (typeof value === 'number') {
            applyValue(key as keyof EditorSettings, value);
        } else if (typeof value === 'boolean') {

@@ -42,6 +42,7 @@ export function Section({ title, open, onToggle, modified, onReset, actions, chi
           <Tooltip content={`Reset ${title}`}>
             <button
               type="button"
+              aria-label={`Reset ${title}`}
               onClick={onReset}
               className="ui-focus grid h-7 w-7 place-items-center rounded-[7px] text-[var(--ui-text-3)] opacity-0 transition hover:bg-white/[0.06] hover:text-[var(--ui-text)] group-hover/section:opacity-100 focus-visible:opacity-100"
             >

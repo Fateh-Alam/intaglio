@@ -138,8 +138,8 @@ export const FILM_EMULATION_SHADER_CHUNK = `
 
     if (filmType == 16) { // Agfa APX 100
         filmColor = vec3(luma);
-        filmColor = smoothstep(0.05, 0.95, filmColor);
-        filmColor += vec3(0.02, 0.01, 0.0) * luma;
+        filmColor = smoothstep(0.04, 0.96, filmColor);
+        filmColor = pow(filmColor, vec3(0.96));
         return mix(color, clamp(filmColor, 0.0, 1.0), strength);
     }
     if (filmType == 17) { // Kodachrome 64
