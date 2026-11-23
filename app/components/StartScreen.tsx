@@ -1,239 +1,169 @@
 "use client";
 
-import React from "react";
-import Image from "next/image";
-import {
-  IconArchive,
-  IconCamera,
-  IconFileImport,
-  IconPhoto,
-  IconSparkles,
-} from "@tabler/icons-react";
-import { BRAND, FORMAT } from "../lib/brand";
+import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
+import { IconArchive, IconArrowRight, IconDeviceDesktop, IconHistory, IconLock, IconPhotoPlus } from "@tabler/icons-react";
+import { BrandMark } from "../editor/shell/TopBar";
 
 interface StartScreenProps {
   onOpenImage: () => void;
   onOpenArchive: () => void;
   onTrySample: () => void;
+  /** Called with a file dropped anywhere on the screen. */
+  onDropFile?: (file: File) => void;
 }
 
-const deskActions = [
-  {
-    title: "Open Photograph",
-    meta: "JPG / PNG / WebP",
-    icon: IconPhoto,
-    tone: "brass",
-  },
-  {
-    title: "Open Archive",
-    meta: `.${FORMAT.archiveExtension} session`,
-    icon: IconArchive,
-    tone: "green",
-  },
-  {
-    title: "Sample Photograph",
-    meta: "Local darkroom file",
-    icon: IconCamera,
-    tone: "navy",
-  },
+const ASSURANCES = [
+  { icon: IconLock, text: "Photos stay on this device" },
+  { icon: IconHistory, text: "Every edit can be undone" },
+  { icon: IconDeviceDesktop, text: "No install, no account" },
 ];
 
-const formatRows = [
-  [`.${FORMAT.recipeExtension}`, FORMAT.recipeName, "Reusable edit settings"],
-  [
-    `.${FORMAT.archiveExtension}`,
-    FORMAT.archiveName,
-    "Full session with metadata and delivery state",
-  ],
-  [".cube", "3D LUT", "Color profile import"],
-];
+const ease = [0.2, 0.8, 0.2, 1] as const;
 
-const scopeItems = [
-  "Non-destructive development",
-  "Local archive restore",
-  "Manual culling and rights metadata",
-  "Proof marks and browser export",
-];
+/** The first screen: one calm place to bring a photo in. */
+export default function StartScreen({ onOpenImage, onOpenArchive, onTrySample, onDropFile }: StartScreenProps) {
+  const [dragging, setDragging] = useState(false);
+  const depth = useRef(0);
 
-export default function StartScreen({
-  onOpenImage,
-  onOpenArchive,
-  onTrySample,
-}: StartScreenProps) {
-  const handlers = [onOpenImage, onOpenArchive, onTrySample];
+  // The whole window is a drop target, so a photo dropped anywhere opens.
+  useEffect(() => {
+    if (!onDropFile) return;
+    const hasFiles = (event: DragEvent) => Array.from(event.dataTransfer?.types ?? []).includes("Files");
+    const onEnter = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      depth.current += 1;
+      setDragging(true);
+    };
+    const onOver = (event: DragEvent) => { if (hasFiles(event)) event.preventDefault(); };
+    const onLeave = () => {
+      depth.current = Math.max(0, depth.current - 1);
+      if (depth.current === 0) setDragging(false);
+    };
+    const onDrop = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      depth.current = 0;
+      setDragging(false);
+      const file = event.dataTransfer?.files?.[0];
+      if (file) onDropFile(file);
+    };
+    window.addEventListener("dragenter", onEnter);
+    window.addEventListener("dragover", onOver);
+    window.addEventListener("dragleave", onLeave);
+    window.addEventListener("drop", onDrop);
+    return () => {
+      window.removeEventListener("dragenter", onEnter);
+      window.removeEventListener("dragover", onOver);
+      window.removeEventListener("dragleave", onLeave);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, [onDropFile]);
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-[var(--intaglio-charcoal)] text-[var(--intaglio-paper)]">
-      <div className="intaglio-grain" />
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-5 md:px-8">
-        <header className="flex min-h-16 items-center justify-between border border-[var(--intaglio-line)] bg-[rgba(32,29,23,0.86)] px-4">
-          <div className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="Intaglio" width={34} height={34} />
-            <div>
-              <div className="font-intaglio-serif text-xl leading-none">
-                {BRAND.name}
-              </div>
-              <div className="intaglio-label mt-1">Session Desk</div>
-            </div>
-          </div>
-          <div className="hidden items-center gap-2 md:flex">
-            {["Local", "Quiet", "Archive", "Print"].map((item) => (
-              <div
-                key={item}
-                className="border border-[var(--intaglio-line)] px-3 py-2"
-              >
-                <span className="intaglio-label text-[rgba(231,223,208,0.42)]">
-                  {item}
-                </span>
-              </div>
-            ))}
-          </div>
-        </header>
+    <div className="ui-root relative flex min-h-[100dvh] w-full flex-col overflow-hidden">
+      {/* Soft light falling on the work surface. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_38%,rgba(255,255,255,0.055),transparent_70%)]" />
 
-        <main className="grid flex-1 gap-5 py-5 lg:grid-cols-[380px_minmax(0,1fr)]">
-          <section className="flex flex-col border border-[var(--intaglio-line)] bg-[var(--intaglio-panel)]">
-            <div className="border-b border-[var(--intaglio-line)] p-6">
-              <div className="intaglio-label text-[var(--intaglio-brass)]">
-                Session Desk
+      <header className="relative z-10 flex h-14 items-center justify-between px-5">
+        <Link href="/" className="ui-focus flex items-center gap-2.5 rounded-[8px] px-1 text-[var(--ui-text)]">
+          <BrandMark size={20} />
+          <span className="text-[13px] font-semibold tracking-[-0.01em]">Intaglio</span>
+        </Link>
+        <Link href="/changelog" className="ui-focus rounded-[8px] px-2.5 py-1.5 text-[12px] text-[var(--ui-text-3)] transition-colors hover:text-[var(--ui-text)]">
+          What’s new
+        </Link>
+      </header>
+
+      <main className="relative z-10 flex flex-1 items-center justify-center px-4 pb-16 pt-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease }}
+          className="w-full max-w-[560px]"
+        >
+          <div
+            className={`relative overflow-hidden rounded-[22px] bg-[var(--ui-panel)] p-2 ring-1 ring-inset transition-[box-shadow,background-color] duration-300 ${dragging ? "ring-[var(--ui-accent)] shadow-[0_0_0_6px_var(--ui-accent-soft)]" : "ring-[var(--ui-line)] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.9)]"}`}
+          >
+            {/* Drop zone */}
+            <div className={`flex flex-col items-center rounded-[16px] border border-dashed px-6 pb-8 pt-10 text-center transition-colors duration-300 ${dragging ? "border-[var(--ui-accent)] bg-[var(--ui-accent-soft)]" : "border-white/[0.09] bg-black/20"}`}>
+              <div className={`grid h-14 w-14 place-items-center rounded-[16px] ring-1 ring-inset transition-colors ${dragging ? "bg-[var(--ui-accent)] text-white ring-transparent" : "bg-white/[0.04] text-[var(--ui-text-2)] ring-white/[0.08]"}`}>
+                <IconPhotoPlus size={26} stroke={1.5} />
               </div>
-              <h1 className="font-intaglio-serif mt-5 text-4xl font-light leading-tight">
-                Begin with a photograph.
+              <h1 className="mt-5 text-[22px] font-semibold tracking-[-0.02em] text-[var(--ui-text)]">
+                {dragging ? "Drop to open" : "Bring in a photo"}
               </h1>
-              <p className="mt-5 text-sm leading-7 text-[rgba(231,223,208,0.55)]">
-                Open a local image, restore an archive, or load the sample file
-                into the darkroom.
+              <p className="mt-2 max-w-[340px] text-[13px] leading-relaxed text-[var(--ui-text-2)]">
+                Drop it anywhere on this page, or choose one. JPEG, PNG, WebP and camera RAW.
               </p>
+              <button
+                type="button"
+                onClick={onOpenImage}
+                className="ui-focus mt-6 inline-flex h-10 items-center gap-2 rounded-[10px] bg-[var(--ui-accent)] px-5 text-[13px] font-semibold text-white shadow-[0_1px_0_rgba(255,255,255,0.18)_inset,0_8px_24px_-8px_rgba(91,155,255,0.7)] transition-colors hover:bg-[var(--ui-accent-strong)]"
+              >
+                <span>Open Photograph</span>
+                <kbd className="rounded-[5px] bg-black/20 px-1.5 py-0.5 font-sans text-[10.5px] font-medium text-white/80">⌘O</kbd>
+              </button>
             </div>
 
-            <div className="grid gap-px bg-[var(--intaglio-line)]">
-              {deskActions.map((action, index) => {
-                const Icon = action.icon;
-                return (
-                  <div role="button" tabIndex={0}
-                    key={action.title}
-                    onClick={handlers[index]}
-                    className="group grid min-h-[96px] grid-cols-[52px_1fr_auto] items-center gap-4 bg-[var(--intaglio-panel)] px-5 py-4 text-left transition duration-300 hover:bg-[var(--intaglio-panel-soft)]"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center border border-[var(--intaglio-line-strong)] text-[var(--intaglio-brass)]">
-                      <Icon size={22} stroke={1.25} />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-[rgba(231,223,208,0.88)]">
-                        {action.title}
-                      </div>
-                      <div className="intaglio-label mt-1 text-[rgba(231,223,208,0.34)]">
-                        {action.meta}
-                      </div>
-                    </div>
-                    <div className="font-mono text-lg text-[rgba(231,223,208,0.28)] transition group-hover:text-[var(--intaglio-brass)]">
-                      +
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Other ways in */}
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={onTrySample}
+                className="ui-focus group flex items-center gap-3 rounded-[14px] bg-white/[0.025] p-2.5 text-left ring-1 ring-inset ring-white/[0.05] transition-colors hover:bg-white/[0.05]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/landing/frame-original.jpg" alt="" className="h-11 w-11 shrink-0 rounded-[9px] object-cover" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12.5px] font-medium text-[var(--ui-text)]">Sample Photograph</span>
+                  <span className="block text-[11.5px] text-[var(--ui-text-3)]">Try it with ours</span>
+                </span>
+                <IconArrowRight size={15} className="mr-1 text-[var(--ui-text-3)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--ui-text-2)]" />
+              </button>
+              <button
+                type="button"
+                aria-label="Open Archive .intaglio project"
+                onClick={onOpenArchive}
+                className="ui-focus group flex items-center gap-3 rounded-[14px] bg-white/[0.025] p-2.5 text-left ring-1 ring-inset ring-white/[0.05] transition-colors hover:bg-white/[0.05]"
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[9px] bg-white/[0.04] text-[var(--ui-text-2)] ring-1 ring-inset ring-white/[0.06]">
+                  <IconArchive size={19} stroke={1.5} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12.5px] font-medium text-[var(--ui-text)]">Open a project</span>
+                  <span className="block text-[11.5px] text-[var(--ui-text-3)]">Continue an .intaglio file</span>
+                </span>
+                <IconArrowRight size={15} className="mr-1 text-[var(--ui-text-3)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--ui-text-2)]" />
+              </button>
             </div>
+          </div>
 
-            <div className="mt-auto border-t border-[var(--intaglio-line)] p-5">
-              <div className="grid grid-cols-2 gap-2">
-                {scopeItems.map((item) => (
-                  <div
-                    key={item}
-                    className="border border-[var(--intaglio-line)] bg-black/10 px-3 py-3 text-xs leading-5 text-[rgba(231,223,208,0.52)]"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
+          <ul className="mt-7 flex flex-col items-center justify-center gap-x-6 gap-y-2.5 sm:flex-row">
+            {ASSURANCES.map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-2 whitespace-nowrap text-[12px] text-[var(--ui-text-3)]">
+                <Icon size={14} stroke={1.6} />
+                {text}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+      </main>
 
-          <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="border border-[var(--intaglio-line)] bg-[var(--intaglio-panel)]">
-              <div className="flex items-center justify-between border-b border-[var(--intaglio-line)] px-5 py-4">
-                <div className="intaglio-label">Workbench</div>
-                <div className="intaglio-label text-[var(--intaglio-green)]">
-                  Ready
-                </div>
-              </div>
-
-              <div className="relative min-h-[360px] overflow-hidden">
-                <Image
-                  src="/demo.jpg"
-                  alt="Intaglio sample photograph"
-                  fill
-                  sizes="(min-width: 1280px) 700px, 100vw"
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,19,15,0.55),rgba(20,19,15,0.06)),linear-gradient(180deg,transparent,rgba(20,19,15,0.82))]" />
-                <div className="absolute bottom-5 left-5 right-5 max-w-xl">
-                  <div className="intaglio-label text-[var(--intaglio-brass)]">
-                    Sample Negative
-                  </div>
-                  <p className="mt-3 text-sm leading-7 text-[rgba(231,223,208,0.68)]">
-                    A calm source image for checking tone, grain, warmth, and
-                    shadow detail before importing your own work.
-                  </p>
-                </div>
-              </div>
-
-              <div className="border-t border-[var(--intaglio-line)] p-5">
-                <div className="mb-4 intaglio-label">Format Map</div>
-                <div className="grid gap-px bg-[var(--intaglio-line)]">
-                  {formatRows.map(([ext, title, desc]) => (
-                    <div
-                      key={ext}
-                      className="grid gap-3 bg-[var(--intaglio-panel)] px-4 py-3 md:grid-cols-[110px_180px_1fr]"
-                    >
-                      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--intaglio-brass)]">
-                        {ext}
-                      </div>
-                      <div className="text-xs text-[rgba(231,223,208,0.75)]">
-                        {title}
-                      </div>
-                      <div className="text-xs leading-5 text-[rgba(231,223,208,0.44)]">
-                        {desc}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <aside className="border border-[var(--intaglio-line)] bg-[var(--intaglio-panel)]">
-              <div className="border-b border-[var(--intaglio-line)] p-5">
-                <div className="intaglio-label">Current Scope</div>
-                <p className="mt-4 text-sm leading-7 text-[rgba(231,223,208,0.54)]">
-                  The darkroom keeps the existing editing engine intact: color,
-                  masks, text overlays, LUTs, history, culling, archives, and
-                  export recipes.
-                </p>
-              </div>
-              <div className="space-y-3 p-5">
-                {[
-                  "Supported-camera RAW develops locally in a worker",
-                  "Projects and recipes embed checksum-verified assets",
-                  "Preview, proofs, batch, and export share one render graph",
-                  "Legacy formats, video, and tethering are unsupported",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="flex items-start gap-3 border border-[var(--intaglio-line)] bg-black/10 px-3 py-3 text-xs leading-5 text-white/50"
-                  >
-                    <IconSparkles className="intaglio-icon mt-0.5 shrink-0 text-[var(--intaglio-brass)]"/>
-                    {item}
-                  </div>
-                ))}
-              </div>
-              <div className="border-t border-[var(--intaglio-line)] p-5">
-                <div role="button" tabIndex={0} onClick={onOpenArchive} className="intaglio-button w-full">
-                  <IconFileImport className="intaglio-icon"/>
-                  Open Archive
-                </div>
-              </div>
-            </aside>
-          </section>
-        </main>
-      </div>
+      <AnimatePresence>
+        {dragging && (
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="pointer-events-none fixed inset-3 z-50 rounded-[24px] ring-2 ring-inset ring-[var(--ui-accent)]/60"
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

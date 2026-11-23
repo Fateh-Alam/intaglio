@@ -1025,26 +1025,34 @@ function useEditorStateController() {
     setRawProgress(null);
   }, [hydratePortableAssets]);
 
+  const openProjectFile = useCallback(async (file: File) => {
+    try {
+      if (!file.name.toLowerCase().endsWith(`.${FORMAT.archiveExtension}`)) throw new Error("Only packaged .intaglio V2 projects are supported.");
+      const { manifest, runtime } = await openIntaglioContainer(file);
+      if (manifest.kind !== "project") throw new Error("Choose an .intaglio project, not an .int recipe.");
+      await restoreProjectSession(manifest.document, runtime);
+    } catch (error) {
+      console.error("Failed to restore Intaglio Archive:", error);
+      alert("Invalid or unsupported Intaglio Archive file.");
+    }
+  }, [restoreProjectSession]);
+
   const openProjectPicker = useCallback(() => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = `.${FORMAT.archiveExtension},${FORMAT.archiveMimeType}`;
-    input.onchange = async (event) => {
+    input.onchange = (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-
-      try {
-        if (!file.name.toLowerCase().endsWith(`.${FORMAT.archiveExtension}`)) throw new Error("Only packaged .intaglio V2 projects are supported.");
-        const { manifest, runtime } = await openIntaglioContainer(file);
-        if (manifest.kind !== "project") throw new Error("Choose an .intaglio project, not an .int recipe.");
-        await restoreProjectSession(manifest.document, runtime);
-      } catch (error) {
-        console.error("Failed to restore Intaglio Archive:", error);
-        alert("Invalid or unsupported Intaglio Archive file.");
-      }
+      if (file) void openProjectFile(file);
     };
     input.click();
-  }, [restoreProjectSession]);
+  }, [openProjectFile]);
+
+  /** Drag and drop: projects restore, anything else opens as a photo. */
+  const openDroppedFile = useCallback((file: File) => {
+    if (file.name.toLowerCase().endsWith(`.${FORMAT.archiveExtension}`)) void openProjectFile(file);
+    else void loadImageFile(file);
+  }, [openProjectFile, loadImageFile]);
 
   const handleCreateVirtualCopy = (requestedName?: string) => {
     const name = requestedName?.trim() || `Version ${settingsSnapshots.length + 1}`;
@@ -1616,6 +1624,7 @@ function useEditorStateController() {
     handleSaveRecipe,
     openImagePicker,
     openProjectPicker,
+    openDroppedFile,
     isCommandBarOpen, setIsCommandBarOpen,
     isShortcutHelpOpen, setIsShortcutHelpOpen,
     handleCommand,

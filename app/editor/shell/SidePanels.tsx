@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ProGradingPanel } from "../components/ProGradingPanel";
-import { IconAdjustmentsHorizontal, IconBrush, IconTypography, IconX } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconBrush, IconChevronRight, IconTimeline, IconTypography, IconX } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import { DevelopPanel } from "../develop/DevelopPanel";
 import { MasksPanel } from "../masks/MasksPanel";
@@ -102,7 +102,20 @@ export function RightPanel() {
     <div className="flex h-full flex-col">
       <div className="border-b border-[var(--ui-line)] px-3 py-2.5">
         <Segmented size="md" value={shell.rightMode} onChange={changeMode} options={RIGHT_MODES} />
-        <button onClick={() => setProGrading(true)} className="ui-focus mt-2 w-full rounded py-1 text-[11px] text-[var(--ui-text-3)] hover:text-[var(--ui-text)]">Open pro grading workspace…</button>
+        <button
+          type="button"
+          aria-label="Open pro grading workspace…"
+          onClick={() => setProGrading(true)}
+          className="ui-focus group mt-2 flex h-9 w-full items-center gap-2.5 rounded-[8px] px-2 text-left transition-colors hover:bg-white/[0.04]"
+        >
+          <span className="grid h-6 w-6 place-items-center rounded-[6px] bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)]">
+            <IconTimeline size={14} stroke={1.8} />
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[var(--ui-text-2)] group-hover:text-[var(--ui-text)]">
+            Pro grading <span className="font-normal text-[var(--ui-text-3)]">· Nodes, scopes, LUTs</span>
+          </span>
+          <IconChevronRight size={14} className="text-[var(--ui-text-3)] transition-transform group-hover:translate-x-0.5" />
+        </button>
       </div>
       <div className="min-h-0 flex-1">
         {shell.rightMode === "develop" && <DevelopPanel />}

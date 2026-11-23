@@ -1,82 +1,62 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconDeviceLaptop, IconX } from "@tabler/icons-react";
+import { IconDeviceDesktop } from "@tabler/icons-react";
 
 interface MobileLimitationModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function MobileLimitationModal({
-  isOpen,
-  onClose,
-}: MobileLimitationModalProps) {
+/** A gentle note on small screens. Everything still works; it is just roomier on a computer. */
+export default function MobileLimitationModal({ isOpen, onClose }: MobileLimitationModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
-
-          {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full max-w-sm overflow-hidden border border-[var(--intaglio-line)] bg-[var(--intaglio-panel)] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="small-screen-title"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.32, ease: [0.2, 0.8, 0.2, 1] }}
+            className="ui-root relative w-full max-w-sm rounded-t-[22px] bg-[var(--ui-panel)] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] ring-1 ring-inset ring-[var(--ui-line)] shadow-[var(--ui-shadow-pop)] sm:rounded-[22px]"
           >
-            {/* Header Art */}
-            <div className="relative h-28 overflow-hidden bg-[var(--intaglio-charcoal-2)]">
-              <div className="intaglio-grain absolute" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="relative z-10 border border-[var(--intaglio-line)] bg-black/20 p-3">
-                  <IconDeviceLaptop className="intaglio-icon text-[var(--intaglio-brass)]"/>
-                </div>
-              </div>
+            <div className="mx-auto mb-5 h-1 w-9 rounded-full bg-white/15 sm:hidden" aria-hidden />
+            <div className="grid h-12 w-12 place-items-center rounded-[14px] bg-white/[0.05] text-[var(--ui-text-2)] ring-1 ring-inset ring-white/[0.08]">
+              <IconDeviceDesktop size={22} stroke={1.5} />
             </div>
-
-            {/* Content */}
-            <div className="p-6 text-center space-y-4">
-              <h2 className="text-xl font-medium text-white tracking-wide">
-                Desktop Recommended
-              </h2>
-
-              <div className="space-y-3">
-                <p className="text-sm text-gray-400 leading-relaxed">
-                  Intaglio is designed for the precision and power of a desktop
-                  darkroom workflow.
-                </p>
-                <p className="border border-[var(--intaglio-line)] bg-white/5 py-2 font-mono text-xs text-gray-500">
-                  Mobile experience is limited.
-                </p>
-              </div>
-
-              <div className="pt-4 flex flex-col gap-3">
-                <div role="button" tabIndex={0}
-                  onClick={onClose}
-                  className="w-full border border-[var(--intaglio-brass)] bg-[var(--intaglio-brass)] py-3 text-sm font-semibold uppercase tracking-wider text-black transition-colors hover:bg-[#c49b62]"
-                >
-                  Continue Anyway
-                </div>
-              </div>
-            </div>
-
-            {/* Close Button */}
-            <div role="button" tabIndex={0}
+            <h2 id="small-screen-title" className="mt-4 text-[17px] font-semibold tracking-[-0.01em] text-[var(--ui-text)]">
+              Roomier on a bigger screen
+            </h2>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--ui-text-2)]">
+              Every tool works here, but sliders, masks and the 1:1 loupe are easier to use on a tablet or computer.
+            </p>
+            <button
+              type="button"
+              autoFocus
               onClick={onClose}
-              className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors"
+              className="ui-focus mt-6 h-11 w-full rounded-[12px] bg-[var(--ui-accent)] text-[14px] font-semibold text-white transition-colors hover:bg-[var(--ui-accent-strong)]"
             >
-              <IconX className="intaglio-icon"/>
-            </div>
+              Continue anyway
+            </button>
           </motion.div>
         </div>
       )}

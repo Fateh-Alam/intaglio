@@ -5,6 +5,7 @@ import {
   Geist_Mono,
   Bebas_Neue,
   Inter,
+  Instrument_Serif,
 } from "next/font/google";
 import { BRAND } from "./lib/brand";
 import SerwistUpdatePrompt from "./components/SerwistUpdatePrompt";
@@ -29,6 +30,14 @@ const bebasNeue = Bebas_Neue({
 
 const inter = Inter({
   variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+// Display serif for landing-page headlines only.
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument",
   subsets: ["latin"],
 });
 
@@ -90,7 +99,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={instrumentSerif.variable}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${inter.variable} antialiased`}
       >

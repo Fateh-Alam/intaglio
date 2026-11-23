@@ -342,3 +342,10 @@ body {
   background-image: conic-gradient(#2a2a2e 25%, #222225 0 50%, #2a2a2e 0 75%, #222225 0);
   background-size: 12px 12px;
 }
+
+/* Landing-page headlines only. */
+.type-display {
+  font-family: var(--font-instrument), "Iowan Old Style", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+}

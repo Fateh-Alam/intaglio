@@ -20,7 +20,7 @@ import { EditorModals } from "./shell/EditorModals";
 
 function EditorLayout() {
   const {
-    showMobileWarning, setShowMobileWarning, imageSrc, setImageSrc, openImagePicker, openProjectPicker, setSettings,
+    showMobileWarning, setShowMobileWarning, imageSrc, setImageSrc, openImagePicker, openProjectPicker, openDroppedFile, setSettings,
     setImageName, setImageInfo, setAssetMetadata, isCommandBarOpen, setIsCommandBarOpen, appCommands, isShortcutHelpOpen,
     setIsShortcutHelpOpen,
   } = useEditorState();
@@ -28,19 +28,30 @@ function EditorLayout() {
   const commands = [...appCommands, ...useShellCommands()];
   useShellShortcuts(Boolean(imageSrc) && !isCommandBarOpen && !isShortcutHelpOpen);
 
+  const openSample = React.useCallback(() => {
+    setSettings(DEFAULT_SETTINGS);
+    setImageSrc("/demo.jpg");
+    setImageName("Demo Sample");
+    setImageInfo({ width: 2000, height: 2500, fileType: "image/jpeg" });
+    setAssetMetadata(DEFAULT_ASSET_METADATA);
+  }, [setSettings, setImageSrc, setImageName, setImageInfo, setAssetMetadata]);
+
+  // /editor?sample=1 (from the landing page) opens straight into the sample.
+  const sampleRequested = React.useRef(false);
+  React.useEffect(() => {
+    if (sampleRequested.current || imageSrc) return;
+    sampleRequested.current = true;
+    if (new URLSearchParams(window.location.search).has("sample")) openSample();
+  }, [imageSrc, openSample]);
+
   if (!imageSrc) {
     return (
-      <main className="intaglio-page relative flex h-screen w-screen overflow-hidden font-intaglio-sans">
+      <main className="flex min-h-[100dvh] w-screen">
         <StartScreen
           onOpenImage={openImagePicker}
           onOpenArchive={openProjectPicker}
-          onTrySample={() => {
-            setSettings(DEFAULT_SETTINGS);
-            setImageSrc("/demo.jpg");
-            setImageName("Demo Sample");
-            setImageInfo({ width: 2000, height: 2500, fileType: "image/jpeg" });
-            setAssetMetadata(DEFAULT_ASSET_METADATA);
-          }}
+          onDropFile={openDroppedFile}
+          onTrySample={openSample}
         />
       </main>
     );
