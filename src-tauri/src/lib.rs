@@ -4,6 +4,8 @@
 //! gives it native file saving and dialogs. `etch-core` attaches here later.
 
 mod menu;
+#[cfg(target_os = "macos")]
+mod native_viewport;
 mod opened_files;
 mod recent;
 mod updates;
@@ -93,12 +95,28 @@ async fn ask_confirm(app: AppHandle, window: WebviewWindow, title: String, messa
         .blocking_show()
 }
 
+#[cfg(target_os = "macos")]
+fn native_viewport_state() -> native_viewport::NativeViewport {
+    native_viewport::NativeViewport::default()
+}
+#[cfg(not(target_os = "macos"))]
+fn native_viewport_state() {}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(opened_files::OpenedFiles::default())
+        .manage(native_viewport_state())
+        .on_window_event(|window, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::WindowEvent::Resized(size) = event {
+                native_viewport::on_resize(window, size.width, size.height);
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = (window, event);
+        })
         .menu(menu::build)
         .setup(|app| {
             recent::refresh_menu(app.handle());
@@ -107,7 +125,9 @@ pub fn run() {
         })
         .on_menu_event(|app, event| {
             let id = event.id().as_ref();
-            if id == updates::MENU_ID {
+            if id == menu::NATIVE_VIEWPORT_TEST {
+                menu::open_native_viewport_test(app);
+            } else if id == updates::MENU_ID {
                 tauri::async_runtime::spawn(updates::check(app.clone(), true));
             } else if !recent::handle_menu(app, id) {
                 menu::forward(app, id);
@@ -120,6 +140,16 @@ pub fn run() {
             opened_files::take_opened_files,
             opened_files::read_opened_file,
             opened_files::pick_file,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_open,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_load,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_update,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_close,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_log,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Etch");

@@ -57,3 +57,4 @@ next-env.d.ts
 
 # desktop (Tauri)
 /src-tauri/target
+/crates/etch-core/target

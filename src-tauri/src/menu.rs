@@ -10,7 +10,7 @@
 //! page and are listed under Help → Keyboard Shortcuts.
 
 use tauri::menu::{AboutMetadataBuilder, Menu, MenuItemBuilder, SubmenuBuilder};
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 pub const MENU_EVENT: &str = "etch:menu";
 
@@ -18,6 +18,17 @@ pub const MENU_EVENT: &str = "etch:menu";
 pub const UNDO: &str = "undo";
 pub const REDO: &str = "redo";
 pub const COMMAND_BAR: &str = "command-bar";
+
+/// Developer-only test page for the native viewport (D2 spike). The Help menu
+/// shows it only when Etch is launched with `ETCH_DEVELOPER=1`.
+pub const NATIVE_VIEWPORT_TEST: &str = "dev-native-viewport";
+
+pub fn open_native_viewport_test<R: Runtime>(app: &AppHandle<R>) {
+    let Some(window) = app.get_webview_window("main") else { return };
+    if let Ok(url) = window.url().and_then(|current| current.join("/native-viewport/").map_err(|error| tauri::Error::Anyhow(error.into()))) {
+        let _ = window.navigate(url);
+    }
+}
 
 fn item<R: Runtime>(app: &AppHandle<R>, id: &str, label: &str, accelerator: Option<&str>) -> tauri::Result<tauri::menu::MenuItem<R>> {
     let builder = MenuItemBuilder::with_id(id, label);
@@ -104,10 +115,13 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
     let window = SubmenuBuilder::new(app, "Window").minimize().maximize().build()?;
 
-    let help = SubmenuBuilder::new(app, "Help")
+    let mut help = SubmenuBuilder::new(app, "Help")
         .item(&item(app, COMMAND_BAR, "Search Commands…", Some("CmdOrCtrl+K"))?)
-        .item(&item(app, "show-shortcuts", "Keyboard Shortcuts", None)?)
-        .build()?;
+        .item(&item(app, "show-shortcuts", "Keyboard Shortcuts", None)?);
+    if std::env::var_os("ETCH_DEVELOPER").is_some() {
+        help = help.separator().item(&item(app, NATIVE_VIEWPORT_TEST, "Developer: Native Viewport Test", None)?);
+    }
+    let help = help.build()?;
 
     Menu::with_items(app, &[&app_menu, &file, &edit, &photo, &view, &window, &help])
 }

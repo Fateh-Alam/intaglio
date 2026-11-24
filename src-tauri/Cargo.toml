@@ -25,3 +25,11 @@ codegen-units = 1
 lto = true
 opt-level = 3
 strip = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+etch-core = { path = "../crates/etch-core" }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSView", "NSResponder", "NSGraphics", "objc2-quartz-core"] }
+objc2-foundation = { version = "0.3", features = ["NSGeometry"] }
+objc2-quartz-core = { version = "0.3", features = ["CALayer", "CAMetalLayer"] }
