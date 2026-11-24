@@ -80,6 +80,7 @@ export function TopBar() {
               <MenuAction label="Proof sheet…" onSelect={() => { setIsProofSheetOpen(true); close(); }} />
               <MenuAction label="Batch export…" onSelect={() => { setIsBatchExportOpen(true); close(); }} />
               <MenuAction label="Export…" shortcut="⌘E" onSelect={() => { setIsExportModalOpen(true); close(); }} />
+              <MenuAction label="Export video…" onSelect={() => { shell.setVideoExportOpen(true); close(); }} />
             </>
           )}
         </Popover>

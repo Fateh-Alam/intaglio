@@ -19,6 +19,7 @@ import { PhotoCanvas } from "./shell/PhotoCanvas";
 import { LeftPanel, RightPanel } from "./shell/SidePanels";
 import { EditorModals } from "./shell/EditorModals";
 import { FloatingHistogram } from "./develop/FloatingHistogram";
+import { VideoExportModal } from "./components/VideoExportModal";
 
 function EditorLayout() {
   const {
@@ -76,6 +77,7 @@ function EditorLayout() {
       <BatchExportModal />
       <EditorModals />
       <FloatingHistogram />
+      <VideoExportModal />
 
       {!shell.panelsHidden && <TopBar />}
 

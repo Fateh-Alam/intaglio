@@ -64,6 +64,9 @@ interface ShellState {
   /** Show title-safe and action-safe frames while placing text. */
   showSafeGuides: boolean;
   setShowSafeGuides: (show: boolean) => void;
+  /** The video export dialog for animated Creative Effects. */
+  videoExportOpen: boolean;
+  setVideoExportOpen: (open: boolean) => void;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -97,6 +100,7 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     readPreference<HistogramPosition | null>(HISTOGRAM_POSITION_KEY, null, isHistogramPosition));
   const [selectedTitleId, setSelectedTitleId] = useState<string | null>("title");
   const [showSafeGuides, setShowSafeGuides] = useState(false);
+  const [videoExportOpen, setVideoExportOpen] = useState(false);
 
   const value = useMemo<ShellState>(() => ({
     leftOpen,
@@ -154,7 +158,9 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     setSelectedTitleId,
     showSafeGuides,
     setShowSafeGuides,
-  }), [leftOpen, leftTab, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking, histogramVisible, histogramDetached, histogramPosition, selectedTitleId, showSafeGuides]);
+      videoExportOpen,
+    setVideoExportOpen,
+  }), [leftOpen, leftTab, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking, histogramVisible, histogramDetached, histogramPosition, selectedTitleId, showSafeGuides, videoExportOpen]);
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }

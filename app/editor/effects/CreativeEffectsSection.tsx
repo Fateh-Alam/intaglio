@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconArrowDown, IconArrowUp, IconEye, IconEyeOff, IconPlayerPause, IconPlayerPlay, IconPlus, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
+import { IconArrowDown, IconArrowUp, IconEye, IconEyeOff, IconMovie, IconPlayerPause, IconPlayerPlay, IconPlus, IconSearch, IconTrash, IconX } from "@tabler/icons-react";
+import { hasAnimatedEffects } from "../render/videoExport";
 import { Button, IconButton, Segmented, Switch } from "../../ui/Controls";
 import { DevSlider } from "../../ui/DevSlider";
 import { Section } from "../../ui/Section";
@@ -123,7 +124,7 @@ function LayerControls({ layer, definition, change, playing, togglePlayback }: {
 
 export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onToggle: (solo: boolean) => void }) {
   const { settings, updateSettings } = useEditorState();
-  const { preview, setPreview } = useShell();
+  const { preview, setPreview, setVideoExportOpen } = useShell();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [library, setLibrary] = useState<Library>("effects");
   const [group, setGroup] = useState("");
@@ -317,6 +318,11 @@ export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onTo
             );
           })}
         </ol>
+      )}
+      {hasAnimatedEffects(settings) && (
+        <Button className="mt-2 w-full" icon={<IconMovie size={14} stroke={1.8} />} onClick={() => { clearPreview(); setVideoExportOpen(true); }}>
+          Export as video…
+        </Button>
       )}
     </Section>
   );
