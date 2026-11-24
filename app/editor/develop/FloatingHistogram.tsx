@@ -52,10 +52,11 @@ function FloatingHistogramCard() {
     const element = panelRef.current;
     if (!element || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => {
-      const rect = element.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
-      const width = Math.round(rect.width);
-      const height = Math.round(rect.height);
+      // Layout size, not getBoundingClientRect: the panel scales in from 96%,
+      // and a mid-animation measurement would shift the default and reset positions.
+      const width = Math.round(element.offsetWidth);
+      const height = Math.round(element.offsetHeight);
+      if (width <= 0 || height <= 0) return;
       setPanelSize((current) => (current.width === width && current.height === height ? current : { width, height }));
     });
     observer.observe(element);
