@@ -34,6 +34,15 @@ export function useShellShortcuts(enabled: boolean) {
       if (event.key === "\\") return run(() => shell.setCompare(shell.compare === "before" ? "off" : "before"));
       if (key === "y") return run(() => shell.setCompare(shell.compare === "split" ? "off" : "split"));
       if (key === "j") return run(() => shell.setShowClipping(!shell.showClipping));
+      if (key === "h" && event.shiftKey) return run(() => {
+        if (!shell.histogramVisible) {
+          shell.setHistogramVisible(true);
+          shell.setHistogramDetached(true);
+        } else {
+          shell.setHistogramDetached(!shell.histogramDetached);
+        }
+      });
+      if (key === "h" && !event.shiftKey) return run(() => shell.setHistogramVisible(!shell.histogramVisible));
       if (key === "l") return run(() => shell.setLeftOpen(!shell.leftOpen));
       if (key === "e") return run(() => switchMode("develop"));
       if (key === "m") return run(() => switchMode("masks"));

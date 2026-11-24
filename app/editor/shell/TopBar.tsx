@@ -2,14 +2,14 @@
 
 import React from "react";
 import {
-  IconArrowBackUp, IconArrowForwardUp, IconChevronDown, IconCommand, IconDownload, IconLayoutSidebarLeftCollapse,
-  IconLayoutSidebarLeftExpand,
+  IconArrowBackUp, IconArrowForwardUp, IconChartHistogram, IconChevronDown, IconCommand, IconDownload,
+  IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import { STILL_FILE_ACCEPT } from "../../lib/rawDecoder";
 import { FORMAT, RECIPE_FILE_ACCEPT } from "../../lib/brand";
 import { Button, IconButton } from "../../ui/Controls";
-import { Popover } from "../../ui/Popover";
+import { MenuItem, Popover } from "../../ui/Popover";
 import { useShell } from "./useShell";
 
 export function BrandMark({ size = 22 }: { size?: number }) {
@@ -47,7 +47,7 @@ export function TopBar() {
   const edited = historyIndex > 0;
 
   return (
-    <header className="relative z-40 flex h-12 shrink-0 items-center gap-2 border-b border-[var(--ui-line)] bg-[var(--ui-chrome)] px-2.5">
+    <header className="relative z-50 flex h-12 shrink-0 items-center gap-2 border-b border-[var(--ui-line)] bg-[var(--ui-chrome)] px-2.5">
       <div className="flex min-w-0 flex-1 items-center gap-1">
         <div className="hidden items-center gap-2 px-1.5 text-[var(--ui-text)] min-[360px]:flex">
           <BrandMark />
@@ -96,6 +96,72 @@ export function TopBar() {
         >
           {shell.leftOpen ? <IconLayoutSidebarLeftCollapse size={17} stroke={1.6} /> : <IconLayoutSidebarLeftExpand size={17} stroke={1.6} />}
         </IconButton>
+        <Popover
+          side="bottom"
+          align="start"
+          width={220}
+          trigger={({ open, toggle }) => (
+            <IconButton
+              label="Histogram"
+              active={open || shell.histogramVisible}
+              aria-pressed={undefined}
+              aria-expanded={open}
+              aria-haspopup="menu"
+              onClick={toggle}
+            >
+              <IconChartHistogram size={17} stroke={1.6} />
+            </IconButton>
+          )}
+        >
+          {(close) => (
+            <>
+              <MenuItem
+                selected={shell.histogramVisible && !shell.histogramDetached}
+                hint="Edit panel"
+                onSelect={() => {
+                  shell.setHistogramVisible(true);
+                  shell.setHistogramDetached(false);
+                  close();
+                }}
+              >
+                Docked histogram
+              </MenuItem>
+              <MenuItem
+                selected={shell.histogramVisible && shell.histogramDetached}
+                hint="⇧H"
+                onSelect={() => {
+                  shell.setHistogramVisible(true);
+                  shell.setHistogramDetached(true);
+                  close();
+                }}
+              >
+                Floating histogram
+              </MenuItem>
+              <MenuItem
+                selected={!shell.histogramVisible}
+                hint="H"
+                onSelect={() => {
+                  shell.setHistogramVisible(false);
+                  close();
+                }}
+              >
+                Hide histogram
+              </MenuItem>
+              {shell.histogramVisible && shell.histogramDetached && shell.histogramPosition !== null && (
+                <>
+                  <Separator />
+                  <MenuAction
+                    label="Reset position"
+                    onSelect={() => {
+                      shell.setHistogramPosition(null);
+                      close();
+                    }}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </Popover>
       </div>
 
       <div className="sr-only min-w-0 max-w-[40%] items-center gap-2 text-[12.5px] sm:not-sr-only sm:flex">

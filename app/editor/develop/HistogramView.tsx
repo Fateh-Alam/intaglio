@@ -1,17 +1,23 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { IconEyeOff, IconPictureInPictureOn } from "@tabler/icons-react";
 import type { HistogramData } from "../../types/editor";
 import { Tooltip } from "../../ui/Tooltip";
 
 const HEIGHT = 96;
 const CLIP_THRESHOLD = 0.1;
 
-interface HistogramViewProps {
+export interface HistogramPlotProps {
   histogram: HistogramData | null;
   showClipping: boolean;
   onToggleClipping: () => void;
   caption: string;
+}
+
+interface HistogramViewProps extends HistogramPlotProps {
+  onDetach?: () => void;
+  onHide?: () => void;
 }
 
 function drawChannel(context: CanvasRenderingContext2D, bins: number[], peak: number, width: number, height: number, color: string) {
@@ -29,16 +35,29 @@ function drawChannel(context: CanvasRenderingContext2D, bins: number[], peak: nu
   context.fill();
 }
 
-/** RGB histogram with clipping warnings, drawn additively so overlaps read as white. */
-export function HistogramView({ histogram, showClipping, onToggleClipping, caption }: HistogramViewProps) {
+/** RGB histogram canvas with clipping warnings and EXIF caption. Shared by docked and floating histograms. */
+export function HistogramPlot({ histogram, showClipping, onToggleClipping, caption }: HistogramPlotProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [canvasWidth, setCanvasWidth] = useState(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      const next = Math.round(canvas.clientWidth);
+      if (next > 0) setCanvasWidth((current) => (current === next ? current : next));
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!canvas || !context) return;
+    const width = canvasWidth || canvas.clientWidth;
+    if (width <= 0) return;
     const ratio = window.devicePixelRatio || 1;
-    const width = canvas.clientWidth;
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(HEIGHT * ratio);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -52,7 +71,7 @@ export function HistogramView({ histogram, showClipping, onToggleClipping, capti
     drawChannel(context, histogram.rgb[1], peak, width, HEIGHT, "rgba(70, 214, 110, 0.5)");
     drawChannel(context, histogram.rgb[2], peak, width, HEIGHT, "rgba(70, 130, 255, 0.6)");
     context.globalCompositeOperation = "source-over";
-  }, [histogram]);
+  }, [histogram, canvasWidth]);
 
   const shadowClip = (histogram?.shadowClipPct ?? 0) > CLIP_THRESHOLD;
   const highlightClip = (histogram?.highlightClipPct ?? 0) > CLIP_THRESHOLD;
@@ -77,7 +96,7 @@ export function HistogramView({ histogram, showClipping, onToggleClipping, capti
   );
 
   return (
-    <div className="px-3 pb-2 pt-3">
+    <>
       <div className="relative overflow-hidden rounded-[10px] bg-black/35 ring-1 ring-inset ring-[var(--ui-line)]">
         <canvas ref={canvasRef} className="block w-full" style={{ height: HEIGHT }} aria-label="Histogram" role="img" />
         <div className="absolute inset-x-1 top-1 flex justify-between">
@@ -86,7 +105,56 @@ export function HistogramView({ histogram, showClipping, onToggleClipping, capti
         </div>
         {!histogram && <div className="absolute inset-0 grid place-items-center text-[11px] text-[var(--ui-text-3)]">Reading tones…</div>}
       </div>
-      <div className="ui-num mt-1.5 truncate px-0.5 text-center text-[11px] text-[var(--ui-text-3)]">{caption}</div>
+      {caption && (
+        <div className="ui-num mt-1.5 truncate px-0.5 text-center text-[11px] text-[var(--ui-text-3)]">{caption}</div>
+      )}
+    </>
+  );
+}
+
+/** Docked RGB histogram with header actions to detach into a floating window or hide altogether. */
+export function HistogramView({ histogram, showClipping, onToggleClipping, caption, onDetach, onHide }: HistogramViewProps) {
+  return (
+    <div className="px-3 pb-2 pt-2.5" data-testid="histogram-docked">
+      <div className="mb-1.5 flex items-center justify-between px-0.5">
+        <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[var(--ui-text-3)]">
+          Histogram
+        </span>
+        {(onDetach || onHide) && (
+          <div className="flex items-center gap-0.5">
+            {onDetach && (
+              <Tooltip content="Detach histogram" shortcut="⇧H" side="bottom">
+                <button
+                  type="button"
+                  aria-label="Detach histogram"
+                  onClick={onDetach}
+                  className="ui-focus grid h-6 w-6 place-items-center rounded-[6px] text-[var(--ui-text-3)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
+                >
+                  <IconPictureInPictureOn size={14} stroke={1.7} />
+                </button>
+              </Tooltip>
+            )}
+            {onHide && (
+              <Tooltip content="Hide histogram" shortcut="H" side="bottom">
+                <button
+                  type="button"
+                  aria-label="Hide histogram"
+                  onClick={onHide}
+                  className="ui-focus grid h-6 w-6 place-items-center rounded-[6px] text-[var(--ui-text-3)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
+                >
+                  <IconEyeOff size={14} stroke={1.7} />
+                </button>
+              </Tooltip>
+            )}
+          </div>
+        )}
+      </div>
+      <HistogramPlot
+        histogram={histogram}
+        showClipping={showClipping}
+        onToggleClipping={onToggleClipping}
+        caption={caption}
+      />
     </div>
   );
 }

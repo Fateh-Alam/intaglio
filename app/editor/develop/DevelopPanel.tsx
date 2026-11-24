@@ -6,6 +6,7 @@ import { useEditorState } from "../hooks/useEditorState";
 import { useShell } from "../shell/useShell";
 import { useDevelop } from "./useDevelop";
 import { HistogramView } from "./HistogramView";
+import { formatHistogramCaption } from "./histogramLayout";
 import { CreativeEffectsSection } from "../effects/CreativeEffectsSection";
 import { LookSection } from "./LookSection";
 import { BasicSection } from "./BasicSection";
@@ -19,19 +20,6 @@ type SectionId = (typeof SECTIONS)[number];
 
 const OPEN_KEY = "intaglio.develop.open";
 const DEFAULT_OPEN: SectionId[] = ["look", "basic"];
-
-function cameraCaption(metadata: Record<string, string | number | null>, size: { width: number; height: number } | null): string {
-  const parts: string[] = [];
-  if (typeof metadata.iso === "number") parts.push(`ISO ${metadata.iso}`);
-  if (typeof metadata.focalLengthMm === "number") parts.push(`${Math.round(metadata.focalLengthMm)} mm`);
-  if (typeof metadata.aperture === "number") parts.push(`ƒ/${metadata.aperture.toFixed(1).replace(/\.0$/, "")}`);
-  if (typeof metadata.shutterSeconds === "number" && metadata.shutterSeconds > 0) {
-    const seconds = metadata.shutterSeconds;
-    parts.push(seconds >= 1 ? `${seconds.toFixed(1).replace(/\.0$/, "")} s` : `1/${Math.round(1 / seconds)} s`);
-  }
-  if (parts.length > 0) return parts.join("  ·  ");
-  return size ? `${size.width} × ${size.height}` : "";
-}
 
 /**
  * The Develop sections in Lightroom's order. Used for the whole photo and,
@@ -79,16 +67,21 @@ export function DevelopSections() {
 export function DevelopPanel() {
   const { histogram, sourceCameraMetadata, imageInfo } = useEditorState();
   const shell = useShell();
+  const showDockedHistogram = shell.histogramVisible && !shell.histogramDetached;
 
   return (
     <div className="flex h-full flex-col">
-      <HistogramView
-        histogram={histogram}
-        showClipping={shell.showClipping}
-        onToggleClipping={() => shell.setShowClipping(!shell.showClipping)}
-        caption={cameraCaption(sourceCameraMetadata, imageInfo ? { width: imageInfo.width, height: imageInfo.height } : null)}
-      />
-      <div className="ui-scroll min-h-0 flex-1 overflow-y-auto border-t border-[var(--ui-line)]">
+      {showDockedHistogram && (
+        <HistogramView
+          histogram={histogram}
+          showClipping={shell.showClipping}
+          onToggleClipping={() => shell.setShowClipping(!shell.showClipping)}
+          caption={formatHistogramCaption(sourceCameraMetadata, imageInfo ? { width: imageInfo.width, height: imageInfo.height } : null)}
+          onDetach={() => shell.setHistogramDetached(true)}
+          onHide={() => shell.setHistogramVisible(false)}
+        />
+      )}
+      <div className={`ui-scroll min-h-0 flex-1 overflow-y-auto ${showDockedHistogram ? "border-t border-[var(--ui-line)]" : ""}`}>
         <DevelopSections />
         <p className="px-4 py-5 text-center text-[11px] leading-relaxed text-[var(--ui-text-3)]">
           Double-click any slider to reset it. Hold <kbd className="font-sans">⌥</kbd> while dragging for fine control. <kbd className="font-sans">⌥</kbd>-click a section to open only that one.

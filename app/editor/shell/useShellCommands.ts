@@ -19,6 +19,31 @@ export function useShellCommands(): AppCommand[] {
     { id: "view-before", title: "Show Before", section: "View", shortcut: "\\", keywords: ["compare", "original"], run: () => shell.setCompare(shell.compare === "before" ? "off" : "before") },
     { id: "view-split", title: "Before / After Split", section: "View", shortcut: "Y", keywords: ["compare", "wipe"], run: () => shell.setCompare(shell.compare === "split" ? "off" : "split") },
     { id: "view-clipping", title: shell.showClipping ? "Hide Clipping" : "Show Clipping", section: "View", shortcut: "J", keywords: ["highlights", "shadows", "blown"], run: () => shell.setShowClipping(!shell.showClipping) },
+    { id: "view-histogram", title: shell.histogramVisible ? "Hide Histogram" : "Show Histogram", section: "View", shortcut: "H", keywords: ["histogram", "tones", "exposure", "scope", "rgb"], run: () => shell.setHistogramVisible(!shell.histogramVisible) },
+    {
+      id: "view-histogram-detach",
+      title: shell.histogramVisible && shell.histogramDetached ? "Dock Histogram" : "Detach Histogram",
+      section: "View",
+      shortcut: "Shift+H",
+      keywords: ["histogram", "float", "window", "move", "undock", "detach", "dock"],
+      run: () => {
+        if (!shell.histogramVisible) {
+          shell.setHistogramVisible(true);
+          shell.setHistogramDetached(true);
+        } else {
+          shell.setHistogramDetached(!shell.histogramDetached);
+        }
+      },
+    },
+    ...(shell.histogramVisible && shell.histogramDetached && shell.histogramPosition !== null
+      ? [{
+          id: "view-histogram-reset-position",
+          title: "Reset Histogram Position",
+          section: "View",
+          keywords: ["histogram", "move", "float", "default", "reset"],
+          run: () => shell.setHistogramPosition(null),
+        }]
+      : []),
     { id: "view-panels", title: shell.panelsHidden ? "Show Panels" : "Hide Panels", section: "View", shortcut: "Shift+F", keywords: ["focus", "fullscreen"], run: () => shell.setPanelsHidden(!shell.panelsHidden) },
     { id: "view-surround-black", title: "Background: Black", section: "View", keywords: ["surround"], run: () => shell.setSurround("black") },
     { id: "view-surround-dark", title: "Background: Dark Grey", section: "View", keywords: ["surround"], run: () => shell.setSurround("dark") },

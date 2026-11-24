@@ -4,6 +4,7 @@ import React, { createContext, useContext, useMemo, useState } from "react";
 import { readPreference, writePreference } from "../../ui/storage";
 import type { EditorSettings } from "../../types/editor";
 import type { CropDraft } from "../crop/useCrop";
+import { isHistogramPosition, type HistogramPosition } from "../develop/histogramLayout";
 
 export type LeftTab = "looks" | "history" | "versions" | "info";
 export type RightMode = "develop" | "masks" | "text";
@@ -48,11 +49,23 @@ interface ShellState {
   /** Eyedropper target while picking a luminance or color range from the photo. */
   picking: "luminosity" | "colorRange" | null;
   setPicking: (mode: "luminosity" | "colorRange" | null) => void;
+  /** Whether the histogram is shown (either docked in Develop or floating detached). */
+  histogramVisible: boolean;
+  setHistogramVisible: (visible: boolean) => void;
+  /** When true (and visible), the histogram floats in a movable overlay instead of docking in Develop. */
+  histogramDetached: boolean;
+  setHistogramDetached: (detached: boolean) => void;
+  /** Viewport coordinates for the detached floating histogram; null uses the default corner. */
+  histogramPosition: HistogramPosition | null;
+  setHistogramPosition: (position: HistogramPosition | null) => void;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
 
 const SURROUND_KEY = "intaglio.ui.surround";
+const HISTOGRAM_VISIBLE_KEY = "intaglio.ui.histogram.visible";
+const HISTOGRAM_DETACHED_KEY = "intaglio.ui.histogram.detached";
+const HISTOGRAM_POSITION_KEY = "intaglio.ui.histogram.position";
 
 /** View-only UI state for the editor shell. Never affects rendered pixels or exports. */
 export function ShellProvider({ children }: { children: React.ReactNode }) {
@@ -70,6 +83,12 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
   const [selectedComponentId, setSelectedComponentId] = useState<string | null>(null);
   const [showMaskOverlay, setShowMaskOverlay] = useState(true);
   const [picking, setPicking] = useState<"luminosity" | "colorRange" | null>(null);
+  const [histogramVisible, setHistogramVisibleState] = useState<boolean>(() =>
+    readPreference<boolean>(HISTOGRAM_VISIBLE_KEY, true, (value): value is boolean => typeof value === "boolean"));
+  const [histogramDetached, setHistogramDetachedState] = useState<boolean>(() =>
+    readPreference<boolean>(HISTOGRAM_DETACHED_KEY, false, (value): value is boolean => typeof value === "boolean"));
+  const [histogramPosition, setHistogramPositionState] = useState<HistogramPosition | null>(() =>
+    readPreference<HistogramPosition | null>(HISTOGRAM_POSITION_KEY, null, isHistogramPosition));
 
   const value = useMemo<ShellState>(() => ({
     leftOpen,
@@ -108,7 +127,22 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     setShowMaskOverlay,
     picking,
     setPicking,
-  }), [leftOpen, leftTab, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking]);
+    histogramVisible,
+    setHistogramVisible: (next) => {
+      setHistogramVisibleState(next);
+      writePreference(HISTOGRAM_VISIBLE_KEY, next);
+    },
+    histogramDetached,
+    setHistogramDetached: (next) => {
+      setHistogramDetachedState(next);
+      writePreference(HISTOGRAM_DETACHED_KEY, next);
+    },
+    histogramPosition,
+    setHistogramPosition: (next) => {
+      setHistogramPositionState(next);
+      writePreference(HISTOGRAM_POSITION_KEY, next);
+    },
+  }), [leftOpen, leftTab, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking, histogramVisible, histogramDetached, histogramPosition]);
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }
