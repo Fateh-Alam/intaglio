@@ -4,7 +4,7 @@ export const BRAND = {
   descriptor: "A precision-machined digital darkroom.",
   shortDescription:
     "A fast, private digital darkroom in your browser. Non-destructive editing, masks, a true 1:1 loupe, node grading, and portable projects.",
-  domain: "https://etch.app",
+  domain: "https://etch.fatehalam.com",
   author: "Etch",
 } as const;
 

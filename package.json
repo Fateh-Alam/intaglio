@@ -22,8 +22,8 @@
     "test:offline": "playwright test tests/browser/offline.spec.ts",
     "build:cloudflare": "node scripts/prepare-public-runtime.mjs && opennextjs-cloudflare build",
     "preview": "pnpm build:cloudflare && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "deploy": "pnpm build:cloudflare && opennextjs-cloudflare deploy",
+    "upload": "pnpm build:cloudflare && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "qualify": "pnpm install --frozen-lockfile --config.confirmModulesPurge=false && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm test:browser && pnpm build:cloudflare"
   },

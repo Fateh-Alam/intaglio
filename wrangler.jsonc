@@ -1,10 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "intaglio",
+  "name": "nyvarra-studio",
   "compatibility_date": "2026-07-08",
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "routes": [
+    {
+      "pattern": "etch.fatehalam.com",
+      "custom_domain": true
+    }
   ],
   "assets": {
     "directory": ".open-next/assets",
@@ -13,13 +19,13 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "intaglio"
+      "service": "nyvarra-studio"
     }
   ],
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "intaglio-opennext-cache"
+      "bucket_name": "nyvarra-studio-opennext-cache"
     }
   ],
   "images": {
