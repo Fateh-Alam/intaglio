@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { IconDownload, IconX } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import { EXPORT_RECIPES } from "../pageTypes";
 import type { ExportRecipe } from "../pageTypes";
-import { ExportMatchIndicator } from './ExportMatchIndicator';
+import { ExportMatchIndicator } from "./ExportMatchIndicator";
 
 export function ExportModal() {
   const {
@@ -22,6 +22,15 @@ export function ExportModal() {
     handleCarouselExport,
   } = useEditorState();
 
+  useEffect(() => {
+    if (!isExportModalOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsExportModalOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isExportModalOpen, setIsExportModalOpen]);
+
   const applyExportRecipe = (recipe: ExportRecipe) => {
     setActiveExportRecipeId(recipe.id);
     setExportFormat(recipe.format);
@@ -32,97 +41,123 @@ export function ExportModal() {
   if (!isExportModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden border border-white/5 bg-[#151515] shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-white/5 p-6">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+      onClick={() => setIsExportModalOpen(false)}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-modal-title"
+        className="ui-root relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[18px] bg-[var(--ui-panel)] ring-1 ring-inset ring-[var(--ui-line-strong)] shadow-[var(--ui-shadow-pop)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--ui-line)] px-6 py-5">
           <div>
-            <div className="flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.28em] text-amber-300/70">
-              <IconDownload className="intaglio-icon" /> Delivery
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--ui-accent-strong)]">
+              <IconDownload size={14} stroke={1.8} />
+              Delivery
             </div>
-            <h3 className="mt-2 text-xl font-light text-white">Export Image</h3>
+            <h3 id="export-modal-title" className="mt-1 text-[18px] font-semibold tracking-[-0.015em] text-[var(--ui-text)]">
+              Export Image
+            </h3>
           </div>
-          <div
-            role="button"
+          <button
+            type="button"
+            aria-label="Close export modal"
             onClick={() => setIsExportModalOpen(false)}
-            className="border border-white/5 bg-[var(--intaglio-panel-soft)] p-2 text-white/50 transition hover:border-white/25 hover:text-white cursor-pointer"
+            className="ui-focus grid h-8 w-8 place-items-center rounded-[8px] text-[var(--ui-text-2)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
           >
-            <IconX className="intaglio-icon" />
-          </div>
+            <IconX size={16} />
+          </button>
         </div>
 
-        <div className="custom-scrollbar space-y-6 overflow-y-auto p-6">
+        <div className="ui-scroll space-y-5 overflow-y-auto px-6 py-5">
           {/* Recipes */}
-          <div className="space-y-3">
-            <label className="intaglio-label text-white/40">
-              Export Recipes
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {EXPORT_RECIPES.map((recipe) => (
-                <div
-                  role="button"
-                  key={recipe.id}
-                  onClick={() => applyExportRecipe(recipe)}
-                  className={`border p-3 text-left transition-all cursor-pointer ${
-                    activeExportRecipeId === recipe.id
-                      ? "border-amber-500/60 bg-amber-500/10"
-                      : "border-white/5 bg-[var(--intaglio-panel-soft)] hover:border-white/25"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] font-mono tracking-[0.22em] uppercase text-white/80">
-                      {recipe.name}
-                    </span>
-                    <span className="shrink-0 text-[9px] font-mono tracking-widest text-amber-400/80">
-                      {recipe.format.split("/")[1].toUpperCase()} • {recipe.scale}x
-                    </span>
-                  </div>
-                  <p className="mt-2 text-[10px] font-mono tracking-widest leading-5 text-white/60">
-                    {recipe.description}
-                  </p>
-                </div>
-              ))}
+          <div className="space-y-2.5">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
+              Export presets
+            </span>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {EXPORT_RECIPES.map((recipe) => {
+                const active = activeExportRecipeId === recipe.id;
+                return (
+                  <button
+                    type="button"
+                    key={recipe.id}
+                    aria-pressed={active}
+                    onClick={() => applyExportRecipe(recipe)}
+                    className={`ui-focus rounded-[12px] p-3 text-left ring-1 ring-inset transition-colors ${
+                      active
+                        ? "bg-[var(--ui-accent-soft)] ring-[var(--ui-accent)]/50"
+                        : "bg-white/[0.025] ring-[var(--ui-line)] hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[12.5px] font-semibold text-[var(--ui-text)]">
+                        {recipe.name}
+                      </span>
+                      <span
+                        className={`ui-num shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-medium ${
+                          active
+                            ? "bg-[var(--ui-accent)]/20 text-[var(--ui-accent-strong)]"
+                            : "bg-white/[0.06] text-[var(--ui-text-2)]"
+                        }`}
+                      >
+                        {recipe.format.split("/")[1].toUpperCase().replace("JPEG", "JPG")} · {recipe.scale}x
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--ui-text-2)]">
+                      {recipe.description}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Format */}
-          <div className="space-y-3">
-            <label className="intaglio-label text-white/40">
+          <div className="space-y-2">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
               Format
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {(["image/jpeg", "image/png", "image/webp"] as const).map((fmt) => (
-                <div
-                  role="button"
-                  key={fmt}
-                  onClick={() => {
-                    setActiveExportRecipeId(null);
-                    setExportFormat(fmt);
-                  }}
-                  className={`border p-3 text-center transition-all cursor-pointer ${
-                    exportFormat === fmt
-                      ? "border-white bg-white text-black"
-                      : "border-white/5 bg-[var(--intaglio-panel-soft)] text-white/60 hover:border-white/25"
-                  }`}
-                >
-                  <div className="font-bold text-sm">
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              {(["image/jpeg", "image/png", "image/webp"] as const).map((fmt) => {
+                const active = exportFormat === fmt;
+                return (
+                  <button
+                    type="button"
+                    key={fmt}
+                    aria-pressed={active}
+                    onClick={() => {
+                      setActiveExportRecipeId(null);
+                      setExportFormat(fmt);
+                    }}
+                    className={`ui-focus h-9 rounded-[10px] text-[12.5px] font-semibold ring-1 ring-inset transition-colors ${
+                      active
+                        ? "bg-[var(--ui-accent)] text-white ring-transparent"
+                        : "bg-[var(--ui-control)] text-[var(--ui-text-2)] ring-[var(--ui-line)] hover:bg-[var(--ui-control-hover)] hover:text-[var(--ui-text)]"
+                    }`}
+                  >
                     {fmt.split("/")[1].toUpperCase().replace("JPEG", "JPG")}
-                  </div>
-                </div>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Quality */}
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <label className="intaglio-label text-white/40">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="export-quality-range" className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
                 Quality
               </label>
-              <span className="text-[9px] font-mono tracking-widest text-amber-500">
+              <span className="ui-num text-[12px] font-medium text-[var(--ui-accent-strong)]">
                 {exportQuality}%
               </span>
             </div>
             <input
+              id="export-quality-range"
               type="range"
               min="10"
               max="100"
@@ -131,64 +166,66 @@ export function ExportModal() {
                 setActiveExportRecipeId(null);
                 setExportQuality(Number(e.target.value));
               }}
-              className="w-full"
+              className="w-full accent-[var(--ui-accent)]"
             />
           </div>
 
           {/* Scale */}
-          <div className="space-y-3">
-            <label className="intaglio-label text-white/40">
+          <div className="space-y-2">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
               Scale factor
-            </label>
-            <div className="flex gap-2">
-              {[0.5, 1, 2, 4].map((scale) => (
-                <div
-                  role="button"
-                  key={scale}
-                  onClick={() => {
-                    setActiveExportRecipeId(null);
-                    setExportScale(scale);
-                  }}
-                  className={`flex-1 border p-2 text-center font-mono text-[10px] tracking-widest transition-all cursor-pointer ${
-                    exportScale === scale
-                      ? "border-amber-400/60 bg-amber-400/15 text-amber-200"
-                      : "border-white/5 bg-[var(--intaglio-panel-soft)] text-white/50 hover:border-white/25"
-                  }`}
-                >
-                  {scale}x
-                </div>
-              ))}
+            </span>
+            <div className="grid grid-cols-4 gap-2">
+              {[0.5, 1, 2, 4].map((scale) => {
+                const active = exportScale === scale;
+                return (
+                  <button
+                    type="button"
+                    key={scale}
+                    aria-pressed={active}
+                    onClick={() => {
+                      setActiveExportRecipeId(null);
+                      setExportScale(scale);
+                    }}
+                    className={`ui-focus ui-num h-8 rounded-[8px] text-[12px] font-medium ring-1 ring-inset transition-colors ${
+                      active
+                        ? "bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)] ring-[var(--ui-accent)]/50"
+                        : "bg-[var(--ui-control)] text-[var(--ui-text-2)] ring-[var(--ui-line)] hover:bg-[var(--ui-control-hover)] hover:text-[var(--ui-text)]"
+                    }`}
+                  >
+                    {scale}x
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Contextual Warnings */}
-          <div className="space-y-3">
-            <ExportMatchIndicator />
-          </div>
+          {/* Parity & Safety */}
+          <ExportMatchIndicator />
 
           {exportSafetyWarnings.length > 0 && (
-            <div className="space-y-3">
-              <label className="intaglio-label text-white/40">
-                Export Safety
-              </label>
+            <div className="space-y-2">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
+                Export safety
+              </span>
               <div className="space-y-2">
                 {exportSafetyWarnings.map((warning) => (
                   <div
                     key={`${warning.title}-${warning.detail}`}
-                    className={`border p-3 ${
+                    className={`rounded-[10px] p-3 ring-1 ring-inset ${
                       warning.tone === "warn"
-                        ? "border-amber-500/25 bg-amber-500/[0.06]"
-                        : "border-cyan-500/20 bg-cyan-500/[0.04]"
+                        ? "bg-[var(--ui-warn)]/10 ring-[var(--ui-warn)]/25"
+                        : "bg-[var(--ui-accent-soft)] ring-[var(--ui-accent)]/25"
                     }`}
                   >
                     <div
-                      className={`font-mono text-[11px] font-medium tracking-[0.24em] ${
-                        warning.tone === "warn" ? "text-amber-300" : "text-cyan-300"
+                      className={`text-[12px] font-semibold ${
+                        warning.tone === "warn" ? "text-[var(--ui-warn)]" : "text-[var(--ui-accent-strong)]"
                       }`}
                     >
                       {warning.title}
                     </div>
-                    <p className="mt-1 text-[10px] font-mono tracking-widest leading-5 text-white/60">
+                    <p className="mt-1 text-[11.5px] leading-relaxed text-[var(--ui-text-2)]">
                       {warning.detail}
                     </p>
                   </div>
@@ -198,28 +235,28 @@ export function ExportModal() {
           )}
         </div>
 
-        <div className="flex gap-3 border-t border-white/5 bg-[var(--intaglio-panel-soft)] p-6">
-          <div
-            role="button"
+        <div className="flex flex-wrap gap-2 border-t border-[var(--ui-line)] bg-[var(--ui-chrome)]/60 px-6 py-4">
+          <button
+            type="button"
             onClick={() => setIsExportModalOpen(false)}
-            className="flex-1 border border-white/5 bg-black/40 py-3 text-center font-mono text-xs font-medium text-white/60 transition hover:border-white/25 hover:text-white cursor-pointer"
+            className="ui-focus h-10 flex-1 rounded-[10px] bg-[var(--ui-control)] px-4 text-[12.5px] font-medium text-[var(--ui-text-2)] ring-1 ring-inset ring-[var(--ui-line)] transition-colors hover:bg-[var(--ui-control-hover)] hover:text-[var(--ui-text)]"
           >
             Cancel
-          </div>
-          <div
-            role="button"
+          </button>
+          <button
+            type="button"
             onClick={handleExport}
-            className="flex-1 border border-amber-400/40 bg-amber-400/10 py-3 text-center font-mono text-[10px] font-bold tracking-widest uppercase text-amber-400 transition hover:bg-amber-400 hover:text-black cursor-pointer"
+            className="ui-focus h-10 flex-1 rounded-[10px] bg-[var(--ui-accent)] px-4 text-[12.5px] font-semibold text-white shadow-[0_1px_0_rgba(255,255,255,0.15)_inset] transition-colors hover:bg-[var(--ui-accent-strong)]"
           >
             Export Single
-          </div>
-          <div
-            role="button"
+          </button>
+          <button
+            type="button"
             onClick={handleCarouselExport}
-            className="flex-[2] border border-amber-400/40 bg-amber-400 py-3 text-center font-mono text-[10px] font-bold tracking-widest uppercase text-black transition hover:bg-amber-300 cursor-pointer"
+            className="ui-focus h-10 flex-[1.6] rounded-[10px] bg-white px-4 text-[12.5px] font-semibold text-[#0c0c0d] transition-colors hover:bg-[#ececee]"
           >
             Export Carousel (3 Slides)
-          </div>
+          </button>
         </div>
       </div>
     </div>

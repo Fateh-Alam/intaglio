@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
+import { IconChevronDown } from "@tabler/icons-react";
 
 const ControlGroup = ({
   title,
   children,
   defaultOpen = true,
-  accentColor = "amber",
+  accentColor = "accent",
   icon,
 }: {
   title: string;
@@ -18,36 +19,34 @@ const ControlGroup = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div data-accent={accentColor} className="relative border-b border-[var(--intaglio-line)] bg-transparent transition-colors hover:bg-white/[0.02]">
-      <div role="button" tabIndex={0}
+    <section
+      data-accent={accentColor}
+      className="border-b border-[var(--ui-line)] py-1 last:border-b-0"
+    >
+      <button
+        type="button"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
-        className="group flex w-full items-center justify-between px-4 py-3 text-left"
+        className="ui-focus group flex h-9 w-full items-center justify-between rounded-[8px] px-1 text-left transition-colors hover:text-[var(--ui-text)]"
       >
-        <h3 className="flex items-center gap-2 intaglio-label text-white/70 transition-colors group-hover:text-white">
-          {icon && <span className="text-white/40 transition-colors group-hover:text-white/80">{icon}</span>}
+        <span className="flex items-center gap-2 text-[12px] font-semibold tracking-[-0.01em] text-[var(--ui-text)]">
+          {icon && (
+            <span className="text-[var(--ui-text-3)] transition-colors group-hover:text-[var(--ui-text-2)]">
+              {icon}
+            </span>
+          )}
           {title}
-        </h3>
-        <div className="flex items-center justify-center">
-          <svg
-            className={`h-3.5 w-3.5 text-white/30 transition-transform duration-300 group-hover:text-white/60 ${isOpen ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-      </div>
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-        }`}
-      >
-        <div className="space-y-4 px-4 pb-6 pt-2">
-          {children}
-        </div>
-      </div>
-    </div>
+        </span>
+        <IconChevronDown
+          size={14}
+          stroke={1.8}
+          className={`text-[var(--ui-text-3)] transition-transform duration-200 group-hover:text-[var(--ui-text-2)] ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {isOpen && <div className="space-y-3 pb-4 pt-1.5">{children}</div>}
+    </section>
   );
 };
 

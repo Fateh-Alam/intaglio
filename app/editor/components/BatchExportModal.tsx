@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import * as THREE from "three";
 import { IconDownload, IconFiles, IconPlayerStop, IconRefresh, IconX } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
@@ -8,6 +8,7 @@ import { ExportEngine } from "../render/ExportEngine";
 import { allocateBatchFilename, createBatchZip, type BatchManifest, type BatchManifestItem } from "../../lib/batchExport";
 import { decodeRawFile, isRawFile, STILL_FILE_ACCEPT } from "../../lib/rawDecoder";
 import { sha256Hex } from "../../lib/crypto";
+import { FORMAT } from "../../lib/brand";
 import { serializeEditorSettings } from "../pageTypes";
 import { createLinearSourceTexture, loadImageTexture, type LinearSourceBuffer } from "../render/sourceTexture";
 
@@ -31,12 +32,25 @@ export function BatchExportModal(): React.ReactElement | null {
   const [isRunning, setIsRunning] = React.useState(false);
   const abortRef = React.useRef<AbortController | null>(null);
 
+  useEffect(() => {
+    if (!isBatchExportOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isRunning) setIsBatchExportOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isBatchExportOpen, isRunning, setIsBatchExportOpen]);
+
   if (!isBatchExportOpen) return null;
-  const updateItem = (id: string, update: Partial<QueueItem>) => setItems((current) => current.map((item) => item.id === id ? { ...item, ...update } : item));
+  const updateItem = (id: string, update: Partial<QueueItem>) =>
+    setItems((current) => current.map((item) => (item.id === id ? { ...item, ...update } : item)));
 
   const addFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
-    setItems((current) => [...current, ...files.map((file) => ({ id: crypto.randomUUID(), file, status: "queued" as const, progress: 0, detail: "Ready" }))]);
+    setItems((current) => [
+      ...current,
+      ...files.map((file) => ({ id: crypto.randomUUID(), file, status: "queued" as const, progress: 0, detail: "Ready" })),
+    ]);
     event.target.value = "";
   };
 
@@ -73,7 +87,11 @@ export function BatchExportModal(): React.ReactElement | null {
         if (controller.signal.aborted) throw new DOMException("Cancelled", "AbortError");
         if (isRawFile(item.file)) {
           updateItem(item.id, { status: "developing", progress: 0.1, detail: "Developing RAW" });
-          const developed = await withRawSlot(() => decodeRawFile(item.file, undefined, controller.signal, (progress, stage) => updateItem(item.id, { progress: progress * 0.45, detail: stage })));
+          const developed = await withRawSlot(() =>
+            decodeRawFile(item.file, undefined, controller.signal, (progress, stage) =>
+              updateItem(item.id, { progress: progress * 0.45, detail: stage })
+            )
+          );
           rawSource = { width: developed.width, height: developed.height, pixels: developed.pixels16 };
           dimensions = { width: developed.width, height: developed.height };
         }
@@ -90,7 +108,14 @@ export function BatchExportModal(): React.ReactElement | null {
         const engine = new ExportEngine();
         let output: Blob;
         try {
-          output = await engine.exportImage(texture, settings, { gradeGraph, format: exportFormat, quality: exportQuality / 100, scale: exportScale, overlays: { text: textOverlay, watermark }, signal: controller.signal });
+          output = await engine.exportImage(texture, settings, {
+            gradeGraph,
+            format: exportFormat,
+            quality: exportQuality / 100,
+            scale: exportScale,
+            overlays: { text: textOverlay, watermark },
+            signal: controller.signal,
+          });
         } finally {
           engine.dispose();
         }
@@ -127,13 +152,13 @@ export function BatchExportModal(): React.ReactElement | null {
         updateItem(item.id, { status: "cancelled", detail: "Cancelled" });
       }
     }
-    const manifest: BatchManifest = { formatVersion: "2.0.0", appId: "intaglio-darkroom", createdAt: new Date().toISOString(), items: manifestItems };
+    const manifest: BatchManifest = { formatVersion: "2.0.0", appId: FORMAT.appId, createdAt: new Date().toISOString(), items: manifestItems };
     if (outputs.size > 0) {
       const archive = await createBatchZip(outputs, manifest);
       const url = URL.createObjectURL(archive);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `intaglio-batch-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
+      anchor.download = `etch-batch-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 30_000);
     }
@@ -141,9 +166,121 @@ export function BatchExportModal(): React.ReactElement | null {
     setIsRunning(false);
   };
 
-  return <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md"><div className="flex max-h-[90vh] w-full max-w-3xl flex-col border border-white/10 bg-[#15130f] shadow-2xl">
-    <header className="flex items-center justify-between border-b border-white/10 p-5"><div><div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--intaglio-brass)]"><IconFiles className="intaglio-icon"/> Local batch export</div><p className="mt-2 text-xs text-white/45">Two local raster jobs; RAW decoding remains worker-backed and cancellable.</p></div><button aria-label="Close batch export" onClick={() => !isRunning && setIsBatchExportOpen(false)} className="p-2 text-white/50 hover:text-white"><IconX className="intaglio-icon"/></button></header>
-    <div className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-5">{items.length === 0 && <div className="border border-dashed border-white/15 p-10 text-center text-sm text-white/40">Add JPEG, PNG, WebP, or a supported-camera RAW file.</div>}{items.map((item) => <div key={item.id} className="grid grid-cols-[1fr_110px] items-center gap-4 border border-white/8 bg-black/20 p-3"><div className="min-w-0"><div className="truncate text-sm text-white/75">{item.file.name}</div><div className="mt-1 text-[10px] text-white/40">{item.detail}{item.outputName ? ` · ${item.outputName}` : ""}</div><div className="mt-2 h-0.5 bg-white/10"><div className="h-full bg-[var(--intaglio-brass)]" style={{ width: `${item.progress * 100}%` }}/></div></div><div className="font-mono text-[9px] uppercase tracking-widest text-white/45">{item.status}</div></div>)}</div>
-    <footer className="flex items-center justify-between gap-3 border-t border-white/10 p-5"><label className="cursor-pointer border border-white/15 px-4 py-2 font-mono text-[9px] uppercase tracking-widest text-white/60 hover:border-white/35">Add files<input type="file" accept={STILL_FILE_ACCEPT} multiple onChange={addFiles} className="hidden"/></label><div className="flex gap-2">{isRunning ? <button onClick={() => abortRef.current?.abort()} className="flex items-center gap-2 border border-red-400/25 px-4 py-2 font-mono text-[9px] uppercase tracking-widest text-red-200"><IconPlayerStop className="intaglio-icon"/>Cancel</button> : <><button onClick={() => setItems((current) => current.map((item) => item.status === "failed" || item.status === "cancelled" ? { ...item, status: "queued", detail: "Ready", progress: 0 } : item))} className="flex items-center gap-2 border border-white/15 px-4 py-2 font-mono text-[9px] uppercase tracking-widest text-white/55"><IconRefresh className="intaglio-icon"/>Retry failed</button><button onClick={run} disabled={items.length === 0} className="flex items-center gap-2 bg-[var(--intaglio-brass)] px-5 py-2 font-mono text-[9px] font-bold uppercase tracking-widest text-black disabled:opacity-30"><IconDownload className="intaglio-icon"/>Export ZIP</button></>}</div></footer>
-  </div></div>;
+  return (
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
+      onClick={() => !isRunning && setIsBatchExportOpen(false)}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="batch-export-title"
+        className="ui-root flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[18px] bg-[var(--ui-panel)] ring-1 ring-inset ring-[var(--ui-line-strong)] shadow-[var(--ui-shadow-pop)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-[var(--ui-line)] px-6 py-5">
+          <div>
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--ui-accent-strong)]">
+              <IconFiles size={14} stroke={1.8} />
+              Batch
+            </div>
+            <h3 id="batch-export-title" className="mt-1 text-[18px] font-semibold tracking-[-0.015em] text-[var(--ui-text)]">
+              Local batch export
+            </h3>
+            <p className="mt-1 text-[12px] text-[var(--ui-text-2)]">
+              Applies your current grade locally in parallel; RAW files decode on a background worker.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Close batch export"
+            onClick={() => !isRunning && setIsBatchExportOpen(false)}
+            className="ui-focus grid h-8 w-8 place-items-center rounded-[8px] text-[var(--ui-text-2)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
+          >
+            <IconX size={16} />
+          </button>
+        </header>
+
+        <div className="ui-scroll flex-1 space-y-2 overflow-y-auto px-6 py-5">
+          {items.length === 0 && (
+            <div className="rounded-[12px] border border-dashed border-[var(--ui-line-strong)] bg-white/[0.015] p-10 text-center text-[13px] text-[var(--ui-text-2)]">
+              Add JPEG, PNG, WebP, or a supported-camera RAW file.
+            </div>
+          )}
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="grid grid-cols-[1fr_96px] items-center gap-4 rounded-[10px] bg-black/25 px-3.5 py-3 ring-1 ring-inset ring-[var(--ui-line)]"
+            >
+              <div className="min-w-0">
+                <div className="truncate text-[13px] font-medium text-[var(--ui-text)]">
+                  {item.file.name}
+                </div>
+                <div className="mt-0.5 text-[11.5px] text-[var(--ui-text-2)]">
+                  {item.detail}
+                  {item.outputName ? ` · ${item.outputName}` : ""}
+                </div>
+                <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.08]">
+                  <div
+                    className="h-full rounded-full bg-[var(--ui-accent)] transition-[width] duration-200"
+                    style={{ width: `${item.progress * 100}%` }}
+                  />
+                </div>
+              </div>
+              <div className="text-right text-[11px] font-medium capitalize text-[var(--ui-text-2)]">
+                {item.status}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ui-line)] bg-[var(--ui-chrome)]/60 px-6 py-4">
+          <label className="ui-focus inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-[9px] bg-[var(--ui-control)] px-3.5 text-[12px] font-medium text-[var(--ui-text)] ring-1 ring-inset ring-[var(--ui-line)] transition-colors hover:bg-[var(--ui-control-hover)]">
+            Add files
+            <input type="file" accept={STILL_FILE_ACCEPT} multiple onChange={addFiles} className="sr-only" />
+          </label>
+          <div className="flex gap-2">
+            {isRunning ? (
+              <button
+                type="button"
+                onClick={() => abortRef.current?.abort()}
+                className="ui-focus inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-[var(--ui-danger)]/15 px-4 text-[12px] font-medium text-[var(--ui-danger)] ring-1 ring-inset ring-[var(--ui-danger)]/30 transition-colors hover:bg-[var(--ui-danger)]/25"
+              >
+                <IconPlayerStop size={14} stroke={1.8} />
+                Cancel
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setItems((current) =>
+                      current.map((item) =>
+                        item.status === "failed" || item.status === "cancelled"
+                          ? { ...item, status: "queued", detail: "Ready", progress: 0 }
+                          : item
+                      )
+                    )
+                  }
+                  className="ui-focus inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-[var(--ui-control)] px-3.5 text-[12px] font-medium text-[var(--ui-text-2)] ring-1 ring-inset ring-[var(--ui-line)] transition-colors hover:bg-[var(--ui-control-hover)] hover:text-[var(--ui-text)]"
+                >
+                  <IconRefresh size={14} stroke={1.8} />
+                  Retry failed
+                </button>
+                <button
+                  type="button"
+                  onClick={run}
+                  disabled={items.length === 0}
+                  className="ui-focus inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-[var(--ui-accent)] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-[var(--ui-accent-strong)] disabled:pointer-events-none disabled:opacity-40"
+                >
+                  <IconDownload size={14} stroke={2} />
+                  Export ZIP
+                </button>
+              </>
+            )}
+          </div>
+        </footer>
+      </div>
+    </div>
+  );
 }

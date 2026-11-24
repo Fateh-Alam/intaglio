@@ -6,23 +6,25 @@ interface ToggleProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   className?: string;
+  ariaLabel?: string;
 }
 
-const Toggle = ({ checked, onChange, className = "" }: ToggleProps) => {
+const Toggle = ({ checked, onChange, className = "", ariaLabel }: ToggleProps) => {
   return (
-    <div role="button" tabIndex={0}
-      
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
-      className={`w-9 h-5 rounded-full relative transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-inner ${
-        checked ? "bg-blue-500 border border-blue-500" : "bg-white/10 border border-white/5"
-      } ${className}`}
+      className={`ui-focus relative h-[18px] w-[30px] shrink-0 rounded-full transition-colors duration-200 ${className}`}
+      style={{ backgroundColor: checked ? "var(--ui-accent)" : "var(--ui-line-strong)" }}
     >
-      <div
-        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all duration-200 shadow-md ${
-          checked ? "left-[1.125rem]" : "left-0.5"
-        }`}
+      <span
+        className="absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.4)] transition-[left] duration-200"
+        style={{ left: checked ? 14 : 2, transitionTimingFunction: "var(--ui-ease)" }}
       />
-    </div>
+    </button>
   );
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   IconX,
   IconDownload,
@@ -23,95 +23,47 @@ interface LUTAdjustments {
   tempShift?: number;
 }
 
-// Predefined LUT presets
 const LUT_PRESETS: { name: string; adjustments: LUTAdjustments }[] = [
-  {
-    name: "Neutral",
-    adjustments: { lift: 0, gamma: 0, gain: 0, saturation: 1 },
-  },
-  {
-    name: "Low Evening",
-    adjustments: { lift: -0.05, gamma: 0.1, gain: -0.1, saturation: 0.9 },
-  },
-  {
-    name: "Faded Film",
-    adjustments: { lift: 0.1, gamma: -0.05, gain: -0.15, saturation: 0.8 },
-  },
-  {
-    name: "High Contrast",
-    adjustments: { lift: -0.1, gamma: 0, gain: 0.15, saturation: 1.1 },
-  },
-  {
-    name: "Cool Tone",
-    adjustments: {
-      lift: 0,
-      gamma: 0,
-      gain: 0,
-      saturation: 0.95,
-      tempShift: -0.1,
-    },
-  },
-  {
-    name: "Warm Tone",
-    adjustments: {
-      lift: 0,
-      gamma: 0,
-      gain: 0,
-      saturation: 1.0,
-      tempShift: 0.1,
-    },
-  },
+  { name: "Neutral", adjustments: { lift: 0, gamma: 0, gain: 0, saturation: 1 } },
+  { name: "Low Evening", adjustments: { lift: -0.05, gamma: 0.1, gain: -0.1, saturation: 0.9 } },
+  { name: "Faded Film", adjustments: { lift: 0.1, gamma: -0.05, gain: -0.15, saturation: 0.8 } },
+  { name: "High Contrast", adjustments: { lift: -0.1, gamma: 0, gain: 0.15, saturation: 1.1 } },
+  { name: "Cool Tone", adjustments: { lift: 0, gamma: 0, gain: 0, saturation: 0.95, tempShift: -0.1 } },
+  { name: "Warm Tone", adjustments: { lift: 0, gamma: 0, gain: 0, saturation: 1.0, tempShift: 0.1 } },
 ];
 
-// Generate a simple 3D LUT based on adjustments
-function generateLUT(
-  size: number,
-  adjustments: Partial<LUTAdjustments>
-): number[] {
-  const {
-    lift = 0,
-    gamma = 0,
-    gain = 0,
-    saturation = 1,
-    tempShift = 0,
-  } = adjustments;
+function generateLUT(size: number, adjustments: Partial<LUTAdjustments>): number[] {
+  const { lift = 0, gamma = 0, gain = 0, saturation = 1, tempShift = 0 } = adjustments;
   const lut: number[] = [];
 
   for (let b = 0; b < size; b++) {
     for (let g = 0; g < size; g++) {
       for (let r = 0; r < size; r++) {
-        // Normalize to 0-1
         let rn = r / (size - 1);
         let gn = g / (size - 1);
         let bn = b / (size - 1);
 
-        // Apply lift (shadows)
         rn = rn + lift * (1 - rn);
         gn = gn + lift * (1 - gn);
         bn = bn + lift * (1 - bn);
 
-        // Apply gamma (midtones)
         const gammaVal = 1 / (1 + gamma);
         rn = Math.pow(Math.max(0, rn), gammaVal);
         gn = Math.pow(Math.max(0, gn), gammaVal);
         bn = Math.pow(Math.max(0, bn), gammaVal);
 
-        // Apply gain (highlights)
         rn = rn * (1 + gain);
         gn = gn * (1 + gain);
         bn = bn * (1 + gain);
 
-        // Apply temperature shift
         rn = rn + tempShift * 0.5;
         bn = bn - tempShift * 0.5;
 
-        // Apply saturation
         const luminance = 0.2126 * rn + 0.7152 * gn + 0.0722 * bn;
         rn = luminance + saturation * (rn - luminance);
         gn = luminance + saturation * (gn - luminance);
         bn = luminance + saturation * (bn - luminance);
 
-        // Clamp values
         rn = Math.max(0, Math.min(1, rn));
         gn = Math.max(0, Math.min(1, gn));
         bn = Math.max(0, Math.min(1, bn));
@@ -124,7 +76,6 @@ function generateLUT(
   return lut;
 }
 
-// Convert LUT to .cube file format
 function lutToCube(lut: number[], size: number, title: string): string {
   let cube = `TITLE "${title}"\n`;
   cube += `LUT_3D_SIZE ${size}\n\n`;
@@ -149,7 +100,16 @@ export default function LUTCreatorModal({
   const [tempShift, setTempShift] = useState(0);
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
-  const LUT_SIZE = 17; // Standard LUT size
+  const LUT_SIZE = 17;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
 
   const handleReset = () => {
     setLift(0);
@@ -170,13 +130,7 @@ export default function LUTCreatorModal({
   };
 
   const handleExportCube = useCallback(() => {
-    const lut = generateLUT(LUT_SIZE, {
-      lift,
-      gamma,
-      gain,
-      saturation,
-      tempShift,
-    });
+    const lut = generateLUT(LUT_SIZE, { lift, gamma, gain, saturation, tempShift });
     const cubeContent = lutToCube(lut, LUT_SIZE, lutName);
 
     const blob = new Blob([cubeContent], { type: "text/plain" });
@@ -189,13 +143,7 @@ export default function LUTCreatorModal({
   }, [lift, gamma, gain, saturation, tempShift, lutName]);
 
   const handleApply = useCallback(() => {
-    const lut = generateLUT(LUT_SIZE, {
-      lift,
-      gamma,
-      gain,
-      saturation,
-      tempShift,
-    });
+    const lut = generateLUT(LUT_SIZE, { lift, gamma, gain, saturation, tempShift });
     onApplyLUT(lut);
     onClose();
   }, [lift, gamma, gain, saturation, tempShift, onApplyLUT, onClose]);
@@ -204,211 +152,134 @@ export default function LUTCreatorModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
       onClick={onClose}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" />
-
-      {/* Modal */}
       <div
-        className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lut-creator-title"
+        className="ui-root relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-[18px] bg-[var(--ui-panel)] ring-1 ring-inset ring-[var(--ui-line-strong)] shadow-[var(--ui-shadow-pop)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-white/5 bg-[#0a0a0a]">
+        <div className="flex items-center justify-between border-b border-[var(--ui-line)] px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-violet-500/15 text-violet-400">
-              <IconPalette className="intaglio-icon"/>
+            <div className="grid h-10 w-10 place-items-center rounded-[12px] bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)]">
+              <IconPalette size={19} stroke={1.8} />
             </div>
             <div>
-              <h2 className="text-xl font-light text-white">3D LUT Creator</h2>
-              <p className="text-xs text-gray-500 font-mono uppercase tracking-widest">
-                Build & Export .cube Files
+              <h2 id="lut-creator-title" className="text-[17px] font-semibold tracking-[-0.015em] text-[var(--ui-text)]">
+                3D LUT Creator
+              </h2>
+              <p className="text-[12px] text-[var(--ui-text-2)]">
+                Build &amp; export .cube files
               </p>
             </div>
           </div>
-          <div role="button" tabIndex={0}
+          <button
+            type="button"
+            aria-label="Close LUT creator"
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition"
+            className="ui-focus grid h-8 w-8 place-items-center rounded-[8px] text-[var(--ui-text-2)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
           >
-            <IconX className="intaglio-icon"/>
-          </div>
+            <IconX size={16} />
+          </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* LUT Name */}
+        <div className="ui-scroll space-y-5 overflow-y-auto px-6 py-5">
           <div>
-            <label className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">
+            <label htmlFor="lut-name-input" className="mb-1.5 block text-[11.5px] font-medium text-[var(--ui-text-2)]">
               LUT Name
             </label>
             <input
+              id="lut-name-input"
               type="text"
               value={lutName}
               onChange={(e) => setLutName(e.target.value)}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-violet-500/50 transition"
+              className="h-10 w-full rounded-[10px] bg-black/30 px-3.5 text-[13px] text-[var(--ui-text)] outline-none ring-1 ring-inset ring-[var(--ui-line)] focus:ring-[var(--ui-accent)]"
             />
           </div>
 
-          {/* Presets */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-mono uppercase tracking-widest text-gray-500">
-                Quick Presets
-              </label>
-              <div role="button" tabIndex={0}
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
+                Quick presets
+              </span>
+              <button
+                type="button"
                 onClick={handleReset}
-                className="flex items-center gap-1 text-[10px] font-mono uppercase text-gray-500 hover:text-white transition"
+                className="ui-focus flex items-center gap-1 rounded px-1.5 py-0.5 text-[11.5px] text-[var(--ui-text-3)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
               >
-                <IconRefresh className="intaglio-icon"/> Reset
-              </div>
+                <IconRefresh size={13} stroke={1.8} /> Reset
+              </button>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {LUT_PRESETS.map((preset) => (
-                <div role="button" tabIndex={0}
+                <button
+                  type="button"
                   key={preset.name}
+                  aria-pressed={activePreset === preset.name}
                   onClick={() => handlePreset(preset)}
-                  className={`px-3 py-2 rounded-lg text-xs font-mono uppercase transition ${
+                  className={`ui-focus h-8 rounded-[8px] px-3 text-[12px] font-medium ring-1 ring-inset transition-colors ${
                     activePreset === preset.name
-                      ? "bg-violet-500/20 border border-violet-500/50 text-violet-400"
-                      : "bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"
+                      ? "bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)] ring-[var(--ui-accent)]/50"
+                      : "bg-[var(--ui-control)] text-[var(--ui-text-2)] ring-[var(--ui-line)] hover:bg-[var(--ui-control-hover)] hover:text-[var(--ui-text)]"
                   }`}
                 >
                   {preset.name}
-                </div>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Adjustments */}
-          <div className="space-y-4">
-            <label className="text-xs font-mono uppercase tracking-widest text-gray-500">
+          <div className="space-y-3.5">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
               Adjustments
-            </label>
+            </span>
 
-            {/* Lift (Shadows) */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-400">Lift (Shadows)</span>
-                <span className="text-xs text-gray-500 font-mono">
-                  {lift > 0 ? "+" : ""}
-                  {(lift * 100).toFixed(0)}%
-                </span>
+            {[
+              { label: "Lift (Shadows)", value: lift, min: -0.3, max: 0.3, set: setLift, text: `${lift > 0 ? "+" : ""}${(lift * 100).toFixed(0)}%` },
+              { label: "Gamma (Midtones)", value: gamma, min: -0.5, max: 0.5, set: setGamma, text: `${gamma > 0 ? "+" : ""}${(gamma * 100).toFixed(0)}%` },
+              { label: "Gain (Highlights)", value: gain, min: -0.3, max: 0.3, set: setGain, text: `${gain > 0 ? "+" : ""}${(gain * 100).toFixed(0)}%` },
+              { label: "Saturation", value: saturation, min: 0, max: 2, set: setSaturation, text: `${(saturation * 100).toFixed(0)}%` },
+              {
+                label: "Temperature",
+                value: tempShift,
+                min: -0.3,
+                max: 0.3,
+                set: setTempShift,
+                text: `${tempShift > 0 ? "Warm" : tempShift < 0 ? "Cool" : "Neutral"}${tempShift !== 0 ? ` (${tempShift > 0 ? "+" : ""}${(tempShift * 100).toFixed(0)}%)` : ""}`,
+              },
+            ].map((row) => (
+              <div key={row.label}>
+                <div className="mb-1 flex justify-between text-[12px]">
+                  <span className="text-[var(--ui-text-2)]">{row.label}</span>
+                  <span className="ui-num text-[var(--ui-text-3)]">{row.text}</span>
+                </div>
+                <input
+                  type="range"
+                  aria-label={row.label}
+                  min={row.min}
+                  max={row.max}
+                  step="0.01"
+                  value={row.value}
+                  onChange={(e) => {
+                    row.set(parseFloat(e.target.value));
+                    setActivePreset(null);
+                  }}
+                  className="w-full accent-[var(--ui-accent)]"
+                />
               </div>
-              <input
-                type="range"
-                min="-0.3"
-                max="0.3"
-                step="0.01"
-                value={lift}
-                onChange={(e) => {
-                  setLift(parseFloat(e.target.value));
-                  setActivePreset(null);
-                }}
-                className="w-full accent-violet-500"
-              />
-            </div>
-
-            {/* Gamma (Midtones) */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-400">Gamma (Midtones)</span>
-                <span className="text-xs text-gray-500 font-mono">
-                  {gamma > 0 ? "+" : ""}
-                  {(gamma * 100).toFixed(0)}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="-0.5"
-                max="0.5"
-                step="0.01"
-                value={gamma}
-                onChange={(e) => {
-                  setGamma(parseFloat(e.target.value));
-                  setActivePreset(null);
-                }}
-                className="w-full accent-violet-500"
-              />
-            </div>
-
-            {/* Gain (Highlights) */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-400">Gain (Highlights)</span>
-                <span className="text-xs text-gray-500 font-mono">
-                  {gain > 0 ? "+" : ""}
-                  {(gain * 100).toFixed(0)}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="-0.3"
-                max="0.3"
-                step="0.01"
-                value={gain}
-                onChange={(e) => {
-                  setGain(parseFloat(e.target.value));
-                  setActivePreset(null);
-                }}
-                className="w-full accent-violet-500"
-              />
-            </div>
-
-            {/* Saturation */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-400">Saturation</span>
-                <span className="text-xs text-gray-500 font-mono">
-                  {(saturation * 100).toFixed(0)}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.01"
-                value={saturation}
-                onChange={(e) => {
-                  setSaturation(parseFloat(e.target.value));
-                  setActivePreset(null);
-                }}
-                className="w-full accent-violet-500"
-              />
-            </div>
-
-            {/* Temperature Shift */}
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-400">Temperature</span>
-                <span className="text-xs text-gray-500 font-mono">
-                  {tempShift > 0 ? "Warm" : tempShift < 0 ? "Cool" : "Neutral"}{" "}
-                  {tempShift !== 0 &&
-                    `(${tempShift > 0 ? "+" : ""}${(tempShift * 100).toFixed(0)}%)`}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="-0.3"
-                max="0.3"
-                step="0.01"
-                value={tempShift}
-                onChange={(e) => {
-                  setTempShift(parseFloat(e.target.value));
-                  setActivePreset(null);
-                }}
-                className="w-full accent-violet-500"
-              />
-            </div>
+            ))}
           </div>
 
-          {/* Preview Gradient */}
           <div>
-            <label className="text-xs font-mono uppercase tracking-widest text-gray-500 mb-2 block">
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
               Preview
-            </label>
-            <div className="h-16 rounded-xl overflow-hidden border border-white/10 relative">
+            </span>
+            <div className="relative h-14 overflow-hidden rounded-[10px] ring-1 ring-inset ring-[var(--ui-line)]">
               <div
                 className="absolute inset-0"
                 style={{
@@ -424,19 +295,21 @@ export default function LUTCreatorModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 flex gap-3 p-6 border-t border-white/5 bg-[#0a0a0a]">
-          <div role="button" tabIndex={0}
+        <div className="flex gap-2.5 border-t border-[var(--ui-line)] bg-[var(--ui-chrome)]/60 px-6 py-4">
+          <button
+            type="button"
             onClick={handleExportCube}
-            className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition font-mono text-sm uppercase"
+            className="ui-focus flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[var(--ui-control)] text-[12.5px] font-medium text-[var(--ui-text)] ring-1 ring-inset ring-[var(--ui-line)] transition-colors hover:bg-[var(--ui-control-hover)]"
           >
-            <IconDownload className="intaglio-icon"/> Export .cube
-          </div>
-          <div role="button" tabIndex={0}
+            <IconDownload size={15} stroke={1.8} /> Export .cube
+          </button>
+          <button
+            type="button"
             onClick={handleApply}
-            className="flex-1 py-3 flex items-center justify-center gap-2 rounded-xl bg-violet-500 border border-violet-400 text-white hover:bg-violet-400 transition font-mono text-sm uppercase"
+            className="ui-focus flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[var(--ui-accent)] text-[12.5px] font-semibold text-white transition-colors hover:bg-[var(--ui-accent-strong)]"
           >
-            <IconWand className="intaglio-icon"/> Apply to Image
-          </div>
+            <IconWand size={15} stroke={1.8} /> Apply to Image
+          </button>
         </div>
       </div>
     </div>

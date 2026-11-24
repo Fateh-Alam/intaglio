@@ -24,7 +24,7 @@ const shade = (size: number, opacity: number): Layer => fx("vignette", size, 0.5
 
 const groups = {
   "Classic Recipes": [
-    ["classic-matrix", "Matrix", text(" 01", "#070e08", "#a6fc79", 8), fx("scanline", 4, 0.35), fx("character-bloom", 6, 0.55, 0.62), shade(70, 0.53)],
+    ["classic-matrix", "Phosphor", text(" 01", "#070e08", "#a6fc79", 8), fx("scanline", 4, 0.35), fx("character-bloom", 6, 0.55, 0.62), shade(70, 0.53)],
     ["classic-noir", "Noir", text(" .:-+*#%@", "#0e0d0f", "#f8ece2", 9), grain(0.52), fx("film-dust", 5, 0.54, 0.49), shade(51, 0.73)],
     ["classic-vaporwave", "Vaporwave", fx("mosaic", 16, 0.44), tone("#302455", "#fdb8d4", 0.38, 0.44), fx("rgb-split", 8, 0.5, 0.48), glow(11, 0.34)],
     ["classic-bonsai", "Bonsai", raster("horizontal", "original", 2), tone("#65423a", "#f6dfb9", 0.40, 0.45)],
@@ -125,7 +125,7 @@ const groups = {
     ["balloon-foil", "Balloon Foil", fx("spherize", 70, 0.73), fx("chrome", 22, 0.91), tone("#633286", "#f4a3c4", 0.59, 0.45)],
   ],
   "Screens & Publishing": [
-    ["nokia-3310", "Nokia 3310", raster("bayer4", "gameboy", 7), frame("SIGNAL  ▂▄▆█", "#5b6f44", "#192619", 0.16, 21)],
+    ["nokia-3310", "Brick Phone", raster("bayer4", "gameboy", 7), frame("SIGNAL  ▂▄▆█", "#5b6f44", "#192619", 0.16, 21)],
     ["pager-display", "Pager Display", raster("horizontal", "amber", 12), text(" .:=▓█", "#382d17", "#d9de9a", 13, 0.61), frame("PAGE / 01", "#716a45", "#241d11", 0.41, 22)],
     ["dos-terminal", "DOS Terminal", text(" .·>_=-+=#@", "#100c07", "#ffd080", 10), fx("crt", 4, 0.31, 0.61), frame("C:\\> ETCH_", "#1a1108", "#ffd68e", 0.61, 15)],
     ["crt-arcade", "CRT Arcade", fx("pixel-art", 8, 0.31), fx("crt", 5, 0.72), frame("INSERT COIN", "#221124", "#e5d17a", 0.70, 17)],
@@ -137,7 +137,7 @@ const groups = {
     ["boot-screen", "Boot Screen", text(" .:-=>0%#█", "#111414", "#c2dcaa", 8), fx("scanline", 5, 0.37), frame("MEMORY TEST / PASS", "#1b191a", "#dce5d5", 0.17, 22)],
     ["bios-interface", "BIOS Interface", text(" .:|+–#▓█", "#152b71", "#d6edf6", 9), frame("BIOS SETUP UTILITY", "#c1d5e1", "#13236c", 0.14, 31)],
     ["datamosh", "Datamosh", ["datamosh", { size: 49, detail: 0.88, phase: 0.27 }], fx("rgb-split", 8, 0.50, 0.26)],
-    ["glitch-matrix", "Glitch Matrix", ["characters", { glyphs: " .:01Δλ#$%", size: 8, shadow: "#030b03", light: "#6cfb7b", phase: 0.43 }], fx("digital-distortion", 15, 0.43, 0.47), fx("character-bloom", 5, 0.55, 0.64)],
+    ["glitch-matrix", "Glitch Code", ["characters", { glyphs: " .:01Δλ#$%", size: 8, shadow: "#030b03", light: "#6cfb7b", phase: 0.43 }], fx("digital-distortion", 15, 0.43, 0.47), fx("character-bloom", 5, 0.55, 0.64)],
     ["electroscan", "Electroscan", ["signal-grid", { size: 29, detail: 0.71, phase: 0.20 }], color("engraving", "#04150c", "#8ce46d", 0.48, 8, 0.34), glow(7, 0.35)],
     ["receipt-printer", "Receipt Printer", raster("atkinson", "mono", 3), frame("TOTAL / 0001", "#eee8da", "#443a31", 0.93, 37), fx("crumpled-print", 13, 0.45, 0.35)],
     ["newspaper-archive", "Newspaper Archive", color("halftone", "#332d26", "#d9ccae", 0.60, 6), frame("THE DAILY PRESS", "#e5d7b7", "#332c24", 0.17, 31), grain(0.26)],

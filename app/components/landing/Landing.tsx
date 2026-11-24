@@ -5,6 +5,7 @@ import {
   IconShieldCheck, IconSparkles, IconTimeline, IconZoomScan,
 } from "@tabler/icons-react";
 import { BrandMark } from "../../editor/shell/TopBar";
+import { ColophonFooterMark } from "../ColophonNote";
 import { BeforeAfter } from "./BeforeAfter";
 import { LookSwitcher, type LookFrame } from "./LookSwitcher";
 import { Reveal } from "./Reveal";
@@ -438,7 +439,7 @@ export function Landing() {
       <footer className="border-t border-white/[0.06]">
         <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-2.5 text-white/80">
-            <BrandMark size={18} />
+            <ColophonFooterMark size={18} />
             <span className="text-[13px] font-semibold">Etch</span>
             <span className="text-[13px] text-white/35">· Photos stay on your device.</span>
           </div>

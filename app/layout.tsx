@@ -6,8 +6,10 @@ import {
   Bebas_Neue,
   Inter,
   Instrument_Serif,
+  Playfair_Display,
 } from "next/font/google";
 import { BRAND } from "./lib/brand";
+import { ColophonNote } from "./components/ColophonNote";
 import SerwistUpdatePrompt from "./components/SerwistUpdatePrompt";
 import "./globals.css";
 
@@ -41,6 +43,13 @@ const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
 });
 
+// Editorial serif for text-overlay presets.
+const playfairDisplay = Playfair_Display({
+  weight: ["400", "700"],
+  variable: "--font-playfair",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(BRAND.domain),
   title: "Etch — A Precision-Machined Digital Darkroom",
@@ -67,9 +76,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.svg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
+        type: "image/png",
         alt: "Etch — A Precision-Machined Digital Darkroom",
       },
     ],
@@ -78,19 +88,20 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Etch — A Precision-Machined Digital Darkroom",
     description: BRAND.shortDescription,
-    images: ["/og-image.svg"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
     follow: true,
+  },
+  other: {
+    colophon: "Edition of one · /humans.txt",
   },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 export default function RootLayout({
@@ -101,7 +112,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={instrumentSerif.variable}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${inter.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${inter.variable} ${playfairDisplay.variable} antialiased`}
       >
         <SerwistProvider
           swUrl="/serwist/sw.js"
@@ -110,6 +121,7 @@ export default function RootLayout({
           reloadOnOnline={false}
         >
           <SerwistUpdatePrompt />
+          <ColophonNote />
           {children}
         </SerwistProvider>
       </body>

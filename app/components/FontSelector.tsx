@@ -20,111 +20,121 @@ export default function FontSelector({
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKey);
+    };
   }, []);
 
-  // Inject Google Fonts link for the preview list
   useEffect(() => {
-    if (!isOpen) return; // Only load when opened to save network
-    
+    if (!isOpen) return;
+
     const linkId = "font-selector-previews";
     if (document.getElementById(linkId)) return;
 
     const link = document.createElement("link");
     link.id = linkId;
-    const familyParams = fonts.map(f => `family=${f.replace(/\s+/g, '+')}`).join('&');
+    const familyParams = fonts.map((f) => `family=${f.replace(/\s+/g, "+")}`).join("&");
     link.href = `https://fonts.googleapis.com/css2?${familyParams}&display=swap`;
     link.rel = "stylesheet";
     document.head.appendChild(link);
   }, [isOpen, fonts]);
 
-  const filteredFonts = fonts.filter(f => f.toLowerCase().includes(search.toLowerCase()));
+  const filteredFonts = fonts.filter((f) => f.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      <div 
-        role="button" 
-        tabIndex={0}
+      <button
+        type="button"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-xs flex items-center justify-between transition-colors focus:outline-none focus:border-amber-500/50 hover:bg-white/5 ${
-          isOpen ? "border-amber-500/50 bg-white/5" : ""
+        className={`ui-focus flex h-8 w-full items-center justify-between gap-2 rounded-[8px] bg-black/30 px-2.5 text-[12px] ring-1 ring-inset transition-colors hover:bg-white/[0.04] ${
+          isOpen ? "ring-[var(--ui-accent)]" : "ring-[var(--ui-line)]"
         }`}
       >
         <span
-          className={`truncate ${value ? "text-white" : "text-gray-500"}`}
+          className={`truncate ${value ? "text-[var(--ui-text)]" : "text-[var(--ui-text-3)]"}`}
           style={value ? { fontFamily: `'${value}', sans-serif` } : {}}
         >
-          {value || "Select Font..."}
+          {value || "Select font…"}
         </span>
-        <IconChevronDown className={`text-gray-500 w-4 h-4 transition-transform duration-200 ${ isOpen ? "rotate-180 text-amber-500" : "" }`}/>
-      </div>
+        <IconChevronDown
+          size={14}
+          stroke={1.8}
+          className={`shrink-0 text-[var(--ui-text-3)] transition-transform duration-200 ${
+            isOpen ? "rotate-180 text-[var(--ui-accent-strong)]" : ""
+          }`}
+        />
+      </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-[#0d0c0a] border border-[var(--intaglio-line)] shadow-xl max-h-72 flex flex-col">
-          <div className="p-2 border-b border-[var(--intaglio-line)] relative">
-            <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500" />
-            <input 
-              type="text" 
-              placeholder="Search fonts..." 
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 flex max-h-72 flex-col overflow-hidden rounded-[10px] bg-[var(--ui-raised)] ring-1 ring-inset ring-[var(--ui-line-strong)] shadow-[var(--ui-shadow-pop)]">
+          <div className="relative border-b border-[var(--ui-line)] p-2">
+            <IconSearch
+              size={13}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--ui-text-3)]"
+            />
+            <input
+              type="text"
+              placeholder="Search fonts…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 pl-7 text-[10px] text-white focus:outline-none focus:border-amber-500/50"
+              className="h-7 w-full rounded-[7px] bg-black/35 pl-7 pr-2 text-[11.5px] text-[var(--ui-text)] outline-none ring-1 ring-inset ring-[var(--ui-line)] placeholder:text-[var(--ui-text-3)] focus:ring-[var(--ui-accent)]"
               autoFocus
             />
           </div>
-          <div className="overflow-y-auto custom-scrollbar flex-1 pb-1">
+          <div className="ui-scroll flex-1 overflow-y-auto p-1">
             {filteredFonts.length === 0 ? (
-              <div className="p-3 text-center text-[10px] text-gray-500">No fonts found</div>
+              <div className="p-3 text-center text-[11.5px] text-[var(--ui-text-3)]">
+                No fonts found
+              </div>
             ) : (
               filteredFonts.map((font) => (
-                <div
+                <button
+                  type="button"
                   key={font}
-                  role="button"
-                  tabIndex={0}
                   onClick={() => {
                     onChange(font);
                     setIsOpen(false);
                     setSearch("");
                   }}
-                  className={`px-3 py-2 flex flex-col hover:bg-white/10 transition-colors ${
-                    value === font ? "bg-amber-500/10 text-amber-400" : "text-gray-300"
+                  className={`ui-focus flex w-full flex-col rounded-[7px] px-2.5 py-1.5 text-left transition-colors ${
+                    value === font
+                      ? "bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)]"
+                      : "text-[var(--ui-text-2)] hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
                   }`}
                 >
-                  <span style={{ fontFamily: `'${font}', sans-serif`, fontSize: '18px' }}>
+                  <span style={{ fontFamily: `'${font}', sans-serif`, fontSize: "15px" }}>
                     {font}
                   </span>
-                  <span className="text-[9px] text-gray-600 font-sans tracking-widest uppercase mt-0.5">
-                    {font}
-                  </span>
-                </div>
+                  <span className="text-[10px] text-[var(--ui-text-3)]">{font}</span>
+                </button>
               ))
             )}
-            
-            {/* Custom Input Fallback */}
+
             {search && filteredFonts.length === 0 && (
-              <div
-                role="button"
-                tabIndex={0}
+              <button
+                type="button"
                 onClick={() => {
                   onChange(search);
                   setIsOpen(false);
                   setSearch("");
                 }}
-                className="px-3 py-3 text-xs border-t border-[var(--intaglio-line)] text-amber-400 hover:bg-white/10"
+                className="ui-focus w-full rounded-[7px] border-t border-[var(--ui-line)] px-2.5 py-2 text-left text-[11.5px] text-[var(--ui-accent-strong)] hover:bg-[var(--ui-accent-soft)]"
               >
-                Use custom: &ldquo;{search}&rdquo;
-              </div>
+                Use custom font: &ldquo;{search}&rdquo;
+              </button>
             )}
           </div>
         </div>

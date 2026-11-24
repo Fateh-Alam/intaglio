@@ -11,7 +11,6 @@ const Slider = ({
   step = 0.01,
   onChange,
   icon,
-  accentColor = "amber",
   bipolar = false,
 }: {
   label: string;
@@ -21,108 +20,94 @@ const Slider = ({
   max: number;
   step?: number;
   onChange: (v: number) => void;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   accentColor?: string;
   bipolar?: boolean;
 }) => {
-  const percentage = ((value - min) / (max - min)) * 100;
+  const clamped = Math.min(max, Math.max(min, value));
+  const percentage = ((clamped - min) / (max - min)) * 100;
   const isModified = Math.abs(value - defaultValue) > 0.001;
-
-  // For bipolar sliders (e.g., -1 to 1), calculate center position
   const centerPercentage = bipolar ? ((0 - min) / (max - min)) * 100 : 0;
 
-  const accentColors: Record<string, string> = {
-    amber: "bg-[var(--intaglio-brass)]",
-    purple: "bg-[var(--intaglio-copper)]",
-    cyan: "bg-[var(--intaglio-brass)]",
-    orange: "bg-[var(--intaglio-copper)]",
-    green: "bg-[var(--intaglio-brass)]",
-  };
-
   return (
-    <div className="group relative space-y-2 py-1">
-      <div className="flex items-center justify-between gap-3 text-white/60 transition group-hover:text-white/90">
-        <div className="flex items-center gap-2">
-          <span className="text-white/40 transition group-hover:text-white/80">
-            {icon}
-          </span>
-          <label className="intaglio-label">
-            {label}
-          </label>
-        </div>
+    <div className="group relative space-y-1.5 py-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-[12px] text-[var(--ui-text-2)] transition-colors group-hover:text-[var(--ui-text)]">
+          {icon && <span className="text-[var(--ui-text-3)]">{icon}</span>}
+          {label}
+        </span>
         <div className="flex items-center gap-2">
           {isModified && (
-            <div role="button"
+            <button
+              type="button"
               onClick={() => onChange(defaultValue)}
-              className="px-2 py-0.5 text-[9px] font-mono tracking-widest uppercase font-medium text-white/40 transition hover:text-white md:opacity-0 md:group-hover:opacity-100"
+              className="ui-focus relative z-30 rounded px-1.5 py-0.5 text-[10.5px] text-[var(--ui-text-3)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
             >
               Reset
-            </div>
+            </button>
           )}
           <span
-            className={`min-w-[36px] text-right font-mono text-xs font-medium ${
-              isModified ? "text-blue-400" : "text-white/50"
+            className={`ui-num min-w-[38px] text-right text-[11.5px] ${
+              isModified ? "text-[var(--ui-accent-strong)]" : "text-[var(--ui-text-3)]"
             }`}
           >
             {value.toFixed(2)}
           </span>
         </div>
       </div>
-      
-      <div className="relative h-4 flex items-center">
-        {/* Background track */}
-        <div className="absolute left-0 right-0 h-1.5 rounded-full bg-white/10 transition-colors group-hover:bg-white/[0.15]" />
 
-        {/* Center zero indicator for bipolar sliders */}
+      <div className="relative flex h-4 items-center">
+        <div className="absolute left-0 right-0 h-[3px] rounded-full bg-white/[0.12] transition-colors group-hover:bg-white/[0.18]" />
+
         {bipolar && (
           <div
-            className="absolute h-2.5 w-0.5 rounded-full bg-white/30 top-1/2 -translate-y-1/2 z-10"
+            className="absolute top-1/2 z-10 h-2.5 w-px -translate-y-1/2 bg-white/30"
             style={{ left: `${centerPercentage}%` }}
           />
         )}
 
-        {/* Value track */}
         {bipolar ? (
           value >= 0 ? (
             <div
-              className={`absolute h-1.5 rounded-full ${accentColors[accentColor] || "bg-blue-500"} transition-all duration-150`}
+              className="absolute h-[3px] rounded-full bg-[var(--ui-accent)]"
               style={{
                 left: `${centerPercentage}%`,
-                width: `${percentage - centerPercentage}%`,
+                width: `${Math.max(0, percentage - centerPercentage)}%`,
               }}
             />
           ) : (
             <div
-              className={`absolute h-1.5 rounded-full ${accentColors[accentColor] || "bg-blue-500"} transition-all duration-150`}
+              className="absolute h-[3px] rounded-full bg-[var(--ui-accent)]"
               style={{
                 left: `${percentage}%`,
-                width: `${centerPercentage - percentage}%`,
+                width: `${Math.max(0, centerPercentage - percentage)}%`,
               }}
             />
           )
         ) : (
           <div
-            className={`absolute left-0 h-1.5 rounded-full ${accentColors[accentColor] || "bg-blue-500"} transition-all duration-150`}
+            className="absolute left-0 h-[3px] rounded-full bg-[var(--ui-accent)]"
             style={{ width: `${percentage}%` }}
           />
         )}
 
-        {/* Thumb indicator - Native Circular Thumb */}
         <div
-          className="pointer-events-none absolute h-3.5 w-3.5 rounded-full -translate-x-1/2 bg-white shadow-md border border-black/10 transition-transform md:scale-90 md:group-hover:scale-110 z-20"
+          className="pointer-events-none absolute z-20 h-3 w-3 -translate-x-1/2 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.6)] transition-transform group-hover:scale-110"
           style={{ left: `${percentage}%` }}
         />
+
+        <input
+          type="range"
+          aria-label={label}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+          onDoubleClick={() => onChange(defaultValue)}
+          className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0 touch-pan-y"
+        />
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        onDoubleClick={() => onChange(defaultValue)}
-        className="absolute bottom-0 left-0 right-0 h-full w-full opacity-0 cursor-pointer touch-pan-y"
-      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { strToU8, Zip, ZipDeflate, ZipPassThrough } from "fflate";
 import { sha256Hex } from "./crypto";
+import type { ContainerAppId } from "../types/document";
 
 export interface BatchManifestItem {
   sourceName: string;
@@ -14,7 +15,7 @@ export interface BatchManifestItem {
 
 export interface BatchManifest {
   formatVersion: "2.0.0";
-  appId: "intaglio-darkroom";
+  appId: ContainerAppId;
   createdAt: string;
   items: BatchManifestItem[];
 }

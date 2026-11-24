@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   IconX,
   IconDeviceFloppy,
@@ -34,7 +34,6 @@ interface SettingCategory {
   keys: (keyof SerializableEditorSettings)[];
 }
 
-// Setting categories for the preset - ALL settings except LUT textures
 const SETTING_CATEGORIES: SettingCategory[] = [
   {
     id: "exposure",
@@ -152,11 +151,7 @@ const SETTING_CATEGORIES: SettingCategory[] = [
     id: "lens",
     label: "Lens Corrections",
     description: "Distortion and perspective keystone",
-    keys: [
-      "lensDistortion",
-      "keystoneH",
-      "keystoneV",
-    ],
+    keys: ["lensDistortion", "keystoneH", "keystoneV"],
   },
   {
     id: "transform",
@@ -210,24 +205,26 @@ export default function PresetCreatorModal({
   const [presetName, setPresetName] = useState("");
   const [presetDescription, setPresetDescription] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    SETTING_CATEGORIES.map((c) => c.id) // All selected by default
+    SETTING_CATEGORIES.map((c) => c.id)
   );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
 
   const handleToggleCategory = (categoryId: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(categoryId)
-        ? prev.filter((id) => id !== categoryId)
-        : [...prev, categoryId]
+      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
     );
   };
 
-  const handleSelectAll = () => {
-    setSelectedCategories(SETTING_CATEGORIES.map((c) => c.id));
-  };
-
-  const handleSelectNone = () => {
-    setSelectedCategories([]);
-  };
+  const handleSelectAll = () => setSelectedCategories(SETTING_CATEGORIES.map((c) => c.id));
+  const handleSelectNone = () => setSelectedCategories([]);
 
   const copySetting = <K extends keyof SerializableEditorSettings>(
     target: Partial<SerializableEditorSettings>,
@@ -262,7 +259,6 @@ export default function PresetCreatorModal({
     };
     onSave(presetData);
     onClose();
-    // Reset state
     setStep(1);
     setPresetName("");
     setPresetDescription("");
@@ -273,73 +269,58 @@ export default function PresetCreatorModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md"
       onClick={onClose}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" />
-
-      {/* Modal */}
       <div
-        className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recipe-creator-title"
+        className="ui-root relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-[18px] bg-[var(--ui-panel)] ring-1 ring-inset ring-[var(--ui-line-strong)] shadow-[var(--ui-shadow-pop)]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Accent Glow */}
-        <div className="absolute -top-20 -right-20 w-48 h-48 rounded-full blur-[100px] bg-amber-500/20" />
-
-        {/* Close Button */}
-        <div role="button" tabIndex={0}
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-all text-gray-400 hover:text-white"
-        >
-          <IconX className="intaglio-icon"/>
-        </div>
-
         {/* Header */}
-        <div className="p-8 pb-0">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-6 bg-amber-500/15 text-amber-500">
-            <IconDeviceFloppy className="intaglio-icon"/>
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--ui-line)] px-6 py-5">
+          <div className="flex items-center gap-3.5">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)]">
+              <IconDeviceFloppy size={19} stroke={1.8} />
+            </div>
+            <div>
+              <h2 id="recipe-creator-title" className="text-[17px] font-semibold tracking-[-0.015em] text-[var(--ui-text)]">
+                Create Etch Look Recipe
+              </h2>
+              <p className="mt-0.5 text-[12px] text-[var(--ui-accent-strong)]">
+                {step === 1
+                  ? "Step 1 of 3 · Name your recipe"
+                  : step === 2
+                    ? "Step 2 of 3 · Select settings"
+                    : "Step 3 of 3 · Review & save"}
+              </p>
+            </div>
           </div>
-          <h2 className="text-2xl font-light text-white mb-2">
-            Create Etch Look Recipe
-          </h2>
-          <p className="text-sm font-mono uppercase tracking-[0.2em] text-amber-500 mb-4">
-            {step === 1
-              ? "Step 1: Name Your Recipe"
-              : step === 2
-                ? "Step 2: Select Settings"
-                : "Step 3: Review & Save"}
-          </p>
+          <button
+            type="button"
+            aria-label="Close recipe creator"
+            onClick={onClose}
+            className="ui-focus grid h-8 w-8 shrink-0 place-items-center rounded-[8px] text-[var(--ui-text-2)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
+          >
+            <IconX size={16} />
+          </button>
         </div>
 
         {/* Step 1: Name & Description */}
         {step === 1 && (
-          <div className="p-8 space-y-6">
-            {/* Explanation */}
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-              <div className="flex items-start gap-3">
-                <IconInfoCircle className="intaglio-icon text-amber-500 shrink-0 mt-0.5"/>
-                <div>
-                  <p className="text-sm text-gray-300 leading-relaxed">
-                    A{" "}
-                    <strong className="text-amber-400">
-                      .{FORMAT.recipeExtension}
-                    </strong>{" "}
-                    file is an Etch Look Recipe. It stores selected edit
-                    settings so you can carry the same treatment to other
-                    photographs. Use an Etch Project{" "}
-                    <strong className="text-cyan-300">
-                      .{FORMAT.archiveExtension}
-                    </strong>{" "}
-                    when you want to preserve the entire editing session.
-                  </p>
-                </div>
-              </div>
+          <div className="ui-scroll space-y-5 overflow-y-auto px-6 py-5">
+            <div className="flex items-start gap-2.5 rounded-[12px] bg-white/[0.03] p-3.5 ring-1 ring-inset ring-[var(--ui-line)]">
+              <IconInfoCircle size={16} stroke={1.8} className="mt-0.5 shrink-0 text-[var(--ui-accent-strong)]" />
+              <p className="text-[12.5px] leading-relaxed text-[var(--ui-text-2)]">
+                A <strong className="font-semibold text-[var(--ui-text)]">.{FORMAT.recipeExtension}</strong> file is an Etch Look Recipe that stores your chosen settings to reuse on other photos. Save a <strong className="font-semibold text-[var(--ui-text)]">.{FORMAT.archiveExtension}</strong> project to preserve the full session.
+              </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="recipe-name" className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">
+                <label htmlFor="recipe-name" className="mb-1.5 block text-[11.5px] font-medium text-[var(--ui-text-2)]">
                   Recipe Name
                 </label>
                 <input
@@ -348,115 +329,112 @@ export default function PresetCreatorModal({
                   value={presetName}
                   onChange={(e) => setPresetName(e.target.value)}
                   placeholder="e.g., Late Autumn"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
+                  className="h-10 w-full rounded-[10px] bg-black/30 px-3.5 text-[13px] text-[var(--ui-text)] outline-none ring-1 ring-inset ring-[var(--ui-line)] placeholder:text-[var(--ui-text-3)] focus:ring-[var(--ui-accent)]"
                 />
               </div>
               <div>
-                <label htmlFor="recipe-description" className="block text-xs font-mono uppercase tracking-widest text-gray-500 mb-2">
+                <label htmlFor="recipe-description" className="mb-1.5 block text-[11.5px] font-medium text-[var(--ui-text-2)]">
                   Description (Optional)
                 </label>
                 <textarea
                   id="recipe-description"
                   value={presetDescription}
                   onChange={(e) => setPresetDescription(e.target.value)}
-                  placeholder="A warm, film-inspired look for portraits..."
+                  placeholder="A warm, film-inspired look for portraits…"
                   rows={2}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition resize-none"
+                  className="w-full resize-none rounded-[10px] bg-black/30 px-3.5 py-2.5 text-[13px] text-[var(--ui-text)] outline-none ring-1 ring-inset ring-[var(--ui-line)] placeholder:text-[var(--ui-text-3)] focus:ring-[var(--ui-accent)]"
                 />
               </div>
             </div>
 
-            <button type="button"
+            <button
+              type="button"
               onClick={() => setStep(2)}
-              className="w-full py-4 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25 transition flex items-center justify-center gap-2"
+              className="ui-focus flex h-10 w-full items-center justify-center gap-1.5 rounded-[10px] bg-[var(--ui-accent)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--ui-accent-strong)]"
             >
-              Next: Select Settings <IconChevronRight className="intaglio-icon"/>
+              Next: Select Settings <IconChevronRight size={15} stroke={2} />
             </button>
           </div>
         )}
 
         {/* Step 2: Select Categories */}
         {step === 2 && (
-          <div className="p-8 space-y-4">
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-sm text-gray-400">
+          <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-[12.5px] text-[var(--ui-text-2)]">
                 Choose which settings to include:
               </p>
-              <div className="flex gap-2 text-[10px] font-mono uppercase">
-                <div role="button" tabIndex={0}
+              <div className="flex items-center gap-2 text-[11.5px] font-medium">
+                <button
+                  type="button"
                   onClick={handleSelectAll}
-                  className="text-amber-500 hover:underline"
+                  className="ui-focus rounded px-1.5 py-0.5 text-[var(--ui-accent-strong)] hover:underline"
                 >
                   All
-                </div>
-                <span className="text-gray-600">|</span>
-                <div role="button" tabIndex={0}
+                </button>
+                <span className="text-[var(--ui-text-3)]">·</span>
+                <button
+                  type="button"
                   onClick={handleSelectNone}
-                  className="text-gray-500 hover:underline"
+                  className="ui-focus rounded px-1.5 py-0.5 text-[var(--ui-text-3)] hover:text-[var(--ui-text)]"
                 >
                   None
-                </div>
+                </button>
               </div>
             </div>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+            <div className="ui-scroll max-h-72 space-y-1.5 overflow-y-auto pr-1">
               {SETTING_CATEGORIES.map((category) => {
                 const isSelected = selectedCategories.includes(category.id);
                 return (
-                  <div role="button" tabIndex={0}
+                  <button
+                    type="button"
                     key={category.id}
+                    aria-pressed={isSelected}
                     onClick={() => handleToggleCategory(category.id)}
-                    className={`w-full p-3 rounded-xl border text-left transition ${
+                    className={`ui-focus flex w-full items-center justify-between gap-3 rounded-[10px] p-3 text-left ring-1 ring-inset transition-colors ${
                       isSelected
-                        ? "bg-amber-500/10 border-amber-500/30"
-                        : "bg-white/5 border-white/10 hover:border-white/20"
+                        ? "bg-[var(--ui-accent-soft)] ring-[var(--ui-accent)]/45"
+                        : "bg-white/[0.025] ring-[var(--ui-line)] hover:bg-white/[0.05]"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p
-                          className={`text-sm font-medium ${isSelected ? "text-amber-400" : "text-gray-300"}`}
-                        >
-                          {category.label}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {category.description}
-                        </p>
-                      </div>
-                      <div
-                        className={`w-5 h-5 rounded-md border flex items-center justify-center transition ${
-                          isSelected
-                            ? "bg-amber-500 border-amber-500"
-                            : "border-gray-600"
-                        }`}
-                      >
-                        {isSelected && (
-                          <IconCheck className="intaglio-icon text-black"/>
-                        )}
-                      </div>
+                    <div className="min-w-0">
+                      <p className={`text-[12.5px] font-medium ${isSelected ? "text-[var(--ui-text)]" : "text-[var(--ui-text-2)]"}`}>
+                        {category.label}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-[var(--ui-text-3)]">
+                        {category.description}
+                      </p>
                     </div>
-                  </div>
+                    <span
+                      className={`grid h-5 w-5 shrink-0 place-items-center rounded-[6px] ring-1 ring-inset transition-colors ${
+                        isSelected
+                          ? "bg-[var(--ui-accent)] text-white ring-transparent"
+                          : "bg-black/30 ring-[var(--ui-line-strong)]"
+                      }`}
+                    >
+                      {isSelected && <IconCheck size={13} stroke={2.4} />}
+                    </span>
+                  </button>
                 );
               })}
             </div>
 
-            <div className="flex gap-3 pt-4">
-              <button type="button"
+            <div className="mt-4 flex gap-2.5 pt-2">
+              <button
+                type="button"
                 onClick={() => setStep(1)}
-                className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition"
+                className="ui-focus h-10 flex-1 rounded-[10px] bg-[var(--ui-control)] text-[12.5px] font-medium text-[var(--ui-text-2)] ring-1 ring-inset ring-[var(--ui-line)] transition-colors hover:bg-[var(--ui-control-hover)] hover:text-[var(--ui-text)]"
               >
                 Back
               </button>
-              <button type="button"
+              <button
+                type="button"
                 onClick={() => setStep(3)}
                 disabled={selectedCategories.length === 0}
-                className={`flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest transition flex items-center justify-center gap-2 ${
-                  selectedCategories.length > 0
-                    ? "bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25"
-                    : "bg-gray-800 text-gray-600 border border-gray-700 cursor-not-allowed"
-                }`}
+                className="ui-focus flex h-10 flex-1 items-center justify-center gap-1 rounded-[10px] bg-[var(--ui-accent)] text-[12.5px] font-semibold text-white transition-colors hover:bg-[var(--ui-accent-strong)] disabled:pointer-events-none disabled:opacity-40"
               >
-                Next <IconChevronRight className="intaglio-icon"/>
+                Next <IconChevronRight size={15} stroke={2} />
               </button>
             </div>
           </div>
@@ -464,33 +442,29 @@ export default function PresetCreatorModal({
 
         {/* Step 3: Review & Save */}
         {step === 3 && (
-          <div className="p-8 space-y-6">
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
+          <div className="ui-scroll space-y-5 overflow-y-auto px-6 py-5">
+            <div className="space-y-3 rounded-[12px] bg-white/[0.03] p-4 ring-1 ring-inset ring-[var(--ui-line)]">
               <div>
-                <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                  Recipe Name
+                <p className="text-[11px] font-medium text-[var(--ui-text-3)]">Recipe Name</p>
+                <p className="mt-0.5 text-[14px] font-semibold text-[var(--ui-text)]">
+                  {presetName || "Untitled Recipe"}
                 </p>
-                <p className="text-white">{presetName || "Untitled Recipe"}</p>
               </div>
               {presetDescription && (
                 <div>
-                  <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                    Description
-                  </p>
-                  <p className="text-gray-400 text-sm">{presetDescription}</p>
+                  <p className="text-[11px] font-medium text-[var(--ui-text-3)]">Description</p>
+                  <p className="mt-0.5 text-[12.5px] text-[var(--ui-text-2)]">{presetDescription}</p>
                 </div>
               )}
               <div>
-                <p className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                  Included Settings
-                </p>
-                <div className="flex flex-wrap gap-1 mt-1">
+                <p className="text-[11px] font-medium text-[var(--ui-text-3)]">Included Settings</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {selectedCategories.map((catId) => {
                     const cat = SETTING_CATEGORIES.find((c) => c.id === catId);
                     return (
                       <span
                         key={catId}
-                        className="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px]"
+                        className="rounded-full bg-[var(--ui-accent-soft)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--ui-accent-strong)]"
                       >
                         {cat?.label}
                       </span>
@@ -500,34 +474,30 @@ export default function PresetCreatorModal({
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
-              <p className="text-sm text-blue-300 leading-relaxed">
-                <strong>How to use:</strong> Your recipe will be saved as a{" "}
-                <code className="bg-blue-500/20 px-1 rounded">
+            <div className="rounded-[12px] bg-[var(--ui-accent-soft)] p-3.5 ring-1 ring-inset ring-[var(--ui-accent)]/25">
+              <p className="text-[12px] leading-relaxed text-[var(--ui-text-2)]">
+                <strong className="font-semibold text-[var(--ui-text)]">How to use:</strong> Saved as a{" "}
+                <code className="rounded bg-white/10 px-1.5 py-0.5 text-[11px] text-[var(--ui-text)]">
                   .{FORMAT.recipeExtension}
                 </code>{" "}
-                file. To apply it later, choose Load .{FORMAT.recipeExtension}{" "}
-                in the sidebar or drag the file onto the editor. Full sessions
-                are saved as Etch Project{" "}
-                <code className="bg-blue-500/20 px-1 rounded">
-                  .{FORMAT.archiveExtension}
-                </code>{" "}
-                files.
+                file. Drag it onto Etch or choose Load .{FORMAT.recipeExtension} in the File menu to apply it to any photo.
               </p>
             </div>
 
-            <div className="flex gap-3">
-              <button type="button"
+            <div className="flex gap-2.5">
+              <button
+                type="button"
                 onClick={() => setStep(2)}
-                className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 transition"
+                className="ui-focus h-10 flex-1 rounded-[10px] bg-[var(--ui-control)] text-[12.5px] font-medium text-[var(--ui-text-2)] ring-1 ring-inset ring-[var(--ui-line)] transition-colors hover:bg-[var(--ui-control-hover)] hover:text-[var(--ui-text)]"
               >
                 Back
               </button>
-              <button type="button"
+              <button
+                type="button"
                 onClick={handleSave}
-                className="flex-1 py-3 rounded-xl font-mono text-sm uppercase tracking-widest bg-amber-500 text-black border border-amber-400 hover:bg-amber-400 transition flex items-center justify-center gap-2"
+                className="ui-focus flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[var(--ui-accent)] text-[12.5px] font-semibold text-white transition-colors hover:bg-[var(--ui-accent-strong)]"
               >
-                <IconDeviceFloppy className="intaglio-icon"/> Save Recipe
+                <IconDeviceFloppy size={15} stroke={2} /> Save Recipe
               </button>
             </div>
           </div>

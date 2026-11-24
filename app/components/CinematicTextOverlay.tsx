@@ -83,7 +83,7 @@ export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
     .toUpperCase(),
   locationText: "",
   billingBlockEnabled: false,
-  billingBlockText: "DIRECTED BY JONATHAN NOLAN  WRITTEN BY CHRISTOPHER NOLAN  PRODUCED BY EMMA THOMAS\nDIRECTOR OF PHOTOGRAPHY HOYTE VAN HOYTEMA  MUSIC BY HANS ZIMMER",
+  billingBlockText: "ETCH STUDIO PRESENTS  ·  DIRECTED BY YOUR NAME\nPHOTOGRAPHY BY YOUR NAME  ·  GRADED IN ETCH",
   subtitleX: 0,
   subtitleY: 30, // Percentage from bottom
   dateX: 0,
@@ -106,10 +106,10 @@ export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {
   customFontVariant: "normal",
 };
 
-// Oscar-level film style presets
+// Curated title typography presets (internal IDs kept stable for saved projects).
 export const FILM_STYLES = {
   blade_runner: {
-    name: "BLADE RUNNER 2049",
+    name: "NEON 2049",
     titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#ffffff",
@@ -124,7 +124,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)",
   },
   interstellar: {
-    name: "INTERSTELLAR",
+    name: "ORBIT",
     titleFont: "var(--font-inter), system-ui, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#ffffff",
@@ -138,7 +138,7 @@ export const FILM_STYLES = {
     gradient: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)",
   },
   sicario: {
-    name: "SICARIO",
+    name: "FRONTIER",
     titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#f5f5f5",
@@ -153,7 +153,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)",
   },
   dune: {
-    name: "DUNE",
+    name: "SANDS",
     titleFont: "var(--font-playfair), 'Playfair Display', Georgia, serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#f4e4c9",
@@ -168,7 +168,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(20,15,10,0.9) 0%, rgba(20,15,10,0.4) 50%, transparent 100%)",
   },
   arrival: {
-    name: "ARRIVAL",
+    name: "MONOLITH",
     titleFont: "var(--font-inter), system-ui, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#ffffff",
@@ -183,7 +183,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 70%, transparent 100%)",
   },
   revenant: {
-    name: "THE REVENANT",
+    name: "WILDERNESS",
     titleFont: "var(--font-playfair), 'Playfair Display', Georgia, serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#e8e0d5",
@@ -197,9 +197,8 @@ export const FILM_STYLES = {
     gradient:
       "linear-gradient(to top, rgba(15,20,15,0.85) 0%, rgba(15,20,15,0.3) 60%, transparent 100%)",
   },
-  // NEW STYLES
   oppenheimer: {
-    name: "OPPENHEIMER",
+    name: "ATOMIC",
     titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#ffffff",
@@ -214,7 +213,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 40%, transparent 100%)",
   },
   the_batman: {
-    name: "THE BATMAN",
+    name: "CRIMSON",
     titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#dc2626",
@@ -229,7 +228,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(10,0,0,0.5) 50%, transparent 100%)",
   },
   joker: {
-    name: "JOKER",
+    name: "ACID SERIF",
     titleFont: "var(--font-playfair), 'Playfair Display', Georgia, serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#84cc16",
@@ -244,7 +243,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(5,10,5,0.9) 0%, rgba(5,10,5,0.4) 50%, transparent 100%)",
   },
   nineteen17: {
-    name: "1917",
+    name: "TRENCH",
     titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#d4c5a9",
@@ -259,7 +258,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(30,28,20,0.9) 0%, rgba(30,28,20,0.4) 50%, transparent 100%)",
   },
   mad_max: {
-    name: "MAD MAX",
+    name: "FURY",
     titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#f97316",
@@ -274,7 +273,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(20,10,0,0.9) 0%, rgba(20,10,0,0.4) 50%, transparent 100%)",
   },
   her: {
-    name: "HER",
+    name: "BLUSH",
     titleFont: "var(--font-inter), system-ui, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#fda4af",
@@ -290,7 +289,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(40,20,25,0.85) 0%, rgba(40,20,25,0.3) 60%, transparent 100%)",
   },
   matrix: {
-    name: "THE MATRIX",
+    name: "PHOSPHOR",
     titleFont: "var(--font-inter), monospace, sans-serif",
     metaFont: "var(--font-inter), monospace, sans-serif",
     titleColor: "#4ade80",
@@ -305,7 +304,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(0,20,0,0.95) 0%, rgba(0,20,0,0.4) 60%, transparent 100%)",
   },
   fight_club: {
-    name: "FIGHT CLUB",
+    name: "REBEL",
     titleFont: "var(--font-bebas), 'Bebas Neue', Helvetica, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#f472b6",
@@ -320,7 +319,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(20,5,10,0.95) 0%, rgba(20,5,10,0.5) 60%, transparent 100%)",
   },
   pulp_fiction: {
-    name: "PULP FICTION",
+    name: "PULP",
     titleFont: "var(--font-bebas), 'Bebas Neue', Impact, sans-serif",
     metaFont: "var(--font-bebas), 'Bebas Neue', sans-serif",
     titleColor: "#fbbf24",
@@ -335,7 +334,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 60%, transparent 100%)",
   },
   lost_in_translation: {
-    name: "LOST IN TRANSLATION",
+    name: "MIDNIGHT",
     titleFont: "var(--font-inter), system-ui, sans-serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#cbd5e1",
@@ -350,7 +349,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(10,5,20,0.9) 0%, rgba(10,5,20,0.4) 60%, transparent 100%)",
   },
   barbie: {
-    name: "BARBIE",
+    name: "POP PINK",
     titleFont: "var(--font-playfair), 'Playfair Display', serif",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#ec4899",
@@ -365,7 +364,7 @@ export const FILM_STYLES = {
       "linear-gradient(to top, rgba(255,192,203,0.3) 0%, transparent 100%)",
   },
   drive: {
-    name: "DRIVE",
+    name: "NIGHTRUN",
     titleFont: "var(--font-bebas), 'Brush Script MT', cursive",
     metaFont: "var(--font-inter), system-ui, sans-serif",
     titleColor: "#ec4899",

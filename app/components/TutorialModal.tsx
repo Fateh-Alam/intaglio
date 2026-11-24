@@ -67,109 +67,98 @@ export default function TutorialModal({
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60" />
 
-      {/* Modal - Glassmorphic Redesign */}
+      {/* Modal */}
       <div
-        className={`relative w-full max-w-lg max-h-[85vh] overflow-hidden bg-[#0d0c0a]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8)] transform transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        role="dialog"
+        aria-modal="true"
+        className={`ui-root relative w-full max-w-lg max-h-[85vh] overflow-hidden rounded-[18px] bg-[var(--ui-panel)] ring-1 ring-inset ring-[var(--ui-line-strong)] shadow-[var(--ui-shadow-pop)] transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           showContent
             ? "translate-y-0 scale-100 opacity-100"
-            : "translate-y-12 scale-95 opacity-0"
+            : "translate-y-8 scale-95 opacity-0"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Subtle top glow */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--intaglio-brass)]/30 to-transparent" />
-
         <div className="flex flex-col max-h-[85vh]">
           {/* Header */}
-          <div className="relative p-8 pb-6 flex items-start justify-between">
-            <div className="flex gap-5">
-              {/* Icon Container */}
-              <div className="flex-shrink-0 flex items-center justify-center w-14 h-14 rounded-full border border-white/10 bg-white/5 text-[var(--intaglio-brass)] shadow-inner">
+          <div className="relative flex items-start justify-between p-6 pb-5">
+            <div className="flex gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[14px] bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)]">
                 {content.icon}
               </div>
-              
+
               <div>
-                <p className="text-[9px] font-mono uppercase tracking-[0.3em] text-[var(--intaglio-brass)]/70 mb-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--ui-accent-strong)]">
                   {content.subtitle}
                 </p>
-                <h2 className="text-2xl font-serif tracking-wide text-white mb-2">
+                <h2 className="mt-0.5 text-[20px] font-semibold tracking-[-0.015em] text-[var(--ui-text)]">
                   {content.title}
                 </h2>
-                <p className="text-[13px] text-gray-400 leading-relaxed max-w-md">
+                <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-[var(--ui-text-2)]">
                   {content.description}
                 </p>
               </div>
             </div>
 
-            {/* Close Button */}
             <button
+              type="button"
+              aria-label="Close guide"
               onClick={onClose}
-              className="p-2 rounded-full border border-transparent hover:bg-white/10 transition-all duration-300 text-gray-500 hover:text-white"
+              className="ui-focus grid h-8 w-8 shrink-0 place-items-center rounded-[8px] text-[var(--ui-text-2)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
             >
-              <IconX className="intaglio-icon"/>
+              <IconX size={16} />
             </button>
           </div>
 
-          <div className="overflow-y-auto custom-scrollbar flex-1 pb-8">
-            {/* Feature-Specific Animation container */}
-            <div className="relative mx-8 my-4 h-48 rounded-lg border border-white/5 bg-black/40 overflow-hidden shadow-inner">
+          <div className="ui-scroll flex-1 overflow-y-auto pb-6">
+            <div className="relative mx-6 my-2 h-48 overflow-hidden rounded-[12px] bg-black/45 ring-1 ring-inset ring-[var(--ui-line)]">
               <OrganicDemo featureId={content.id} color={content.accentColor} />
             </div>
 
-            {/* Tips Section */}
-            <div className="px-8 mt-8">
-              <div className="flex items-center gap-2 mb-4">
-                <IconBulb className="intaglio-icon text-[var(--intaglio-brass)]"/>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
+            <div className="mt-6 px-6">
+              <div className="mb-3 flex items-center gap-2">
+                <IconBulb size={15} stroke={1.8} className="text-[var(--ui-accent-strong)]" />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
                   Quick Tips
                 </span>
               </div>
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {content.tips.map((tip, index) => (
                   <li
                     key={index}
-                    className="flex items-start gap-3 text-[13px] text-gray-300 transition-all duration-500"
+                    className="flex items-start gap-2.5 text-[13px] text-[var(--ui-text-2)] transition-all duration-500"
                     style={{
                       opacity: showContent ? 1 : 0,
-                      transform: showContent
-                        ? "translateX(0)"
-                        : "translateX(-20px)",
-                      transitionDelay: `${300 + index * 150}ms`,
+                      transform: showContent ? "translateX(0)" : "translateX(-12px)",
+                      transitionDelay: `${200 + index * 100}ms`,
                     }}
                   >
-                    <IconChevronRight className="intaglio-icon mt-0.5 shrink-0 text-[var(--intaglio-brass)]"/>
+                    <IconChevronRight size={15} stroke={2} className="mt-0.5 shrink-0 text-[var(--ui-accent-strong)]" />
                     <span className="leading-relaxed">{tip}</span>
                   </li>
                 ))}
               </ul>
 
-              {/* Plain English Section */}
               {content.plainEnglish && (
-                <div className="mt-8 p-5 rounded-lg bg-white/[0.02] border border-white/5 relative overflow-hidden">
-                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[var(--intaglio-brass)]/50" />
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--intaglio-brass)]">
-                      In Plain English
-                    </span>
+                <div className="relative mt-6 overflow-hidden rounded-[12px] bg-white/[0.03] p-4 ring-1 ring-inset ring-[var(--ui-line)]">
+                  <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-accent-strong)]">
+                    In Plain English
                   </div>
-                  <p className="text-[13px] text-gray-400 leading-relaxed italic font-serif">
+                  <p className="text-[13px] leading-relaxed text-[var(--ui-text-2)]">
                     &ldquo;{content.plainEnglish}&rdquo;
                   </p>
                 </div>
               )}
             </div>
           </div>
-          
-          {/* Footer */}
-          <div className="px-8 pb-8 pt-4">
-            <div
-              role="button"
-              tabIndex={0}
+
+          <div className="border-t border-[var(--ui-line)] bg-[var(--ui-chrome)]/60 px-6 py-4">
+            <button
+              type="button"
               onClick={onClose}
-              className="w-full py-4 text-center border border-[var(--intaglio-line)] bg-[#161410] text-[var(--intaglio-paper)] font-mono text-[10px] uppercase tracking-widest transition-colors hover:bg-[var(--intaglio-brass)] hover:text-[#0d0c0a] cursor-pointer"
+              className="ui-focus h-10 w-full rounded-[10px] bg-[var(--ui-accent)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--ui-accent-strong)]"
             >
-              Acknowledge
-            </div>
+              Got it
+            </button>
           </div>
         </div>
       </div>

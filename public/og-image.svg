@@ -1,13 +1,27 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1200" height="630" fill="#14130F"/>
-  <rect x="72" y="72" width="1056" height="486" fill="#201D17" stroke="#3A352A"/>
-  <rect x="102" y="102" width="406" height="426" fill="#E7DFD0"/>
-  <rect x="134" y="134" width="342" height="250" fill="#3F5545"/>
-  <rect x="134" y="384" width="342" height="112" fill="#14130F"/>
-  <circle cx="305" cy="260" r="86" fill="#201D17" stroke="#B08A52" stroke-width="8"/>
-  <circle cx="305" cy="260" r="38" fill="#14130F" stroke="#E7DFD0" stroke-opacity="0.65" stroke-width="5"/>
-  <text x="570" y="250" fill="#E7DFD0" font-family="Georgia, serif" font-size="104" font-weight="400">Etch</text>
-  <text x="576" y="314" fill="#B08A52" font-family="Arial, sans-serif" font-size="18" letter-spacing="7">A TIMELESS DIGITAL DARKROOM</text>
-  <text x="576" y="384" fill="#B9AD98" font-family="Arial, sans-serif" font-size="28">Made for photographs that deserve patience.</text>
-  <path d="M576 442H920" stroke="#8F563F" stroke-width="6" stroke-linecap="round"/>
+  <defs>
+    <radialGradient id="warmGlow" cx="74%" cy="32%" r="55%">
+      <stop offset="0%" stop-color="#D6AA6E" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#0B0B0C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="blueGlow" cx="18%" cy="22%" r="48%">
+      <stop offset="0%" stop-color="#5B9BFF" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#0B0B0C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0B0B0C"/>
+  <rect width="1200" height="630" fill="url(#warmGlow)"/>
+  <rect width="1200" height="630" fill="url(#blueGlow)"/>
+  <rect x="48" y="48" width="1104" height="534" rx="28" fill="#121214" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <g transform="translate(104 116)">
+    <circle cx="24" cy="24" r="20.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="2.5"/>
+    <circle cx="24" cy="24" r="12.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="2.5"/>
+    <circle cx="24" cy="24" r="4.8" fill="#FFFFFF"/>
+    <path d="M24 3.5V44.5" stroke="#FFFFFF" stroke-opacity="0.9" stroke-width="2.5" stroke-linecap="round"/>
+    <text x="66" y="33" fill="#FFFFFF" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="600" letter-spacing="-0.4">Etch</text>
+  </g>
+  <text x="104" y="256" fill="#7AAFFF" font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="600" letter-spacing="2.4">A PHOTO EDITOR THAT RUNS IN YOUR BROWSER</text>
+  <text x="104" y="348" fill="#FFFFFF" font-family="Georgia, serif" font-size="82" font-weight="400">The darkroom,</text>
+  <text x="104" y="432" fill="#FFFFFF" fill-opacity="0.72" font-family="Georgia, serif" font-style="italic" font-size="82" font-weight="400">in a browser tab.</text>
+  <text x="104" y="512" fill="#A3A3AA" font-family="Inter, system-ui, sans-serif" font-size="22">Non-destructive editing · Masks · 1:1 loupe · Node grading · No AI, ever</text>
 </svg>

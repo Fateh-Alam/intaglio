@@ -3,8 +3,6 @@
 import React from "react";
 import {
   IconTypography,
-  IconMapPin,
-  IconMovie,
   IconItalic,
   IconLetterCase,
   IconLetterCaseUpper,
@@ -69,6 +67,35 @@ const POPULAR_FONTS = [
   "Manrope",
 ];
 
+const VISUAL_STYLES: ReadonlyArray<{
+  id: TextOverlaySettings["subtitleStyle"];
+  label: string;
+  swatch: string;
+  tracking: number;
+}> = [
+  { id: "blade_runner", label: "Neon 2049", swatch: "#fdba74", tracking: 0.1 },
+  { id: "interstellar", label: "Orbit", swatch: "#ffffff", tracking: 0.2 },
+  { id: "sicario", label: "Frontier", swatch: "#fbbf24", tracking: 0.1 },
+  { id: "dune", label: "Sands", swatch: "#f4e4c9", tracking: 0.15 },
+  { id: "arrival", label: "Monolith", swatch: "#d4d4d8", tracking: 0.2 },
+  { id: "revenant", label: "Wilderness", swatch: "#d6d3d1", tracking: 0.15 },
+  { id: "oppenheimer", label: "Atomic", swatch: "#ffffff", tracking: 0.15 },
+  { id: "the_batman", label: "Crimson", swatch: "#ef4444", tracking: 0.05 },
+  { id: "joker", label: "Acid Serif", swatch: "#a3e635", tracking: 0.0 },
+  { id: "nineteen17", label: "Trench", swatch: "#d4c5a9", tracking: 0.2 },
+  { id: "mad_max", label: "Fury", swatch: "#f97316", tracking: 0.12 },
+  { id: "her", label: "Blush", swatch: "#fda4af", tracking: 0.15 },
+  { id: "matrix", label: "Phosphor", swatch: "#4ade80", tracking: 0.25 },
+  { id: "fight_club", label: "Rebel", swatch: "#f472b6", tracking: 0.05 },
+  { id: "pulp_fiction", label: "Pulp", swatch: "#facc15", tracking: 0.1 },
+  { id: "lost_in_translation", label: "Midnight", swatch: "#94a3b8", tracking: 0.15 },
+  { id: "barbie", label: "Pop Pink", swatch: "#ec4899", tracking: 0.05 },
+  { id: "drive", label: "Nightrun", swatch: "#e879f9", tracking: 0.1 },
+];
+
+const FIELD_CLASS =
+  "w-full rounded-[8px] bg-black/30 px-2.5 py-1.5 text-[12px] text-[var(--ui-text)] outline-none ring-1 ring-inset ring-[var(--ui-line)] placeholder:text-[var(--ui-text-3)] focus:ring-[var(--ui-accent)] transition-colors";
+
 interface CinematicTextControlsProps {
   textOverlay: TextOverlaySettings;
   setTextOverlay: React.Dispatch<React.SetStateAction<TextOverlaySettings>>;
@@ -81,17 +108,17 @@ export default function CinematicTextControls({
   onFontUpload,
 }: CinematicTextControlsProps) {
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+    <div className="space-y-1">
       {/* 1. Content Section */}
       <ControlGroup title="Content">
         <div className="space-y-3">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                <IconMovie className="intaglio-icon inline mr-2"/>
+              <label htmlFor="overlay-title-input" className="text-[12px] text-[var(--ui-text-2)]">
                 Title
               </label>
               <Toggle
+                ariaLabel="Show title"
                 checked={textOverlay.subtitleEnabled}
                 onChange={(checked) =>
                   setTextOverlay((prev) => ({
@@ -102,8 +129,9 @@ export default function CinematicTextControls({
               />
             </div>
             <input
+              id="overlay-title-input"
               type="text"
-              placeholder="Movie Title"
+              placeholder="Title text"
               value={textOverlay.subtitleText}
               onChange={(e) =>
                 setTextOverlay((prev) => ({
@@ -111,17 +139,17 @@ export default function CinematicTextControls({
                   subtitleText: e.target.value,
                 }))
               }
-              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] uppercase tracking-widest text-[var(--intaglio-paper)] font-mono placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition"
+              className={FIELD_CLASS}
             />
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                <IconMapPin className="intaglio-icon inline mr-2"/>
-                Location/Date
+              <label htmlFor="overlay-date-input" className="text-[12px] text-[var(--ui-text-2)]">
+                Date &amp; location
               </label>
               <Toggle
+                ariaLabel="Show date and location"
                 checked={textOverlay.dateEnabled}
                 onChange={(checked) =>
                   setTextOverlay((prev) => ({
@@ -132,8 +160,9 @@ export default function CinematicTextControls({
               />
             </div>
             <input
+              id="overlay-date-input"
               type="text"
-              placeholder="Date (e.g. MAY 2024)"
+              placeholder="Date (e.g., NOVEMBER 2026)"
               value={textOverlay.dateText}
               onChange={(e) =>
                 setTextOverlay((prev) => ({
@@ -141,11 +170,12 @@ export default function CinematicTextControls({
                   dateText: e.target.value,
                 }))
               }
-              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition mb-2"
+              className={FIELD_CLASS}
             />
             <input
               type="text"
-              placeholder="Location (e.g., LAHORE, PAKISTAN)"
+              aria-label="Location"
+              placeholder="Location (e.g., KYOTO, JAPAN)"
               value={textOverlay.locationText}
               onChange={(e) =>
                 setTextOverlay((prev) => ({
@@ -153,17 +183,17 @@ export default function CinematicTextControls({
                   locationText: e.target.value,
                 }))
               }
-              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition uppercase mb-2"
+              className={FIELD_CLASS}
             />
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-                <IconMovie className="intaglio-icon inline mr-2"/>
-                Billing Block
+              <label htmlFor="overlay-credits-input" className="text-[12px] text-[var(--ui-text-2)]">
+                Credit block
               </label>
               <Toggle
+                ariaLabel="Show credit block"
                 checked={textOverlay.billingBlockEnabled}
                 onChange={(checked) =>
                   setTextOverlay((prev) => ({
@@ -174,164 +204,63 @@ export default function CinematicTextControls({
               />
             </div>
             <textarea
-              placeholder="CREDITS TEXT..."
+              id="overlay-credits-input"
+              placeholder="Credits text…"
               value={textOverlay.billingBlockText}
-              rows={4}
+              rows={3}
               onChange={(e) =>
                 setTextOverlay((prev) => ({
                   ...prev,
                   billingBlockText: e.target.value,
                 }))
               }
-              className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition uppercase resize-none"
+              className={`${FIELD_CLASS} resize-none leading-relaxed`}
             />
           </div>
         </div>
       </ControlGroup>
 
-      {/* 2. Visual Style Presets */}
-      <ControlGroup title="Visual Style">
-        <div className="grid grid-cols-4 gap-1 max-h-[180px] overflow-y-auto pr-1 custom-scrollbar">
-          {[
-            {
-              id: "blade_runner",
-              label: "Blade Runner",
-              color: "text-orange-300",
-              tracking: 0.1,
-            },
-            {
-              id: "interstellar",
-              label: "Interstellar",
-              color: "text-white",
-              tracking: 0.2,
-            },
-            {
-              id: "sicario",
-              label: "Sicario",
-              color: "text-amber-400",
-              tracking: 0.1,
-            },
-            {
-              id: "dune",
-              label: "Dune",
-              color: "text-amber-200",
-              tracking: 0.15,
-            },
-            {
-              id: "arrival",
-              label: "Arrival",
-              color: "text-gray-300",
-              tracking: 0.2,
-            },
-            {
-              id: "revenant",
-              label: "Revenant",
-              color: "text-stone-300",
-              tracking: 0.15,
-            },
-            {
-              id: "oppenheimer",
-              label: "Oppenheimer",
-              color: "text-white",
-              tracking: 0.15,
-            },
-            {
-              id: "the_batman",
-              label: "The Batman",
-              color: "text-red-500",
-              tracking: 0.05,
-            },
-            {
-              id: "joker",
-              label: "Joker",
-              color: "text-lime-400",
-              tracking: 0.0,
-            },
-            {
-              id: "nineteen17",
-              label: "1917",
-              color: "text-stone-400",
-              tracking: 0.2,
-            },
-            {
-              id: "mad_max",
-              label: "Mad Max",
-              color: "text-orange-500",
-              tracking: 0.12,
-            },
-            {
-              id: "her",
-              label: "Her",
-              color: "text-pink-300",
-              tracking: 0.15,
-            },
-            {
-              id: "matrix",
-              label: "Matrix",
-              color: "text-green-500",
-              tracking: 0.25,
-            },
-            {
-              id: "fight_club",
-              label: "Fight Club",
-              color: "text-pink-500",
-              tracking: 0.05,
-            },
-            {
-              id: "pulp_fiction",
-              label: "Pulp Fiction",
-              color: "text-yellow-500",
-              tracking: 0.1,
-            },
-            {
-              id: "lost_in_translation",
-              label: "Lost in Tr.",
-              color: "text-slate-400",
-              tracking: 0.15,
-            },
-            {
-              id: "barbie",
-              label: "Barbie",
-              color: "text-pink-400",
-              tracking: 0.05,
-            },
-            {
-              id: "drive",
-              label: "Drive",
-              color: "text-fuchsia-400",
-              tracking: 0.1,
-            },
-          ].map((style) => (
-            <div role="button" tabIndex={0}
-              key={style.id}
-              onClick={() =>
-                setTextOverlay((prev) => ({
-                  ...prev,
-                  subtitleStyle:
-                    style.id as TextOverlaySettings["subtitleStyle"],
-                  letterSpacing: style.tracking,
-                }))
-              }
-              className={`py-1.5 px-1 text-[8px] font-mono uppercase tracking-widest transition border border-[var(--intaglio-line)] rounded-none flex flex-col items-center justify-center gap-1 ${
-                textOverlay.subtitleStyle === style.id
-                  ? `bg-white/10 border-amber-500/50 ${style.color} ring-1 ring-amber-500/20`
-                  : "bg-white/5 border-white/5 text-gray-500 hover:text-gray-300 hover:bg-white/10"
-              }`}
-            >
-              <span className="truncate w-full text-center">{style.label}</span>
-            </div>
-          ))}
+      {/* 2. Title Style Presets */}
+      <ControlGroup title="Title style">
+        <div className="ui-scroll grid max-h-[200px] grid-cols-3 gap-1.5 overflow-y-auto pr-1">
+          {VISUAL_STYLES.map((style) => {
+            const active = textOverlay.subtitleStyle === style.id;
+            return (
+              <button
+                type="button"
+                key={style.id}
+                aria-pressed={active}
+                onClick={() =>
+                  setTextOverlay((prev) => ({
+                    ...prev,
+                    subtitleStyle: style.id,
+                    letterSpacing: style.tracking,
+                  }))
+                }
+                className={`ui-focus flex items-center gap-1.5 rounded-[7px] px-2 py-1.5 text-left text-[11px] font-medium transition-colors ${
+                  active
+                    ? "bg-[var(--ui-accent-soft)] text-[var(--ui-text)] ring-1 ring-inset ring-[var(--ui-accent)]/50"
+                    : "bg-white/[0.03] text-[var(--ui-text-2)] ring-1 ring-inset ring-[var(--ui-line)] hover:bg-white/[0.06] hover:text-[var(--ui-text)]"
+                }`}
+              >
+                <span
+                  aria-hidden
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: style.swatch }}
+                />
+                <span className="truncate">{style.label}</span>
+              </button>
+            );
+          })}
         </div>
       </ControlGroup>
 
       {/* 3. Typography & Appearance */}
       <ControlGroup title="Typography">
-        {/* Font Override Toggle */}
-        <div className="flex items-center justify-between mb-3 px-1">
-          <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500">
-            Custom Typography
-          </label>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-[var(--ui-text-2)]">Custom typography</span>
           <Toggle
+            ariaLabel="Custom typography"
             checked={textOverlay.customFontEnabled}
             onChange={(checked) =>
               setTextOverlay((prev) => ({
@@ -343,255 +272,240 @@ export default function CinematicTextControls({
         </div>
 
         {textOverlay.customFontEnabled && (
-          <div className="space-y-4 mb-4 pt-1 animate-in slide-in-from-top-2">
-            {/* Font Family */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 z-10">
-                <IconTypography className="intaglio-icon"/>
-              </div>
-              <FontSelector
-                value={textOverlay.customFontName}
-                fonts={POPULAR_FONTS}
-                onChange={(val) => {
-                  setTextOverlay((prev) => ({
-                    ...prev,
-                    customFontName: val,
-                  }));
+          <div className="space-y-2.5 pt-1">
+            <FontSelector
+              value={textOverlay.customFontName}
+              fonts={POPULAR_FONTS}
+              onChange={(val) =>
+                setTextOverlay((prev) => ({
+                  ...prev,
+                  customFontName: val,
+                }))
+              }
+            />
+
+            <label className="ui-focus flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-[8px] bg-[var(--ui-control)] px-3 text-[12px] font-medium text-[var(--ui-text-2)] ring-1 ring-inset ring-[var(--ui-line)] transition-colors hover:bg-[var(--ui-control-hover)] hover:text-[var(--ui-text)]">
+              <IconUpload size={14} stroke={1.8} />
+              Embed font file
+              <input
+                type="file"
+                accept=".woff2,.ttf,.otf,font/woff2,font/ttf,font/otf"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file && onFontUpload) void onFontUpload(file);
+                  event.target.value = "";
                 }}
-                className="pl-7" // Extra padding for the icon
               />
-            </div>
-            <label className="flex cursor-pointer items-center justify-center gap-2 border border-white/10 bg-black/25 px-3 py-2 font-mono text-[9px] uppercase tracking-widest text-white/55 hover:border-amber-500/40 hover:text-amber-300">
-              <IconUpload className="intaglio-icon"/> Embed font file
-              <input type="file" accept=".woff2,.ttf,.otf,font/woff2,font/ttf,font/otf" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file && onFontUpload) void onFontUpload(file); event.target.value = ""; }} />
             </label>
 
-            {/* Weight & Style */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="relative">
-                <CustomSelect
-                  value={textOverlay.customFontWeight || "400"}
-                  options={[
-                    { value: "100", label: "Thin (100)" },
-                    { value: "300", label: "Light (300)" },
-                    { value: "400", label: "Regular (400)" },
-                    { value: "500", label: "Medium (500)" },
-                    { value: "700", label: "Bold (700)" },
-                    { value: "900", label: "Black (900)" },
-                  ]}
-                  onChange={(val) =>
-                    setTextOverlay((prev) => ({
-                      ...prev,
-                      customFontWeight: val,
-                    }))
-                  }
-                />
-              </div>
-              <div role="button" tabIndex={0}
+            <div className="grid grid-cols-2 gap-1.5">
+              <CustomSelect
+                value={textOverlay.customFontWeight || "400"}
+                options={[
+                  { value: "100", label: "Thin (100)" },
+                  { value: "300", label: "Light (300)" },
+                  { value: "400", label: "Regular (400)" },
+                  { value: "500", label: "Medium (500)" },
+                  { value: "700", label: "Bold (700)" },
+                  { value: "900", label: "Black (900)" },
+                ]}
+                onChange={(val) =>
+                  setTextOverlay((prev) => ({
+                    ...prev,
+                    customFontWeight: val,
+                  }))
+                }
+              />
+              <button
+                type="button"
+                aria-pressed={textOverlay.customFontStyle === "italic"}
                 onClick={() =>
                   setTextOverlay((prev) => ({
                     ...prev,
-                    customFontStyle:
-                      prev.customFontStyle === "italic" ? "normal" : "italic",
+                    customFontStyle: prev.customFontStyle === "italic" ? "normal" : "italic",
                   }))
                 }
-                className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg border transition ${
+                className={`ui-focus flex h-8 items-center justify-center gap-1.5 rounded-[8px] text-[12px] font-medium ring-1 ring-inset transition-colors ${
                   textOverlay.customFontStyle === "italic"
-                    ? "bg-white/10 border-amber-500/50 text-amber-400"
-                    : "bg-black/30 border-white/10 text-gray-400 hover:text-gray-200"
+                    ? "bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)] ring-[var(--ui-accent)]/50"
+                    : "bg-black/30 text-[var(--ui-text-2)] ring-[var(--ui-line)] hover:bg-white/[0.05] hover:text-[var(--ui-text)]"
                 }`}
               >
-                <IconItalic className="intaglio-icon"/> Italic
-              </div>
+                <IconItalic size={14} stroke={1.8} />
+                Italic
+              </button>
             </div>
 
-            {/* Transform Row */}
-            <div className="flex bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none p-1 gap-1">
-              {[
-                { id: "none", icon: <IconX className="intaglio-icon"/> },
-                {
-                  id: "uppercase",
-                  icon: <IconLetterCaseUpper className="intaglio-icon"/>,
-                },
-                {
-                  id: "lowercase",
-                  icon: <IconLetterCaseLower className="intaglio-icon"/>,
-                },
-                {
-                  id: "capitalize",
-                  icon: <IconLetterCase className="intaglio-icon"/>,
-                },
-              ].map((opt) => (
-                <div role="button" tabIndex={0}
+            <div className="grid grid-cols-4 gap-1 rounded-[8px] bg-black/30 p-0.5 ring-1 ring-inset ring-[var(--ui-line)]">
+              {(
+                [
+                  { id: "none", label: "Normal case", icon: <IconX size={14} /> },
+                  { id: "uppercase", label: "Uppercase", icon: <IconLetterCaseUpper size={14} /> },
+                  { id: "lowercase", label: "Lowercase", icon: <IconLetterCaseLower size={14} /> },
+                  { id: "capitalize", label: "Capitalize", icon: <IconLetterCase size={14} /> },
+                ] as const
+              ).map((opt) => (
+                <button
+                  type="button"
                   key={opt.id}
+                  aria-label={opt.label}
+                  aria-pressed={textOverlay.customTextTransform === opt.id}
                   onClick={() =>
                     setTextOverlay((prev) => ({
                       ...prev,
-                      customTextTransform:
-                        opt.id as TextOverlaySettings["customTextTransform"],
+                      customTextTransform: opt.id,
                     }))
                   }
-                  className={`flex-1 py-1.5 flex items-center justify-center rounded transition ${
+                  className={`ui-focus flex h-7 items-center justify-center rounded-[6px] transition-colors ${
                     textOverlay.customTextTransform === opt.id
-                      ? "bg-white/20 text-white shadow-sm"
-                      : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                      ? "bg-white/[0.12] text-[var(--ui-text)]"
+                      : "text-[var(--ui-text-3)] hover:bg-white/[0.04] hover:text-[var(--ui-text-2)]"
                   }`}
                 >
                   {opt.icon}
-                </div>
+                </button>
               ))}
             </div>
-            {/* Small Caps */}
-            <div className="">
-              <div role="button" tabIndex={0}
-                onClick={() =>
-                  setTextOverlay((prev) => ({
-                    ...prev,
-                    customFontVariant:
-                      prev.customFontVariant === "small-caps"
-                        ? "normal"
-                        : "small-caps",
-                  }))
-                }
-                className={`w-full flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg border transition ${
-                  textOverlay.customFontVariant === "small-caps"
-                    ? "bg-white/10 border-amber-500/50 text-amber-400"
-                    : "bg-black/30 border-white/10 text-gray-400 hover:text-gray-200"
-                }`}
-              >
-                <span className="font-variant-small-caps">Small Caps</span>
-              </div>
-            </div>
+
+            <button
+              type="button"
+              aria-pressed={textOverlay.customFontVariant === "small-caps"}
+              onClick={() =>
+                setTextOverlay((prev) => ({
+                  ...prev,
+                  customFontVariant:
+                    prev.customFontVariant === "small-caps" ? "normal" : "small-caps",
+                }))
+              }
+              className={`ui-focus flex h-8 w-full items-center justify-center rounded-[8px] text-[12px] font-medium ring-1 ring-inset transition-colors ${
+                textOverlay.customFontVariant === "small-caps"
+                  ? "bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)] ring-[var(--ui-accent)]/50"
+                  : "bg-black/30 text-[var(--ui-text-2)] ring-[var(--ui-line)] hover:bg-white/[0.05] hover:text-[var(--ui-text)]"
+              }`}
+            >
+              Small Caps
+            </button>
           </div>
         )}
 
-        {/* Size & Spacing Sliders - Always Visible */}
         <Slider
           label="Size"
           value={textOverlay.fontSize}
+          defaultValue={1}
           min={0.5}
           max={3}
           step={0.1}
-          onChange={(v) =>
-            setTextOverlay((prev) => ({
-              ...prev,
-              fontSize: v,
-            }))
-          }
-          icon={<IconTypography className="intaglio-icon"/>}
+          onChange={(v) => setTextOverlay((prev) => ({ ...prev, fontSize: v }))}
+          icon={<IconTypography size={13} stroke={1.7} />}
         />
 
         <Slider
           label="Spacing"
           value={textOverlay.letterSpacing}
+          defaultValue={0}
           min={-0.2}
           max={1.0}
           step={0.01}
-          onChange={(v) =>
-            setTextOverlay((prev) => ({
-              ...prev,
-              letterSpacing: v,
-            }))
-          }
-          icon={<IconSpacingHorizontal className="intaglio-icon"/>}
+          onChange={(v) => setTextOverlay((prev) => ({ ...prev, letterSpacing: v }))}
+          icon={<IconSpacingHorizontal size={13} stroke={1.7} />}
         />
 
-        <div className="pt-2"></div>
         <Slider
           label="Opacity"
           value={textOverlay.opacity}
+          defaultValue={1}
           min={0}
           max={1}
-          onChange={(v) =>
-            setTextOverlay((prev) => ({
-              ...prev,
-              opacity: v,
-            }))
-          }
-          icon={<IconEye className="intaglio-icon"/>}
+          onChange={(v) => setTextOverlay((prev) => ({ ...prev, opacity: v }))}
+          icon={<IconEye size={13} stroke={1.7} />}
         />
 
         {textOverlay.customFontEnabled && (
           <>
-            <div className="pt-4 border-t border-[var(--intaglio-line)] mt-4">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-2 block">
-                Advanced Layout
-              </label>
-              
-              <div className="flex bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none p-1 gap-1 mb-4">
-                {[
-                  { id: "left", icon: <IconAlignLeft className="intaglio-icon"/> },
-                  { id: "center", icon: <IconAlignCenter className="intaglio-icon"/> },
-                  { id: "right", icon: <IconAlignRight className="intaglio-icon"/> },
-                ].map((opt) => (
-                  <div role="button" tabIndex={0}
+            <div className="space-y-2 border-t border-[var(--ui-line)] pt-3">
+              <span className="block text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
+                Layout
+              </span>
+
+              <div className="grid grid-cols-3 gap-1 rounded-[8px] bg-black/30 p-0.5 ring-1 ring-inset ring-[var(--ui-line)]">
+                {(
+                  [
+                    { id: "left", label: "Align left", icon: <IconAlignLeft size={14} /> },
+                    { id: "center", label: "Align center", icon: <IconAlignCenter size={14} /> },
+                    { id: "right", label: "Align right", icon: <IconAlignRight size={14} /> },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    type="button"
                     key={opt.id}
+                    aria-label={opt.label}
+                    aria-pressed={textOverlay.textAlign === opt.id}
                     onClick={() =>
                       setTextOverlay((prev) => ({
                         ...prev,
-                        textAlign: opt.id as TextOverlaySettings["textAlign"],
+                        textAlign: opt.id,
                       }))
                     }
-                    className={`flex-1 py-1.5 flex items-center justify-center rounded transition ${
+                    className={`ui-focus flex h-7 items-center justify-center rounded-[6px] transition-colors ${
                       textOverlay.textAlign === opt.id
-                        ? "bg-white/20 text-white shadow-sm"
-                        : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                        ? "bg-white/[0.12] text-[var(--ui-text)]"
+                        : "text-[var(--ui-text-3)] hover:bg-white/[0.04] hover:text-[var(--ui-text-2)]"
                     }`}
                   >
                     {opt.icon}
-                  </div>
+                  </button>
                 ))}
               </div>
 
               <Slider
-                label="Line Height"
+                label="Line height"
                 value={textOverlay.lineHeight || 1.2}
+                defaultValue={1.2}
                 min={0.5}
                 max={2.5}
                 step={0.05}
-                onChange={(v) =>
-                  setTextOverlay((prev) => ({ ...prev, lineHeight: v }))
-                }
-                icon={<IconArrowAutofitHeight className="intaglio-icon"/>}
+                onChange={(v) => setTextOverlay((prev) => ({ ...prev, lineHeight: v }))}
+                icon={<IconArrowAutofitHeight size={13} stroke={1.7} />}
               />
             </div>
 
-            <div className="pt-4 border-t border-[var(--intaglio-line)] mt-4">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
-                <IconShadow className="intaglio-icon"/> Drop Shadow
-              </label>
-              
+            <div className="space-y-2 border-t border-[var(--ui-line)] pt-3">
+              <span className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--ui-text-3)]">
+                <IconShadow size={13} stroke={1.7} /> Drop shadow
+              </span>
+
               <input
                 type="text"
-                placeholder="Shadow Color (e.g., rgba(0,0,0,0.8))"
+                aria-label="Shadow color"
+                placeholder="rgba(0,0,0,0.8)"
                 value={textOverlay.shadowColor || "rgba(0,0,0,0.8)"}
                 onChange={(e) =>
                   setTextOverlay((prev) => ({ ...prev, shadowColor: e.target.value }))
                 }
-                className="w-full bg-[#0a0908] border border-[var(--intaglio-line)] rounded-none px-3 py-2 text-[10px] font-mono tracking-widest text-[var(--intaglio-paper)] placeholder:text-gray-600 focus:outline-none focus:border-amber-500/50 transition mb-3"
+                className={FIELD_CLASS}
               />
 
               <Slider
-                label="Blur Radius"
-                value={textOverlay.shadowBlur || 20}
+                label="Blur radius"
+                value={textOverlay.shadowBlur ?? 20}
+                defaultValue={20}
                 min={0}
                 max={100}
                 step={1}
-                onChange={(v) =>
-                  setTextOverlay((prev) => ({ ...prev, shadowBlur: v }))
-                }
-                icon={<IconShadow className="intaglio-icon"/>}
+                onChange={(v) => setTextOverlay((prev) => ({ ...prev, shadowBlur: v }))}
+                icon={<IconShadow size={13} stroke={1.7} />}
               />
               <Slider
                 label="Distance"
-                value={textOverlay.shadowDistance || 4}
+                value={textOverlay.shadowDistance ?? 4}
+                defaultValue={4}
                 min={-50}
                 max={50}
                 step={1}
-                onChange={(v) =>
-                  setTextOverlay((prev) => ({ ...prev, shadowDistance: v }))
-                }
-                icon={<IconShadow className="intaglio-icon"/>}
+                bipolar
+                onChange={(v) => setTextOverlay((prev) => ({ ...prev, shadowDistance: v }))}
+                icon={<IconShadow size={13} stroke={1.7} />}
               />
             </div>
           </>

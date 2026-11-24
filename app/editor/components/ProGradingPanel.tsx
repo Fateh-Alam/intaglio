@@ -21,7 +21,7 @@ export function ProGradingPanel({ onClose }: { onClose: () => void }) {
     try {
       const cube = bakeGradeLut(editor.settings, editor.gradeGraph, size);
       const url = URL.createObjectURL(new Blob([cube], { type: 'text/plain' }));
-      const link = document.createElement('a'); link.href = url; link.download = `intaglio-color-grade-${size}.cube`; link.click();
+      const link = document.createElement('a'); link.href = url; link.download = `etch-color-grade-${size}.cube`; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setMessage(`Exported ${size}³ color grade.`);
     } catch (error) { setMessage(error instanceof Error ? error.message : String(error)); }
