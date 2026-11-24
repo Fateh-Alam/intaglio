@@ -58,6 +58,12 @@ interface ShellState {
   /** Viewport coordinates for the detached floating histogram; null uses the default corner. */
   histogramPosition: HistogramPosition | null;
   setHistogramPosition: (position: HistogramPosition | null) => void;
+  /** Title or caption layer selected in the Text panel and on the photo. */
+  selectedTitleId: string | null;
+  setSelectedTitleId: (id: string | null) => void;
+  /** Show title-safe and action-safe frames while placing text. */
+  showSafeGuides: boolean;
+  setShowSafeGuides: (show: boolean) => void;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -89,6 +95,8 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     readPreference<boolean>(HISTOGRAM_DETACHED_KEY, false, (value): value is boolean => typeof value === "boolean"));
   const [histogramPosition, setHistogramPositionState] = useState<HistogramPosition | null>(() =>
     readPreference<HistogramPosition | null>(HISTOGRAM_POSITION_KEY, null, isHistogramPosition));
+  const [selectedTitleId, setSelectedTitleId] = useState<string | null>("title");
+  const [showSafeGuides, setShowSafeGuides] = useState(false);
 
   const value = useMemo<ShellState>(() => ({
     leftOpen,
@@ -142,7 +150,11 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
       setHistogramPositionState(next);
       writePreference(HISTOGRAM_POSITION_KEY, next);
     },
-  }), [leftOpen, leftTab, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking, histogramVisible, histogramDetached, histogramPosition]);
+    selectedTitleId,
+    setSelectedTitleId,
+    showSafeGuides,
+    setShowSafeGuides,
+  }), [leftOpen, leftTab, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking, histogramVisible, histogramDetached, histogramPosition, selectedTitleId, showSafeGuides]);
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }

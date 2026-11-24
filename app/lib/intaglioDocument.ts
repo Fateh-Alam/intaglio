@@ -1,4 +1,5 @@
 import type { TextOverlaySettings } from "../components/CinematicTextOverlay";
+import { resolveTitles } from "../editor/text/titleModel";
 import type { AssetMetadataSettings, EditorSettings, WatermarkSettings } from "../types/editor";
 import {
   DEFAULT_GEOMETRY_STATE,
@@ -139,6 +140,7 @@ export async function createIntaglioDocument(input: DocumentAdapterInput): Promi
     ],
     overlays: {
       textBlocks,
+      titles: resolveTitles(input.textOverlay),
       watermark: {
         enabled: input.watermark.enabled,
         text: input.watermark.text,

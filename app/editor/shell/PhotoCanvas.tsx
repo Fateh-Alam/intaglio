@@ -284,6 +284,9 @@ export function PhotoCanvas() {
             onStatsUpdate={setHistogram}
             textOverlay={cropping ? undefined : textOverlay}
             setTextOverlay={setTextOverlay}
+            titleEditing={!cropping && !zoomed && shell.rightMode === "text" && !shell.panelsHidden
+              ? { selectedId: shell.selectedTitleId, onSelect: shell.setSelectedTitleId, showSafeGuides: shell.showSafeGuides }
+              : null}
             watermark={watermark}
             performanceMode={performanceMode}
             compositionGuide={cropping ? "off" : compositionGuide}

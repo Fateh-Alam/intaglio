@@ -9,10 +9,8 @@ import React, {
 import { Canvas } from "@react-three/fiber";
 import ImagePlane, { type LoupeView } from "./ImagePlane";
 import type { LinearSourceBuffer } from "../editor/render/sourceTexture";
-import CinematicTextOverlay, {
-  TextOverlaySettings,
-} from "./CinematicTextOverlay";
-import RenderedOverlayCanvas from "./RenderedOverlayCanvas";
+import type { TextOverlaySettings } from "./CinematicTextOverlay";
+import { TitleStage, type TitleEditing } from "../editor/text/TitleStage";
 import type { MaskColorSampler } from "../lib/maskGeometry";
 import { cropSize, fitPhoto } from "../lib/cropGeometry";
 import type {
@@ -43,7 +41,10 @@ export default function CinematicEditor({
   rawSource = null,
   view,
   onOutputSize,
+  titleEditing = null,
 }: {
+  /** On-photo title handles; only while the Text panel is open. */
+  titleEditing?: TitleEditing | null;
   /**
    * Loupe view. The parent zooms its DOM overlays with a CSS transform about
    * the center (translate(pan) scale(zoom)); the WebGL canvas cancels that
@@ -164,7 +165,7 @@ export default function CinematicEditor({
       {imageBounds && textOverlay && (
         <div
           id="text-overlay-container"
-          className="absolute pointer-events-auto"
+          className={`absolute ${titleEditing ? "pointer-events-auto" : "pointer-events-none"}`}
           style={{
             left: imageBounds.left,
             top: imageBounds.top,
@@ -172,10 +173,14 @@ export default function CinematicEditor({
             height: imageBounds.height,
           }}
         >
-          <RenderedOverlayCanvas text={textOverlay} watermark={watermark ?? { enabled: false, text: "", position: "bottom-right", opacity: 0, size: 0 }} />
-          <div className="absolute inset-0 opacity-0 focus-within:opacity-100 hover:opacity-100">
-            <CinematicTextOverlay settings={textOverlay} setSettings={setTextOverlay} />
-          </div>
+          <TitleStage
+            text={textOverlay}
+            setText={setTextOverlay}
+            watermark={watermark}
+            width={imageBounds.width}
+            height={imageBounds.height}
+            editing={titleEditing}
+          />
         </div>
       )}
     </div>
