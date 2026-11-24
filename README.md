@@ -42,6 +42,20 @@ pnpm build:cloudflare
 
 The archive browser contract currently proves a 65 MB disk-backed project in Chromium and a safe size-specific rejection in Playwright WebKit when OPFS is unavailable. This is not yet the promised 1 GB real-Safari qualification.
 
+## macOS app (early)
+
+`src-tauri/` holds the Tauri 2 shell for the Mac app (phase D1 in [the roadmap](docs/PRO_ROADMAP.md#10-desktop-a-mac-app-that-competes-with-lightroom-windows-next)). It wraps a static export of the editor (`ETCH_TARGET=desktop`, written to `out/`) in the system webview and adds a native menu bar, native Save sheets and alerts, and Finder integration (`.etch` and `.etchlook` files open in Etch; photos offer "Open With → Etch"). [app/lib/platform.ts](app/lib/platform.ts) is the one place where web and desktop behave differently. It also checks for signed updates once a day (see the [release runbook](docs/RELEASE_RUNBOOK.md#publishing-a-release)). The Rust `etch-core` engine comes next. It needs a Rust toolchain (`rustup`) and Xcode.
+
+```bash
+pnpm desktop:dev
+```
+
+```bash
+pnpm desktop:build
+```
+
+The build writes `src-tauri/target/release/bundle/macos/Etch.app` and a `.dmg`, plus signed update files when the update key is present. Builds are ad-hoc signed and not notarized, so the first launch on another Mac needs **System Settings → Privacy & Security → Open Anyway** (see the release runbook).
+
 ## Privacy
 
 Photographs, RAW files, recipes, projects, LUTs, uploaded fonts, and exports stay in the browser. Cloudflare may record request and error telemetry for the application shell, but editor content is never sent to the Worker.

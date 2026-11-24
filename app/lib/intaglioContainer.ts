@@ -12,6 +12,7 @@ import {
 } from "../types/document";
 import { sha256Hex } from "./crypto";
 import { validateGradeGraph } from "./gradeGraph";
+import { isDesktopApp, saveFile } from "./platform";
 
 export class IntaglioContainerError extends Error {
   constructor(public readonly code: string, message: string) { super(message); this.name = "IntaglioContainerError"; }
@@ -355,14 +356,12 @@ export async function openIntaglioContainer(file: Blob): Promise<{ manifest: Int
   return { manifest, runtime };
 }
 
-export function triggerContainerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-    void releaseContainerOutput(blob);
-  }, 30_000);
+/** Saves a project or recipe archive. Resolves `false` if the user cancels. */
+export async function triggerContainerDownload(blob: Blob, filename: string): Promise<boolean> {
+  try {
+    return await saveFile(blob, filename);
+  } finally {
+    // The browser reads the blob URL lazily, so give the download time to start.
+    setTimeout(() => void releaseContainerOutput(blob), isDesktopApp() ? 0 : 30_000);
+  }
 }

@@ -11,6 +11,7 @@ import { sha256Hex } from "../../lib/crypto";
 import { FORMAT } from "../../lib/brand";
 import { serializeEditorSettings } from "../pageTypes";
 import { createLinearSourceTexture, loadImageTexture, type LinearSourceBuffer } from "../render/sourceTexture";
+import { saveFile, showError } from "../../lib/platform";
 
 type ItemStatus = "queued" | "developing" | "rendering" | "complete" | "failed" | "cancelled";
 interface QueueItem { id: string; file: File; status: ItemStatus; progress: number; detail: string; outputName?: string }
@@ -155,12 +156,11 @@ export function BatchExportModal(): React.ReactElement | null {
     const manifest: BatchManifest = { formatVersion: "2.0.0", appId: FORMAT.appId, createdAt: new Date().toISOString(), items: manifestItems };
     if (outputs.size > 0) {
       const archive = await createBatchZip(outputs, manifest);
-      const url = URL.createObjectURL(archive);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `etch-batch-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`;
-      anchor.click();
-      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      try {
+        await saveFile(archive, `etch-batch-${new Date().toISOString().replace(/[:.]/g, "-")}.zip`);
+      } catch (error) {
+        void showError(error instanceof Error ? `Could not save the batch: ${error.message}` : "Could not save the batch.");
+      }
     }
     abortRef.current = null;
     setIsRunning(false);

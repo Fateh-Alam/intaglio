@@ -8,6 +8,7 @@ import {
   IconPalette,
   IconWand,
 } from "@tabler/icons-react";
+import { saveFile, showError } from "../lib/platform";
 
 interface LUTCreatorModalProps {
   isOpen: boolean;
@@ -134,12 +135,8 @@ export default function LUTCreatorModal({
     const cubeContent = lutToCube(lut, LUT_SIZE, lutName);
 
     const blob = new Blob([cubeContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${lutName.replace(/\s+/g, "_").toLowerCase()}.cube`;
-    a.click();
-    URL.revokeObjectURL(url);
+    void saveFile(blob, `${lutName.replace(/\s+/g, "_").toLowerCase()}.cube`)
+      .catch((error) => void showError(error instanceof Error ? error.message : "Could not save the LUT."));
   }, [lift, gamma, gain, saturation, tempShift, lutName]);
 
   const handleApply = useCallback(() => {

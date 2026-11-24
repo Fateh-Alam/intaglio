@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useSerwist } from "@serwist/turbopack/react";
+import { askConfirm } from "../lib/platform";
 
 export default function SerwistUpdatePrompt() {
   const { serwist } = useSerwist();
@@ -11,8 +12,10 @@ export default function SerwistUpdatePrompt() {
     let acceptingUpdate = false;
     const onWaiting = (event: { isUpdate?: boolean }) => {
       if (!event.isUpdate) return;
-      acceptingUpdate = window.confirm("A complete Etch update is ready. Reload now?");
-      if (acceptingUpdate) serwist.messageSkipWaiting();
+      void askConfirm("A complete Etch update is ready. Reload now?", { confirmLabel: "Reload" }).then((accepted) => {
+        acceptingUpdate = accepted;
+        if (accepted) serwist.messageSkipWaiting();
+      });
     };
     const onControlling = () => {
       if (acceptingUpdate) window.location.reload();

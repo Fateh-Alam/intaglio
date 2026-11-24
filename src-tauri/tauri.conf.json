@@ -1,0 +1,132 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Etch",
+  "version": "../package.json",
+  "identifier": "com.fatehalam.etch",
+  "build": {
+    "frontendDist": "../out",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build:desktop"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Etch",
+        "url": "editor/",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "center": true,
+        "backgroundColor": "#14130f",
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg"
+    ],
+    "category": "public.app-category.photography",
+    "shortDescription": "A precision-machined digital darkroom",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.png"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-"
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "etch"
+        ],
+        "name": "Etch Project",
+        "description": "Etch project",
+        "role": "Editor",
+        "rank": "Owner",
+        "mimeType": "application/x-etch-project",
+        "exportedType": {
+          "identifier": "com.fatehalam.etch.project",
+          "conformsTo": [
+            "public.data",
+            "public.zip-archive"
+          ]
+        }
+      },
+      {
+        "ext": [
+          "etchlook"
+        ],
+        "name": "Etch Look",
+        "description": "Etch look recipe",
+        "role": "Editor",
+        "rank": "Owner",
+        "mimeType": "application/x-etch-recipe",
+        "exportedType": {
+          "identifier": "com.fatehalam.etch.look",
+          "conformsTo": [
+            "public.data",
+            "public.zip-archive"
+          ]
+        }
+      },
+      {
+        "ext": [
+          "intaglio",
+          "int"
+        ],
+        "name": "Intaglio File (legacy)",
+        "description": "Legacy Intaglio project or recipe",
+        "role": "Editor",
+        "rank": "Default"
+      },
+      {
+        "ext": [
+          "jpg",
+          "jpeg",
+          "png",
+          "webp",
+          "dng",
+          "cr2",
+          "cr3",
+          "nef",
+          "arw",
+          "raf",
+          "orf",
+          "rw2"
+        ],
+        "name": "Photograph",
+        "description": "Photograph",
+        "role": "Viewer",
+        "rank": "Alternate",
+        "contentTypes": [
+          "public.jpeg",
+          "public.png",
+          "org.webmproject.webp",
+          "public.camera-raw-image"
+        ]
+      }
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdGMjI2NDk3NjA3M0RGNDYKUldSRzMzTmdsMlFpZjVuZ3I5bi9SbFJUbkJESXk3dUtYZW45SEg2VnJtVzZLYm1tb1BJWEs0R0MK",
+      "endpoints": [
+        "https://github.com/Fateh-Alam/intaglio/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

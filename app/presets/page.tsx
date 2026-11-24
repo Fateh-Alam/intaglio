@@ -23,6 +23,7 @@ import { createIntaglioDocument, createRuntimeAssetStore } from "../lib/intaglio
 import { applyRecipe } from "../lib/recipeEngine";
 import { DEFAULT_ASSET_METADATA, DEFAULT_SETTINGS, DEFAULT_WATERMARK, serializeEditorSettings } from "../editor/pageTypes";
 import { DEFAULT_TEXT_OVERLAY } from "../components/CinematicTextOverlay";
+import { showError } from "../lib/platform";
 
 interface PresetCardProps {
   preset: IntaglioRecipe;
@@ -207,7 +208,7 @@ export default function PresetsPage() {
       exportRecipeId: null,
     });
     const archive = await createIntaglioContainer("recipe", document, createRuntimeAssetStore());
-    triggerContainerDownload(archive, `etch-${preset.id}.${FORMAT.recipeExtension}`);
+    await triggerContainerDownload(archive, `etch-${preset.id}.${FORMAT.recipeExtension}`);
   };
 
   const handlePreview = (preset: IntaglioRecipe) => {
@@ -234,7 +235,7 @@ export default function PresetsPage() {
       setActiveTag("Imported");
     } catch (error) {
       console.error("Failed to import preset:", error);
-      alert("Could not import one or more recipe files.");
+      void showError("Could not import one or more recipe files.");
     } finally {
       event.target.value = "";
     }

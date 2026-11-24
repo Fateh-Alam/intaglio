@@ -30,9 +30,10 @@ We will not out-feature Lightroom, Capture One, Photoshop, Resolve and darktable
 6. **No AI, ever.** Classical algorithms, deterministic results (decided 2026-10-03, see §11).
 7. **Pro power, Lightroom simplicity.** The most advanced tool on the market must feel as approachable as Lightroom. See the ease-of-use contract below.
 8. **Breathtaking design.** The interface must be the most beautiful, considered product design in the category: calm, precise, photo-first, fast. Design quality is a release gate, not polish.
+9. **Power for everyone (decided 2026-11-24).** Etch aims to be the most capable photo app ever made, and its most innovative, highest-capability features are never reserved for photography experts. Anyone, on their first day, can reach and use them. Expert surfaces add depth and precision, but no capability exists *only* behind expert vocabulary or setup.
 
 ### Ease-of-use contract (every feature must pass)
-1. **Familiar first.** The default right panel follows Lightroom's mental model and order: Basic → Tone Curve → Color Mixer → Color Grading → Detail → Optics → Geometry → Effects → Calibration. Advanced surfaces (Nodes, LUT Studio, Scopes, Film Lab) are opt-in workspaces and never stand in the way.
+1. **Familiar first.** The default right panel follows Lightroom's mental model and order: Basic → Tone Curve → Color Mixer → Color Grading → Detail → Optics → Geometry → Effects → Calibration. Advanced surfaces (Nodes, LUT Studio, Scopes, Film Lab) are opt-in workspaces and never stand in the way, but what they can do is never locked inside them (rule 9).
 2. **Plain language.** Every control is labeled in photographer words ("Highlights", "Skin tones", "Make sky bluer"), with the technical term and a one-line explanation on hover.
 3. **One click to power.** Every advanced capability has a single obvious entry point ("Match look from a photo…", "Save look as LUT…", "Fix skin tones").
 4. **Good by default.** Color management, profiles and view transforms are automatic and correct with zero setup; experts can override.
@@ -40,6 +41,7 @@ We will not out-feature Lightroom, Capture One, Photoshop, Resolve and darktable
 6. **Direct manipulation.** Drag on the photo itself to adjust curves, colors and masks (targeted adjustment), not just numbers.
 7. **Lightroom-compatible muscle memory** where it makes sense: `\` before/after, `R` crop, `K` brush, `J` clipping, `Cmd/Ctrl+Z`, double-click to reset.
 8. **Honest feedback.** Every slow operation shows progress; every failure says what happened and how to fix it.
+9. **No expert-only capability.** Every innovative or advanced capability ships with an outcome-first front door that a beginner understands: named for the result, not the technique ("Match the colors of this photo", not "optimal-transport color transfer"); reachable in one click from the photo, the Edit panel or the command bar; and good with zero settings. The expert surface (nodes, curves, numbers) is the same feature opened up, not a separate, harder feature. A capability isn't done until someone new to photography can use it unaided. This is a release gate, checked alongside the render contract.
 
 ---
 
@@ -70,7 +72,7 @@ These were shipping defects; all are now covered by unit tests and/or the render
 - **Grade Graph is decorative.** Nodes are validated and saved, but nothing compiles them into the renderer. → Phase 1, item G1.
 - **No crop stage in the renderer.** `GeometryState.crop` exists in the schema only. → Phase 0.
 - **History stores 50 full snapshots.** → Phase 0, command history.
-- **13 `alert/confirm/prompt` calls and 6 `<a download>` flows.** These block the desktop app (webviews don't implement `prompt`). → Phase 0.
+- **12 `alert/confirm/prompt` calls and 6 `<a download>` flows** (recounted 2026-11-24). These block the desktop app (webviews don't implement `prompt`). → Phase 0.
 - **RAW is decoded into sRGB primaries** (`outputColor: 1`). Wide-gamut camera color is clipped at decode. → Phase 1, item C2.
 - **Two very large files:** `useEditorState.tsx` (~1.8k lines) and `EditorRightSidebar.tsx` (~1.9k lines).
 
@@ -89,9 +91,9 @@ These were shipping defects; all are now covered by unit tests and/or the render
                 └───────────────┬─────────────────────────────────────────┬────────────────────┘
                                 │                                         │
                 ┌───────────────▼───────────────┐         ┌───────────────▼───────────────┐
-                │ GPU backend: WebGPU (WGSL)     │         │ GPU backend: WebGL2 (fallback) │
-                │ compute: blurs, pyramids,      │         │ current three.js passes        │
-                │ scopes, denoise, PatchMatch    │         │                                │
+                │ etch-core (Rust, wgpu, WGSL)  │         │ GPU backend: WebGL2 (fallback) │
+                │ WebGPU · Metal · D3D12        │         │ current three.js passes        │
+                │ compute, scopes, PatchMatch   │         │ retired once etch-core matches │
                 └───────────────┬───────────────┘         └───────────────┬───────────────┘
                                 └──────────────┬──────────────────────────┘
                      ┌─────────────────────────▼─────────────────────────┐
@@ -105,8 +107,8 @@ These were shipping defects; all are now covered by unit tests and/or the render
 ### Engine strategy: one engine, three shells
 - **Now:** a TypeScript engine on three.js/WebGL2 (what exists).
 - **Next:** introduce a **Graph IR** between the document and passes. Passes declare inputs, outputs, params and cost, and the scheduler caches each node by content hash. This alone fixes the "every plate re-runs every pass at full resolution" problem.
-- **Then:** add a **WebGPU backend** (WGSL compute) behind the IR. Compute shaders unlock fast separable blurs, image pyramids (local Laplacian, multiband blending), GPU histograms and scopes, NL-means denoise, and PatchMatch. WebGPU ships in Chrome, Edge and Safari 26, and in WebView2 and WKWebView, so the same code runs in both desktop shells. WebGL2 stays as a fallback.
-- **Desktop native compute** (Phase 4): heavy CPU work (RAW decode, lens database, ICC transforms) moves to Rust in the desktop shell. The web build keeps WASM builds of the same Rust crates, so one codebase still yields the same pixels everywhere.
+- **Then:** build **`etch-core`**, a Rust engine that implements the IR on **`wgpu`** with **WGSL** shaders (Phase 3). `wgpu` targets Metal on macOS, D3D12 on Windows, and WebGPU in the browser through WASM, so one shader source and one engine produce the pixels on every platform. Compute shaders unlock fast separable blurs, image pyramids (local Laplacian, multiband blending), GPU histograms and scopes, NL-means denoise, and PatchMatch. The current GLSL passes are ported to WGSL (`naga` translates most of them), gated pass by pass by the render contract.
+- **Desktop native compute** (Phase 4): RAW decode, lens corrections, ICC transforms, the catalog and file watching run natively in `etch-core`, and the desktop viewport is a native Metal layer (§10). The web build runs WASM builds of the same crates, so one codebase still yields the same pixels everywhere. The TypeScript/WebGL2 engine stays as the web fallback until `etch-core` matches it, then retires.
 
 ### State architecture (Phase 0)
 - Replace the 90-key `EditorSettings` bag with **typed node params** in the grade graph. Keep a "Basic" facade so the current UI keeps working.
@@ -240,7 +242,9 @@ Local verification: typecheck, lint, production build and 67 automated tests pas
 
 ## 8. Track W — Workflow and library
 
-- [ ] **Catalog:** SQLite (WASM on web via OPFS; native on desktop) with folders, collections, smart collections, ratings, flags, color labels, keywords, and EXIF/IPTC fields.
+- [ ] **Catalog:** SQLite (WASM on web via OPFS; native in `etch-core` on desktop, WAL mode with FTS5 keyword search) with folders, collections, smart collections, ratings, flags, color labels, keywords, and EXIF/IPTC fields.
+- [ ] **Lightroom Classic catalog import:** a `.lrcat` is a SQLite database, so read folders, collections, ratings, flags, color labels and keywords directly, and map develop settings (`crs:` fields) and Lightroom presets to our nodes. This is the switching lever on desktop.
+- [ ] **Preview cache and smart previews** (desktop): cached renders for the grid and ~2560 px float16 proxies, so photos stay editable with their drive disconnected.
 - [ ] **Culling:** decode embedded RAW JPEG previews for instant browsing (no full decode), loupe/compare/survey views, and keyboard-only flow (P/X/1–5/arrows). Target: 100 RAWs culled per minute.
 - [ ] **Sync settings** across a selection, with **relative sync** (exposure +0.3 rather than set to 0.3) and per-module checkboxes.
 - [ ] **XMP sidecars:** read and write. Import **Lightroom develop settings** (mapped to our nodes, documenting what doesn't map) so a switcher's back catalog comes with them.
@@ -265,26 +269,77 @@ Local verification: typecheck, lint, production build and 67 automated tests pas
 
 ---
 
-## 10. Desktop: macOS and Windows with every capability
+## 10. Desktop: a Mac app that competes with Lightroom (Windows next)
 
-### Shell choice: **Tauri 2** (recommended)
-| | Tauri 2 | Electron |
+On desktop, Lightroom is beaten in three places: the **image viewport**, the **catalog** and **browsing speed**. A webview is weakest in exactly those three. So the native layer owns the pixels and the library, and the React UI we already have owns the panels.
+
+### Decision (2026-11-24): Rust engine + native Metal viewport, React UI in a Tauri 2 shell
+
+This replaces the earlier plan of running the web renderer unchanged inside the webview.
+
+```
+┌───────────────────── Etch.app (Tauri 2 shell) ─────────────────────┐
+│  React UI (existing panels, sliders, curves, wheels) — WKWebView   │
+│      │  small JSON messages only (slider values, commands)         │
+│      ▼                                                             │
+│  etch-core (Rust) ── edit graph ── GPU pipeline (wgpu → Metal)     │
+│      │                                │                            │
+│  catalog · RAW · color · I/O          └─► native Metal viewport    │
+│  (SQLite, LibRaw, lcms2, ImageIO)         (EDR/HDR, ColorSync)     │
+└────────────────────────────────────────────────────────────────────┘
+        The same etch-core compiles to WASM + WebGPU for the web app
+```
+
+### Stack
+
+| Layer | Choice | Why |
 |---|---|---|
-| Web engines | WKWebView (macOS) = **WebKit**, WebView2 (Windows) = **Chromium** | Chromium everywhere |
-| Fit with our parity matrix | **Exact match**: we already qualify Chromium + WebKit | Simpler matrix, but we'd stop testing WebKit for desktop |
-| Native compute | **Rust:** LibRaw/rawler, lcms2, lensfun, SQLite, file watching, threads | Node native addons (C++/N-API) |
-| Bundle / RAM | ~10–20 MB / low | ~150 MB+ / high |
-| GPU | WebGPU in both webviews (macOS 26+, WebView2) | WebGPU (Chromium) |
+| Engine | Rust crate `etch-core`; `rayon` for CPU threads, `tokio` for I/O | Real threads and no memory cap; one engine for web, macOS and Windows |
+| GPU | `wgpu` with WGSL shaders (Metal on macOS, WebGPU on web, D3D12 on Windows) | One shader source on every platform; GLSL passes port via `naga` |
+| Viewport | Native `CAMetalLayer`: float16, extended linear Display P3, EDR enabled | Lightroom-class HDR editing and full ColorSync display management, which a webview canvas can't give us |
+| UI | Existing React/TS panels in Tauri 2 (WKWebView on macOS, WebView2 on Windows) | Keeps the UI we have and one UI for every platform |
+| RAW | LibRaw (under its CDDL licence), then our own GPU demosaic and highlight reconstruction (§5) | Widest camera coverage; quality stays ours |
+| Lens | lensfun database, Adobe LCP import, DNG opcodes | Most lenses covered on day one |
+| Color | lcms2 (ICC, soft proofing, printer profiles), our OKLab/Rec.2020 pipeline, AgX/ACES view transforms, DCP | §3 on native and web alike |
+| Catalog | SQLite (`rusqlite`) in WAL mode, FTS5 keyword search, XMP sidecars | Scales past 500k photos; sidecars mean no lock-in |
+| Previews | Embedded RAW JPEGs for an instant grid, then a cache of our renders, plus smart-preview proxies (~2560 px, float16) | Photo Mechanic-fast culling; editing with the drive offline |
+| Formats | libjpeg-turbo/MozJPEG, libjxl, libavif, libtiff, Apple ImageIO for HEIC, Adobe XMP Toolkit, Adobe DNG SDK | Fast and permissively licensed |
+| Mac platform | `notify` (FSEvents) hot folders, Quick Look and Spotlight extensions, PhotoKit import, security-scoped bookmarks | Feels like a Mac app; keeps the Mac App Store possible |
+| Shipping | Ad-hoc signed `.dmg` (no paid Apple membership, so no notarization; decided 2026-11-24), Tauri updater with Etch's own update key, Apple Silicon first | Direct download; a one-time "Open Anyway" on first launch, then silent updates. Developer ID can be added later without other changes |
 
-Tauri fits because our render-contract tests already cover exactly the two engines Tauri ships, and Rust gives us native RAW, color management and file I/O without a second language runtime.
+### Engine rules (how it feels faster than Lightroom)
+1. **Pixels never cross the bridge.** The UI sends parameters; Rust renders straight to the Metal layer. Only histograms, scopes and thumbnails come back, as small buffers.
+2. **Render only what's on screen**, at screen resolution, while editing. Full resolution is for 100% zoom and export (§9 viewport-first rendering).
+3. **Show pixels at once, then refine:** embedded JPEG, then proxy render, then full render.
+4. **Tiled image pyramid** for large files and panoramas, so there are no texture-size limits and memory stays flat on 100 MP files.
+
+### Alternatives considered
+| Option | Verdict |
+|---|---|
+| Tauri with the web renderer inside the webview (previous plan) | Fine as the first shell (D1), but webview memory limits and no EDR or display-transform control cap it below Lightroom |
+| Electron | Lowest risk, but Chromium-only, ~150 MB+, and native work through C++ Node add-ons |
+| SwiftUI/AppKit UI over `etch-core` | The fallback if a native view under the webview proves fiddly. Best Mac feel, but a second UI to maintain |
+| Fully native Rust UI (egui/iced) | Rewrites a working UI for little gain; rejected |
+
+### Licensing guardrails (closed-source app)
+- **No GPL code:** no exiv2, and no code from darktable or RawTherapee. Read their papers; don't copy their code.
+- **LGPL** (lensfun, gphoto2 for tethering later) is dynamically linked, with attribution. LibRaw is used under CDDL.
+- Prefer Apple ImageIO over libheif (LGPL) for HEIC on macOS.
 
 ### Desktop phases
-1. **Shell (2–3 weeks):** static-export the editor (`output: "export"` for the editor routes; marketing pages stay on Cloudflare), Tauri window, native menus, app icon, code signing and notarization (Apple), MSIX/NSIS signing (Windows), and auto-update.
-2. **Native I/O:** replace `alert/confirm/prompt` (13 sites) with in-app dialogs; replace `<a download>` (6 sites) with native Save dialogs; drag-and-drop from Finder/Explorer; file associations (`.int`, `.intaglio`, RAW "Open With"); recent files.
-3. **Native compute:** Rust RAW decode (multi-threaded), lcms2 with the display ICC profile, lensfun, SQLite catalog on real disk (no OPFS quota), and file watching for hot folders.
-4. **Desktop-only power:** HDR/EDR display output on macOS, second-monitor client view, and controller support.
+1. **D1 — Shell (2–3 wk, after Phase 0's dialog/download abstraction):** static-export the editor (`output: "export"` for the editor routes; marketing pages stay on Cloudflare), Tauri window, native menus, app icon, native Open/Save dialogs replacing `<a download>` (6 sites), in-app dialogs replacing `alert/confirm/prompt` (12 sites), Finder drag-and-drop, file associations (`.etch`, `.etchlook`, legacy `.int`/`.intaglio`, RAW "Open With"), recent files, ad-hoc signing, a `.dmg` and auto-update. The current TS renderer runs in WKWebView.
+   **Exit:** an ad-hoc signed `.dmg` installs on a second Mac with the documented first-launch steps, then opens, edits and exports at parity with Safari.
+2. **D2 — `etch-core` and the Metal viewport (Phase 3; months, not weeks):** port the passes to WGSL in Rust, render into a `CAMetalLayer` under a transparent webview, and drive it from the React UI over IPC.
+   **Exit:** the render contract passes Metal against the web golden images; slider-to-photon budgets from §9 are met.
+3. **D3 — Library:** SQLite catalog, preview cache and smart previews, culling, and **Lightroom Classic catalog import** (§8).
+   **Exit:** Phase 6's 2,000-image wedding, on desktop.
+4. **D4 — Native compute and output:** LibRaw decode (multi-threaded), lcms2 with the display profile, lensfun, HDR/EDR editing and HDR export, print with soft proofing, hot folders.
+5. **D5 — Desktop-only power:** second-display client view, MIDI/HID controllers, Quick Look and Spotlight, PhotoKit import.
+6. **Web on `etch-core`:** the web app runs the same engine through WASM + WebGPU; the TS/WebGL2 renderer retires once it is at parity. **Windows** follows with the same core: WebView2 over a D3D12 swap chain.
 
-**Rule:** the desktop app is a superset, never a fork. Every document opens in all three and renders identical pixels (gated by the same render contract run inside each webview).
+**Rule:** the desktop app is a superset, never a fork. Every document opens on web, macOS and Windows and renders identical pixels, gated by the same render contract run headless in Rust and inside each webview.
+
+**Testing:** `tauri-driver` doesn't support macOS, so engine correctness is tested in Rust (`cargo test` against golden images), UI flows run against the web build in Playwright WebKit, and the shell gets a small native smoke test.
 
 ---
 
@@ -318,13 +373,13 @@ Graph IR plus node cache; **GradeGraph compiles to the renderer**; full curves s
 Camera-native RAW → Rec.2020 working space; CAT16 white balance; view transforms (AgX/sigmoid/ACES 2.0); gamut mapping; ICC in/out; soft proofing; DCP import; P3/16-bit/AVIF/JXL/TIFF export.
 **Exit:** ColorChecker test shots within ΔE2000 ≤ 2.0 mean of reference; no hard clipping in the view transform; wide-gamut phone JPEGs render correctly.
 
-### Phase 3 — WebGPU and performance (6–8 wk)
-WGSL backend behind the IR; compute blurs and pyramids; viewport-first tiling; local Laplacian clarity; worker/OffscreenCanvas rendering.
-**Exit:** performance budgets met on M1 Air and a mid-range Windows laptop (Intel Iris Xe); WebGL2 fallback at parity.
+### Phase 3 — `etch-core` and performance (12–16 wk estimate)
+Rust engine on `wgpu` with WGSL passes behind the IR (§2, §10 D2); native Metal viewport on desktop; compute blurs and pyramids; viewport-first tiling; local Laplacian clarity. The web keeps the WebGL2 engine until `etch-core` runs there through WASM + WebGPU at parity.
+**Exit:** performance budgets met on M1 Air and a mid-range Windows laptop (Intel Iris Xe); Metal, WebGPU and WebGL2 at parity under the render contract.
 
-### Phase 4 — Desktop (6–8 wk, can overlap Phase 3)
-Tauri shell, native I/O, Rust RAW decode, signed builds, auto-update, render contract executed inside both webviews.
-**Exit:** notarized macOS and signed Windows builds; the same `.intaglio` renders identically across web/macOS/Windows.
+### Phase 4 — Desktop (shell 2–3 wk after Phase 0; the rest overlaps Phases 3 and 6)
+§10 D1 shell first (Tauri, native I/O, signed builds, auto-update), then D3–D5 as the engine lands: native catalog, LibRaw decode, lcms2, HDR/EDR, print.
+**Exit:** an installable macOS build that culls, grades and exports with the native engine; the same `.etch` document renders identically on web and macOS. Signed Windows builds follow on the same core.
 
 ### Phase 5 — Pro toolkit (10–12 wk)
 Heal/clone/content-aware fill, frequency separation, linear-light dodge & burn, edge-aware masks, lens correction, profiled denoise, capture sharpening, highlight reconstruction.
@@ -342,7 +397,7 @@ Spectral darkroom and film-stock library; Color Space Sculptor; Look DNA; constr
 ## 13. Quality gates (always on)
 
 - **Render contract** (exists): preview = export = tiled = JPEG/WebP, Chromium + WebKit. Extended this pass with **correctness gates** (neutral plate is a no-op, identity LUT is a no-op, master curve reaches export). Every new node adds a correctness gate, not just a parity gate.
-- **Golden images:** per node, per format, per backend (WebGL2/WebGPU), per platform (web/macOS/Windows).
+- **Golden images:** per node, per format, per backend (WebGL2/WebGPU/Metal/D3D12), per platform (web/macOS/Windows), checked headless in Rust and in the browser.
 - **Numerical tests:** curves (monotonicity, no overshoot), LUT round-trips, color transforms against reference matrices, ICC transforms against lcms2 reference output.
 - **Performance CI:** budgets from §9 fail the build on regression over 10%.
 - **Fuzzing:** archive parser, `.cube` parser, XMP parser.
@@ -356,5 +411,8 @@ Spectral darkroom and film-stock library; Color Space Sculptor; Look DNA; constr
 | WebGPU behavior differs between WebKit and Chromium | Keep the WebGL2 fallback; run the render contract per backend per engine. |
 | Memory on 100 MP RAW in the browser | Tile everything; half-float proxies; native decode on desktop; explicit memory budget and graceful downgrade. |
 | Scope explosion | Phases have exit criteria; nothing ships without its gate. Moonshots stay in Phase 7. |
-| Licensing | LibRaw (LGPL/CDDL) and lensfun (LGPL library, CC-BY-SA database) need dynamic linking/attribution. lcms2 (MIT), OCIO (BSD), libjxl (BSD), libavif (BSD), libultrahdr (Apache) are permissive. Review before each integration. |
+| Licensing | No GPL code (exiv2, darktable, RawTherapee). LibRaw under CDDL; lensfun (LGPL library, CC-BY-SA database) dynamically linked with attribution; ImageIO over libheif on macOS. lcms2 (MIT), OCIO (BSD), libjxl (BSD), libavif (BSD), libultrahdr (Apache), wgpu and Tauri (MIT/Apache) are permissive. Review before each integration. |
+| Native Metal view under a transparent webview is fiddly (input routing, resize sync) | Spike it first in D2; fall back to a SwiftUI/AppKit UI over `etch-core` if it can't hold 120 Hz. |
+| WKWebView memory limits while D1 still renders in the webview | Keep D1 on proxies with tiled export; move rendering to `etch-core` in D2. |
+| No WebDriver for WKWebView (`tauri-driver` lacks macOS) | Engine tests in Rust, UI tests on the web build in Playwright WebKit, a small native smoke test for the shell. |
 | Users asking for AI features | The no-AI decision is final; each AI feature competitors ship has a classical answer in §11 that we must make excellent. |

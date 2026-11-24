@@ -54,3 +54,6 @@ next-env.d.ts
 /public/libraw
 /test-results
 /playwright-report
+
+# desktop (Tauri)
+/src-tauri/target

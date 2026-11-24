@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useRef, useEffect, useLayou
 import { DEFAULT_TEXT_OVERLAY, TextOverlaySettings } from "../../components/CinematicTextOverlay";
 import { applyRecipe } from "../../lib/recipeEngine";
 import { PRESETS } from "../../lib/presets";
-import { ARCHIVE_FILE_ACCEPT, FORMAT, STORAGE_KEYS, isArchiveFilename, isRecipeFilename } from "../../lib/brand";
+import { ARCHIVE_FILE_ACCEPT, FORMAT, RECIPE_FILE_ACCEPT, STORAGE_KEYS, isArchiveFilename, isRecipeFilename } from "../../lib/brand";
 import * as THREE from "three";
 import { createLut3DTexture, parseCubeData, parseCubeLUT, serializeCubeLUT, type CubeLutData } from "../../utils/lutParser";
 import { generatePaletteMatchLut } from "../../utils/colorTransfer";
@@ -43,6 +43,7 @@ import {
 
 
 import { HistoryState } from "../../components/HistoryPanel";
+import { isDesktopApp, pickDesktopFile, saveFile, showError } from "../../lib/platform";
 
 const MAX_HISTORY_ENTRIES = 500;
 
@@ -578,7 +579,7 @@ function useEditorStateController() {
       setWatermark(DEFAULT_WATERMARK);
     } catch (error) {
       console.error("Failed to open image:", error);
-      alert(error instanceof Error ? error.message : "Could not open this image file.");
+      void showError(error instanceof Error ? error.message : "Could not open this image file.");
     } finally {
       rawAbortRef.current = null;
       setRawProgress(null);
@@ -594,6 +595,10 @@ function useEditorStateController() {
   };
 
   const openImagePicker = useCallback(() => {
+    if (isDesktopApp()) {
+      void pickDesktopFile("photo").catch((error) => void showError(error instanceof Error ? error.message : "Could not open the photo."));
+      return;
+    }
     const input = document.createElement("input");
     input.type = "file";
     input.accept = STILL_FILE_ACCEPT;
@@ -646,8 +651,8 @@ function useEditorStateController() {
     if (!file) return;
     file.text()
       .then((text) => installCubeLut(text, file.name))
-      .then((installed) => { if (!installed) alert("Failed to parse LUT file"); })
-      .catch(() => alert("Failed to read LUT file"));
+      .then((installed) => { if (!installed) void showError("Failed to parse LUT file"); })
+      .catch(() => void showError("Failed to read LUT file"));
   };
 
   const handleFontUpload = async (file: File) => {
@@ -705,7 +710,7 @@ function useEditorStateController() {
         await handleApplyGeneratedLut(lut);
       } catch (err) {
         console.error("Reference match failed", err);
-        alert("Failed to match palette.");
+        void showError("Failed to match palette.");
       }
     };
     reader.readAsDataURL(file);
@@ -732,10 +737,8 @@ function useEditorStateController() {
     [settings]
   );
 
-  // Load a portable Etch V2 recipe (.etchlook or legacy .int). Generic JSON is unsupported.
-  const handleLoadPreset = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Apply a portable Etch V2 recipe (.etchlook or legacy .int) to the open photo. Generic JSON is unsupported.
+  const applyRecipeFile = useCallback(async (file: File) => {
     try {
       if (!isRecipeFilename(file.name)) throw new Error(`Only portable .${FORMAT.recipeExtension} or legacy .int V2 recipes are supported.`);
       const { manifest, runtime } = await openIntaglioContainer(file);
@@ -756,10 +759,14 @@ function useEditorStateController() {
       addToHistory(mergedSettings, `Load Recipe: ${manifest.document.title}`);
     } catch (error) {
       console.error("Failed to load Etch recipe:", error);
-      alert(error instanceof Error ? error.message : `Invalid or unsupported .${FORMAT.recipeExtension} recipe.`);
-    } finally {
-      event.target.value = "";
+      void showError(error instanceof Error ? error.message : `Invalid or unsupported .${FORMAT.recipeExtension} recipe.`);
     }
+  }, [settings, addToHistory, hydratePortableAssets]);
+
+  const handleLoadPreset = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) await applyRecipeFile(file);
   };
 
   // Copy settings to system clipboard
@@ -857,10 +864,10 @@ function useEditorStateController() {
         activeVirtualCopyId,
       });
       const archive = await createIntaglioContainer("project", document, runtimeAssetsRef.current);
-      triggerContainerDownload(archive, `${toFileStem(imageName)}_${createTimestampSlug()}.${ARCHIVE_FILE_EXTENSION}`);
+      await triggerContainerDownload(archive, `${toFileStem(imageName)}_${createTimestampSlug()}.${ARCHIVE_FILE_EXTENSION}`);
     } catch (error) {
       console.error("Failed to save Etch Project:", error);
-      alert(error instanceof Error ? error.message : "Could not create a portable Etch project.");
+      void showError(error instanceof Error ? error.message : "Could not create a portable Etch project.");
     }
   }, [
     activeExportRecipeId,
@@ -910,10 +917,10 @@ function useEditorStateController() {
         rawDevelop,
       });
       const archive = await createIntaglioContainer("recipe", document, runtimeAssetsRef.current);
-      triggerContainerDownload(archive, `${toFileStem(recipe.name || "recipe")}.${FORMAT.recipeExtension}`);
+      await triggerContainerDownload(archive, `${toFileStem(recipe.name || "recipe")}.${FORMAT.recipeExtension}`);
     } catch (error) {
       console.error("Failed to save Etch recipe:", error);
-      alert(error instanceof Error ? error.message : "Could not create a portable Etch recipe.");
+      void showError(error instanceof Error ? error.message : "Could not create a portable Etch recipe.");
     }
   }, [activeExportRecipeId, assetMetadata, documentAssets, exportFormat, exportQuality, exportScale, gradeGraph, rawDevelop, settings.lutStrength, settings.lutTexture, textOverlay, watermark]);
 
@@ -1037,11 +1044,15 @@ function useEditorStateController() {
       await restoreProjectSession(manifest.document, runtime);
     } catch (error) {
       console.error("Failed to restore Etch Project:", error);
-      alert("Invalid or unsupported Etch project file.");
+      void showError("Invalid or unsupported Etch project file.");
     }
   }, [restoreProjectSession]);
 
   const openProjectPicker = useCallback(() => {
+    if (isDesktopApp()) {
+      void pickDesktopFile("project").catch((error) => void showError(error instanceof Error ? error.message : "Could not open the project."));
+      return;
+    }
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ARCHIVE_FILE_ACCEPT;
@@ -1052,11 +1063,31 @@ function useEditorStateController() {
     input.click();
   }, [openProjectFile]);
 
+  /** Applies a saved look (.etchlook) to the open photo. */
+  const openRecipePicker = useCallback(() => {
+    if (isDesktopApp()) {
+      void pickDesktopFile("look").catch((error) => void showError(error instanceof Error ? error.message : "Could not open the look."));
+      return;
+    }
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = RECIPE_FILE_ACCEPT;
+    input.onchange = (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) void applyRecipeFile(file);
+    };
+    input.click();
+  }, [applyRecipeFile]);
+
   /** Drag and drop: projects restore, anything else opens as a photo. */
+  // One entry point for files dropped on the window or opened from Finder.
   const openDroppedFile = useCallback((file: File) => {
     if (isArchiveFilename(file.name)) void openProjectFile(file);
-    else void loadImageFile(file);
-  }, [openProjectFile, loadImageFile]);
+    else if (isRecipeFilename(file.name)) {
+      if (imageSrc) void applyRecipeFile(file);
+      else void showError(`Open a photo first, then open “${file.name}” to apply this look.`);
+    } else void loadImageFile(file);
+  }, [openProjectFile, loadImageFile, imageSrc, applyRecipeFile]);
 
   const handleCreateVirtualCopy = (requestedName?: string) => {
     const name = requestedName?.trim() || `Version ${settingsSnapshots.length + 1}`;
@@ -1165,23 +1196,19 @@ function useEditorStateController() {
         overlays: { text: textOverlay, watermark },
       });
 
-      // 3. Trigger clean browser download
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      const ext = format.split("/")[1] || "jpeg";
-      const recipeSlug = activeExportRecipeId ?? "custom";
-      link.download = `${toFileStem(imageName)}_${recipeSlug}_${createTimestampSlug()}.${ext}`;
-      link.click();
-      URL.revokeObjectURL(url);
-
       // Clean up export engine resources
       exportEngine.dispose();
       texture.dispose();
-      setIsExportModalOpen(false);
+
+      // 3. Download in the browser, or the native Save sheet on desktop
+      const ext = format.split("/")[1] || "jpeg";
+      const recipeSlug = activeExportRecipeId ?? "custom";
+      const saved = await saveFile(blob, `${toFileStem(imageName)}_${recipeSlug}_${createTimestampSlug()}.${ext}`);
+      // Cancelling the Save sheet keeps the export settings open.
+      if (saved) setIsExportModalOpen(false);
     } catch (error) {
       console.error("Failed to export via GPU RenderGraph:", error);
-      alert(error instanceof Error ? `Export failed: ${error.message}` : "Export failed.");
+      void showError(error instanceof Error ? `Export failed: ${error.message}` : "Export failed.");
     }
   };
 
@@ -1193,15 +1220,10 @@ function useEditorStateController() {
       const format = exportFormat as 'image/jpeg' | 'image/png' | 'image/webp';
       const baseOpts = { format, quality: exportQuality / 100, scale: exportScale, overlays: { text: textOverlay, watermark } };
 
-      // Helper to trigger download
       const downloadBlob = (blob: Blob, suffix: string) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
         const ext = format.split("/")[1] || "jpeg";
-        link.download = `${toFileStem(imageName)}_${suffix}_${createTimestampSlug()}.${ext}`;
-        link.click();
-        URL.revokeObjectURL(url);
+        void saveFile(blob, `${toFileStem(imageName)}_${suffix}_${createTimestampSlug()}.${ext}`)
+          .catch((error) => void showError(error instanceof Error ? `Carousel export failed: ${error.message}` : "Carousel export failed."));
       };
 
       // 1. Before Slide (Original)
@@ -1265,7 +1287,7 @@ function useEditorStateController() {
       }
     } catch (error) {
       console.error("Failed to export carousel:", error);
-      alert(error instanceof Error ? `Carousel export failed: ${error.message}` : "Carousel export failed.");
+      void showError(error instanceof Error ? `Carousel export failed: ${error.message}` : "Carousel export failed.");
     }
     setIsExportModalOpen(false);
   };
@@ -1417,6 +1439,14 @@ function useEditorStateController() {
       disabled: !imageSrc,
       keywords: ["look", "recipe", "save"],
       run: () => setIsPresetModalOpen(true),
+    },
+    {
+      id: "apply-look",
+      title: "Apply a Saved Look…",
+      section: "Looks",
+      disabled: !imageSrc,
+      keywords: ["recipe", "etchlook", "preset", "style", "open"],
+      run: openRecipePicker,
     },
     {
       id: "copy-settings",
@@ -1628,6 +1658,7 @@ function useEditorStateController() {
     handleSaveRecipe,
     openImagePicker,
     openProjectPicker,
+    openRecipePicker,
     openDroppedFile,
     isCommandBarOpen, setIsCommandBarOpen,
     isShortcutHelpOpen, setIsShortcutHelpOpen,

@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { BRAND, FORMAT, ROUTE_LABELS } from "./lib/brand";
 
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   const webManifest = {
     name: BRAND.productName,

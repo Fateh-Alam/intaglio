@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { BRAND } from "./lib/brand";
 
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = ["/", "/editor", "/presets", "/changelog"] as const;
   return routes.map((route) => ({

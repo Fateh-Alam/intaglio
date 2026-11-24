@@ -13,6 +13,7 @@ import { BatchExportModal } from "./components/BatchExportModal";
 import { ShellProvider, useShell } from "./shell/useShell";
 import { useShellShortcuts } from "./shell/useShellShortcuts";
 import { useShellCommands } from "./shell/useShellCommands";
+import { useDesktopBridge } from "./shell/useDesktopBridge";
 import { TopBar } from "./shell/TopBar";
 import { PhotoCanvas } from "./shell/PhotoCanvas";
 import { LeftPanel, RightPanel } from "./shell/SidePanels";
@@ -23,11 +24,18 @@ function EditorLayout() {
   const {
     showMobileWarning, setShowMobileWarning, imageSrc, setImageSrc, openImagePicker, openProjectPicker, openDroppedFile, setSettings,
     setImageName, setImageInfo, setAssetMetadata, isCommandBarOpen, setIsCommandBarOpen, appCommands, isShortcutHelpOpen,
-    setIsShortcutHelpOpen,
+    setIsShortcutHelpOpen, handleUndo, handleRedo,
   } = useEditorState();
   const shell = useShell();
   const commands = [...appCommands, ...useShellCommands()];
   useShellShortcuts(Boolean(imageSrc) && !isCommandBarOpen && !isShortcutHelpOpen);
+  useDesktopBridge({
+    commands,
+    openFile: openDroppedFile,
+    undo: handleUndo,
+    redo: handleRedo,
+    openCommandBar: () => setIsCommandBarOpen(true),
+  });
 
   const openSample = React.useCallback(() => {
     setSettings(DEFAULT_SETTINGS);

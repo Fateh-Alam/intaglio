@@ -116,7 +116,8 @@ export default function RootLayout({
       >
         <SerwistProvider
           swUrl="/serwist/sw.js"
-          register={process.env.NODE_ENV === "production"}
+          // The desktop app ships its files locally, so it needs no service worker.
+          register={process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_ETCH_TARGET !== "desktop"}
           cacheOnNavigation
           reloadOnOnline={false}
         >

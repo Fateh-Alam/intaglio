@@ -6,8 +6,7 @@ import {
   IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand,
 } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
-import { STILL_FILE_ACCEPT } from "../../lib/rawDecoder";
-import { FORMAT, RECIPE_FILE_ACCEPT } from "../../lib/brand";
+import { FORMAT } from "../../lib/brand";
 import { Button, IconButton } from "../../ui/Controls";
 import { MenuItem, Popover } from "../../ui/Popover";
 import { useShell } from "./useShell";
@@ -39,8 +38,8 @@ const Separator = () => <div className="my-1 h-px bg-white/[0.07]" />;
 
 export function TopBar() {
   const {
-    imageName, history, historyIndex, handleUndo, handleRedo, handleUpload, openProjectPicker, handleSaveProjectSession,
-    setIsPresetModalOpen, handleLoadPreset, setIsBatchExportOpen, setIsProofSheetOpen, setIsExportModalOpen,
+    imageName, history, historyIndex, handleUndo, handleRedo, openImagePicker, openProjectPicker, openRecipePicker, handleSaveProjectSession,
+    setIsPresetModalOpen, setIsBatchExportOpen, setIsProofSheetOpen, setIsExportModalOpen,
     handleCopySettings, handlePasteSettings, clipboard, setIsCommandBarOpen,
   } = useEditorState();
   const shell = useShell();
@@ -69,16 +68,12 @@ export function TopBar() {
         >
           {(close) => (
             <>
-              <MenuAction label="Open photo…" shortcut="⌘O">
-                <input type="file" accept={STILL_FILE_ACCEPT} className="hidden" onChange={(event) => { handleUpload(event); close(); }} />
-              </MenuAction>
+              <MenuAction label="Open photo…" shortcut="⌘O" onSelect={() => { openImagePicker(); close(); }} />
               <MenuAction label="Open project…" shortcut="⇧⌘O" onSelect={() => { openProjectPicker(); close(); }} />
               <MenuAction label="Save project" shortcut="⌘S" onSelect={() => { void handleSaveProjectSession(); close(); }} />
               <Separator />
               <MenuAction label={`Save look as .${FORMAT.recipeExtension}…`} onSelect={() => { setIsPresetModalOpen(true); close(); }} />
-              <MenuAction label={`Apply .${FORMAT.recipeExtension} look…`}>
-                <input type="file" accept={RECIPE_FILE_ACCEPT} className="hidden" onChange={(event) => { void handleLoadPreset(event); close(); }} />
-              </MenuAction>
+              <MenuAction label={`Apply .${FORMAT.recipeExtension} look…`} onSelect={() => { openRecipePicker(); close(); }} />
               <MenuAction label="Copy edit settings" onSelect={() => { handleCopySettings(); close(); }} />
               {clipboard && <MenuAction label="Paste edit settings" onSelect={() => { handlePasteSettings(); close(); }} />}
               <Separator />
