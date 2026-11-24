@@ -39,7 +39,7 @@ export function Segmented<T extends string>({ value, options, onChange, size = "
             <span className="relative z-10 flex items-center gap-1.5 whitespace-nowrap">{option.label}</span>
           </button>
         );
-        return option.hint ? <Tooltip key={option.id} content={option.hint}>{button}</Tooltip> : button;
+        return option.hint ? <Tooltip key={option.id} content={option.hint} className="h-full flex-1">{button}</Tooltip> : button;
       })}
     </div>
   );

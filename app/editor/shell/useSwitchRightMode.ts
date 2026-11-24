@@ -9,7 +9,7 @@ export function useSwitchRightMode() {
   const { setActivePlateId, settings, activePlateId } = useEditorState();
   return (mode: RightMode) => {
     shell.setPicking(null);
-    if (mode === "develop") setActivePlateId("base");
+    if (mode === "develop" || mode === "grade") setActivePlateId("base");
     if (mode === "masks" && !settings.adjustmentLayers.some((plate) => plate.id === activePlateId)) {
       const previous = settings.adjustmentLayers.find((plate) => plate.maskIds.some((id) => id === shell.selectedComponentId));
       const next = previous ?? settings.adjustmentLayers.at(-1);

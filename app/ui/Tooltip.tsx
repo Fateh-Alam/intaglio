@@ -8,6 +8,8 @@ interface TooltipProps {
   shortcut?: string;
   side?: "top" | "bottom" | "left" | "right";
   delay?: number;
+  /** Classes for the anchor wrapper, e.g. to let the child stretch in a flex row. */
+  className?: string;
   children: React.ReactElement;
 }
 
@@ -15,7 +17,7 @@ interface TooltipProps {
  * Portal tooltip so it is never clipped by scrolling panels. Shows after a
  * short hover delay and hides immediately on leave or press.
  */
-export function Tooltip({ content, shortcut, side = "bottom", delay = 450, children }: TooltipProps) {
+export function Tooltip({ content, shortcut, side = "bottom", delay = 450, className = "", children }: TooltipProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -48,7 +50,7 @@ export function Tooltip({ content, shortcut, side = "bottom", delay = 450, child
   }[side];
 
   return (
-    <span ref={anchorRef} className="inline-flex" onPointerEnter={show} onPointerLeave={hide} onPointerDown={hide}>
+    <span ref={anchorRef} className={`inline-flex ${className}`} onPointerEnter={show} onPointerLeave={hide} onPointerDown={hide}>
       {children}
       {position && typeof document !== "undefined" && createPortal(
         <div

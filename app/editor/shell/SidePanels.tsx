@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { ProGradingPanel } from "../components/ProGradingPanel";
 import { TitlesPanel } from "../text/TitlesPanel";
-import { IconAdjustmentsHorizontal, IconBrush, IconChevronRight, IconTimeline, IconTypography, IconX } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconBrush, IconTimeline, IconTypography, IconX } from "@tabler/icons-react";
 import { DevelopPanel } from "../develop/DevelopPanel";
 import { MasksPanel } from "../masks/MasksPanel";
 import { Segmented, IconButton } from "../../ui/Controls";
@@ -47,38 +47,25 @@ const RIGHT_MODES: ReadonlyArray<{ id: RightMode; label: React.ReactNode; hint: 
   { id: "develop", label: <><IconAdjustmentsHorizontal size={14} stroke={1.75} /> Edit</>, hint: "Adjust the whole photo (E)" },
   { id: "masks", label: <><IconBrush size={14} stroke={1.75} /> Masks</>, hint: "Adjust selected areas (M)" },
   { id: "text", label: <><IconTypography size={14} stroke={1.75} /> Text</>, hint: "Titles, captions and watermark (T)" },
+  { id: "grade", label: <><IconTimeline size={14} stroke={1.75} /> Grade</>, hint: "Pro grading: nodes, scopes and LUT Studio" },
 ];
 
+/** Tool tabs, then that tool's controls. Grade is an opt-in mode beside Edit, Masks and Text. */
 export function RightPanel() {
-  const [proGrading, setProGrading] = useState(false);
   const shell = useShell();
   const changeMode = useSwitchRightMode();
   const crop = useCrop();
-  if (proGrading && !crop.draft) return <ProGradingPanel onClose={() => setProGrading(false)} />;
   if (crop.draft) return <div className="flex h-full flex-col"><CropControls /></div>;
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-[var(--ui-line)] px-3 py-2.5">
-        <Segmented size="md" value={shell.rightMode} onChange={changeMode} options={RIGHT_MODES} />
-        <button
-          type="button"
-          aria-label="Open pro grading workspace…"
-          onClick={() => setProGrading(true)}
-          className="ui-focus group mt-2 flex h-9 w-full items-center gap-2.5 rounded-[8px] px-2 text-left transition-colors hover:bg-white/[0.04]"
-        >
-          <span className="grid h-6 w-6 place-items-center rounded-[6px] bg-[var(--ui-accent-soft)] text-[var(--ui-accent-strong)]">
-            <IconTimeline size={14} stroke={1.8} />
-          </span>
-          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[var(--ui-text-2)] group-hover:text-[var(--ui-text)]">
-            Pro grading <span className="font-normal text-[var(--ui-text-3)]">· Nodes, scopes, LUTs</span>
-          </span>
-          <IconChevronRight size={14} className="text-[var(--ui-text-3)] transition-transform group-hover:translate-x-0.5" />
-        </button>
+        <Segmented size="md" className="w-full" value={shell.rightMode} onChange={changeMode} options={RIGHT_MODES} />
       </div>
       <div className="min-h-0 flex-1">
         {shell.rightMode === "develop" && <DevelopPanel />}
         {shell.rightMode === "masks" && <MasksPanel />}
         {shell.rightMode === "text" && <TitlesPanel />}
+        {shell.rightMode === "grade" && <ProGradingPanel />}
       </div>
     </div>
   );

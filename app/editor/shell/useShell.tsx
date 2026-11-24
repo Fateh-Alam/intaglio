@@ -7,7 +7,7 @@ import type { CropDraft } from "../crop/useCrop";
 import { isHistogramPosition, type HistogramPosition } from "../develop/histogramLayout";
 
 export type LeftTab = "looks" | "history" | "versions" | "info";
-export type RightMode = "develop" | "masks" | "text";
+export type RightMode = "develop" | "masks" | "text" | "grade";
 export type Surround = "black" | "dark" | "medium";
 export type CompareMode = "off" | "split" | "before";
 

@@ -248,7 +248,12 @@ export function DevSlider({
           <div
             data-thumb="true"
             className={`absolute top-1/2 h-[13px] w-[13px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#f5f5f7] shadow-[0_1px_3px_rgba(0,0,0,0.6),0_0_0_0.5px_rgba(0,0,0,0.5)] transition-[transform,box-shadow] duration-150 ${disabled ? "" : "group-hover/track:scale-110 group-focus-visible/track:ring-2 group-focus-visible/track:ring-[var(--ui-accent)]"} ${dragging ? "scale-110" : ""}`}
-            style={{ left: `${pct}%`, transitionTimingFunction: "var(--ui-ease)" }}
+            style={{
+              left: `${pct}%`,
+              transitionTimingFunction: "var(--ui-ease)",
+              // A changed slider is visible at a glance, even on colored tracks.
+              ...(changed && !disabled ? { boxShadow: "0 1px 3px rgba(0,0,0,0.6), 0 0 0 2px var(--ui-accent)" } : {}),
+            }}
           />
         </div>
       </div>
