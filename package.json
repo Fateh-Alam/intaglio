@@ -23,7 +23,7 @@
     "test:e2e": "node scripts/e2e-smoke.mjs",
     "test:browser": "playwright test",
     "test:offline": "playwright test tests/browser/offline.spec.ts",
-    "build:cloudflare": "node scripts/prepare-public-runtime.mjs && opennextjs-cloudflare build",
+    "build:cloudflare": "node scripts/prepare-public-runtime.mjs && opennextjs-cloudflare build && node scripts/cloudflare-static-sw.mjs",
     "preview": "pnpm build:cloudflare && opennextjs-cloudflare preview",
     "deploy": "pnpm build:cloudflare && opennextjs-cloudflare deploy",
     "upload": "pnpm build:cloudflare && opennextjs-cloudflare upload",
