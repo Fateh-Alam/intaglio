@@ -2,6 +2,7 @@
 
 import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { IconCheck, IconEye, IconPhoto, IconSearch } from "@tabler/icons-react";
+import type { EditorSettings } from "../../types/editor";
 import { Segmented, Switch } from "../../ui/Controls";
 import { useEditorState } from "../hooks/useEditorState";
 import { EFFECT_GROUPS, EFFECTS } from "../effects/catalog";
@@ -12,12 +13,24 @@ import { useShell } from "./useShell";
 
 type Collection = "effects" | "looks";
 interface Item { id: string; name: string; group: string; layers: () => CreativeEffect[] }
+interface EffectPreview {
+  id: string;
+  source: "hover" | "eye";
+  settings: EditorSettings;
+  held?: EffectPreview;
+}
 
 const EFFECT_ITEMS: readonly Item[] = EFFECTS.map((effect) => ({ id: effect.id, name: effect.name, group: effect.group, layers: () => [createEffect(effect.id)] }));
 const LOOK_ITEMS: readonly Item[] = STUDIO_LOOKS.map((look) => ({ id: look.id, name: look.name, group: look.group, layers: () => createLookLayers(look) }));
 
 /** A thumbnail that renders only once it scrolls into view. */
-function Thumbnail({ item, collection, renderer }: { item: Item; collection: Collection; renderer: EffectThumbnailRenderer | null }) {
+function Thumbnail({ item, collection, renderer, onPointerEnter, onPointerLeave }: {
+  item: Item;
+  collection: Collection;
+  renderer: EffectThumbnailRenderer | null;
+  onPointerEnter: React.PointerEventHandler<HTMLSpanElement>;
+  onPointerLeave: () => void;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const [thumbnail, setThumbnail] = useState<{ renderer: EffectThumbnailRenderer; url: string | null }>();
   const url = thumbnail?.renderer === renderer ? thumbnail?.url : undefined;
@@ -36,7 +49,8 @@ function Thumbnail({ item, collection, renderer }: { item: Item; collection: Col
     return () => { cancelled = true; observer.disconnect(); };
   }, [item, collection, renderer]);
   return (
-    <span ref={ref} aria-hidden="true" className="relative isolate grid size-14 shrink-0 place-items-center overflow-hidden rounded-[8px] bg-[var(--ui-raised)] after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-1 after:ring-inset after:ring-white/[0.12]">
+    <span ref={ref} aria-hidden="true" onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave}
+      className="relative isolate grid size-14 shrink-0 place-items-center overflow-hidden rounded-[8px] bg-[var(--ui-raised)] after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-1 after:ring-inset after:ring-white/[0.12]">
       {url
         // eslint-disable-next-line @next/next/no-img-element
         ? <img src={url} alt="" className="absolute inset-0 size-full object-cover" draggable={false} />
@@ -45,7 +59,7 @@ function Thumbnail({ item, collection, renderer }: { item: Item; collection: Col
   );
 }
 
-/** Browse Creative Effects and studio looks, each shown on the photo; click adds, the eye previews. */
+/** Browse effects and Studio looks. Hover to preview, click to apply, or hold a preview with the eye. */
 export function EffectsTab() {
   const { settings, updateSettings, imageSrc, rawSource, gradeGraph } = useEditorState();
   const shell = useShell();
@@ -54,8 +68,8 @@ export function EffectsTab() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [append, setAppend] = useState(false);
-  const [previewId, setPreviewId] = useState<string | null>(null);
-  const previewRef = useRef<typeof shell.preview>(null);
+  const [preview, setEffectPreview] = useState<EffectPreview | null>(null);
+  const previewRef = useRef<EffectPreview | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -71,17 +85,17 @@ export function EffectsTab() {
     return () => next.dispose();
   }, [imageSrc, rawSource]);
 
-  const clearPreview = () => {
-    const active = previewRef.current;
-    if (active) shell.setPreview((current) => (current === active ? null : current));
-    previewRef.current = null;
-    setPreviewId(null);
+  const clearPreview = (restore: EffectPreview | null = null) => {
+    const active = previewRef.current?.settings;
+    if (active) shell.setPreview((current) => (current === active ? restore?.settings ?? null : current));
+    previewRef.current = restore;
+    setEffectPreview(restore);
   };
 
   // Discard the temporary settings when the underlying edit changes or the tab closes.
   const setPreview = shell.setPreview;
   useEffect(() => () => {
-    const active = previewRef.current;
+    const active = previewRef.current?.settings;
     if (active) setPreview((current) => (current === active ? null : current));
     previewRef.current = null;
   }, [settings, setPreview]);
@@ -116,22 +130,23 @@ export function EffectsTab() {
       collection === "looks" ? `Studio look: ${item.name}` : `Add ${item.name}`);
   };
 
-  const togglePreview = (item: Item) => {
-    if (previewId === item.id && previewRef.current && shell.preview === previewRef.current) { clearPreview(); return; }
+  const activePreview = preview?.settings === shell.preview ? preview : null;
+  const heldPreview = activePreview?.source === "eye" ? activePreview : activePreview?.held;
+  const showPreview = (item: Item, source: EffectPreview["source"]) => {
     const layers = item.layers();
     const candidate = { ...settings, creativeEffects: replaceStack ? layers : [...settings.creativeEffects, ...layers] };
-    previewRef.current = candidate;
+    const next = { id: item.id, source, settings: candidate, held: source === "hover" ? heldPreview : undefined };
+    previewRef.current = next;
     shell.setPreview(candidate);
-    setPreviewId(item.id);
+    setEffectPreview(next);
   };
 
-  const previewing = (id: string) => previewId === id && previewRef.current !== null && shell.preview === previewRef.current;
   const empty = Object.keys(groups).length === 0;
 
   return (
     <div className="flex h-full flex-col" onKeyDown={(event) => {
       if (event.key !== "Escape") return;
-      if (previewRef.current && shell.preview === previewRef.current) clearPreview();
+      if (activePreview) clearPreview();
       else if (event.target === searchRef.current && query) setQuery("");
       else return;
       event.preventDefault();
@@ -173,11 +188,19 @@ export function EffectsTab() {
             <div className="sticky top-0 z-10 bg-[var(--ui-panel)] px-1.5 py-2 text-[10.5px] font-medium uppercase tracking-[0.08em] text-[var(--ui-text-3)]">{group}</div>
             {items.map((item) => {
               const added = collection === "effects" && inStack.has(item.id);
-              const active = previewing(item.id);
+              const active = activePreview?.id === item.id;
+              const held = heldPreview?.id === item.id;
               return (
                 <div key={item.id} role="listitem" className={`flex items-center gap-1 rounded-[9px] pr-1 transition-colors ${active ? "bg-[var(--ui-accent-soft)]" : "hover:bg-white/[0.05]"}`}>
                   <button type="button" onClick={() => add(item)} className="ui-focus flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-[9px] p-1.5 text-left">
-                    <Thumbnail item={item} collection={collection} renderer={renderer} />
+                    <Thumbnail item={item} collection={collection} renderer={renderer}
+                      onPointerEnter={(event) => {
+                        if (event.pointerType !== "touch") showPreview(item, "hover");
+                      }}
+                      onPointerLeave={() => {
+                        const current = previewRef.current;
+                        if (current?.source === "hover" && current.id === item.id) clearPreview(current.held);
+                      }} />
                     <span className="min-w-0 flex-1">
                       <span className="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--ui-text)]">{item.name}</span>
                       <span className="sr-only">{item.group}</span>
@@ -188,9 +211,9 @@ export function EffectsTab() {
                     type="button"
                     aria-label={`Preview ${item.name}`}
                     title={`Preview ${item.name}`}
-                    aria-pressed={active}
-                    onClick={() => togglePreview(item)}
-                    className={`ui-focus grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-[8px] transition-colors ${active ? "bg-[var(--ui-accent)] text-white" : "text-[var(--ui-text-2)] hover:bg-white/[0.08] hover:text-[var(--ui-text)]"}`}
+                    aria-pressed={held}
+                    onClick={() => held ? clearPreview() : showPreview(item, "eye")}
+                    className={`ui-focus grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-[8px] transition-colors ${held ? "bg-[var(--ui-accent)] text-white" : "text-[var(--ui-text-2)] hover:bg-white/[0.08] hover:text-[var(--ui-text)]"}`}
                   >
                     <IconEye size={15} stroke={1.8} />
                   </button>

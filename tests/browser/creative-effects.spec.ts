@@ -16,13 +16,27 @@ test("preview, edit, reorder and save a creative effect stack", async ({ page })
   await expect(library.getByRole("radio", { name: "Effects", exact: true })).toBeChecked();
   await expect(search).toBeFocused();
   await search.fill("dither");
-  await results.getByRole("button", { name: "Preview Dither", exact: true }).click();
-  await expect(results.getByRole("button", { name: "Preview Dither", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const dither = results.getByRole("button", { name: /^Dither Print/ });
+  const ditherPreview = results.getByRole("button", { name: "Preview Dither", exact: true });
+  const previewBadge = page.getByText("Preview", { exact: true });
+  await dither.locator("img").hover();
+  await expect(previewBadge).toBeVisible();
+  await expect(ditherPreview).toHaveAttribute("aria-pressed", "false");
+  await expect(stack).toHaveCount(0);
+  await search.hover();
+  await expect(previewBadge).toBeHidden();
+
+  await ditherPreview.click();
+  await expect(ditherPreview).toHaveAttribute("aria-pressed", "true");
+  await dither.locator("img").hover();
+  await search.hover();
+  await expect(previewBadge).toBeVisible();
+  await expect(ditherPreview).toHaveAttribute("aria-pressed", "true");
   await expect(stack).toHaveCount(0);
   await search.press("Escape");
-  await expect(results.getByRole("button", { name: "Preview Dither", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await expect(ditherPreview).toHaveAttribute("aria-pressed", "false");
 
-  await results.getByRole("button", { name: /^Dither Print/ }).click();
+  await dither.click();
   await page.getByRole("button", { name: "Play effect", exact: true }).click();
   await expect(page.getByText("Preview", { exact: true })).toBeVisible();
   await page.clock.runFor(250);
@@ -90,6 +104,11 @@ test("browse categories, render thumbnails and apply studio looks", async ({ pag
   await page.getByRole("button", { name: /^Creative Effects/ }).click();
   const look = results.getByRole("button", { name: /^Instant Frame/ });
   const preview = results.getByRole("button", { name: "Preview Instant Frame" });
+  await look.locator("img").hover();
+  await expect(page.getByText("Preview", { exact: true })).toBeVisible();
+  await expect(stack.getByRole("listitem")).toHaveCount(1);
+  await library.getByRole("searchbox").hover();
+  await expect(page.getByText("Preview", { exact: true })).toBeHidden();
   await preview.click();
   await expect(preview).toHaveAttribute("aria-pressed", "true");
   await expect(stack.getByRole("listitem")).toHaveCount(1);
