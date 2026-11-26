@@ -28,6 +28,7 @@ function EditorLayout() {
     setIsShortcutHelpOpen, handleUndo, handleRedo,
   } = useEditorState();
   const shell = useShell();
+  const browsingEffects = shell.leftOpen && shell.leftTab === "effects" && !shell.panelsHidden;
   const commands = [...appCommands, ...useShellCommands()];
   useShellShortcuts(Boolean(imageSrc) && !isCommandBarOpen && !isShortcutHelpOpen);
   useDesktopBridge({
@@ -90,8 +91,10 @@ function EditorLayout() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -16 }}
               transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-              className="absolute inset-y-0 left-0 z-30 w-full max-w-[320px] shrink-0 border-r border-[var(--ui-line)] bg-[var(--ui-panel)] shadow-2xl md:relative md:w-[280px] md:shadow-none"
-              aria-label="Looks, history, versions and info"
+              className={`z-30 w-full shrink-0 border-[var(--ui-line)] bg-[var(--ui-panel)] md:relative md:w-[280px] md:border-r md:shadow-none ${browsingEffects
+                ? "max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:h-[46dvh] max-md:border-t"
+                : "max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:max-w-[320px] max-md:border-r max-md:shadow-2xl"}`}
+              aria-label="Editor library"
             >
               <LeftPanel />
             </motion.aside>
@@ -102,7 +105,7 @@ function EditorLayout() {
 
         {!shell.panelsHidden && (
           <aside
-            className="h-[46dvh] shrink-0 border-t border-[var(--ui-line)] bg-[var(--ui-panel)] md:h-auto md:w-[328px] md:border-l md:border-t-0"
+            className={`h-[46dvh] shrink-0 border-t border-[var(--ui-line)] bg-[var(--ui-panel)] md:h-auto md:w-[328px] md:border-l md:border-t-0 ${browsingEffects ? "max-md:invisible" : ""}`}
             aria-label="Edit controls"
           >
             <RightPanel />

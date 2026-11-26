@@ -85,7 +85,7 @@ export function TopBar() {
           )}
         </Popover>
         <IconButton
-          label={shell.leftOpen ? "Hide looks & history" : "Show looks & history"}
+          label={shell.leftOpen ? "Hide editor library" : "Show editor library"}
           shortcut="L"
           active={shell.leftOpen}
           onClick={() => shell.setLeftOpen(!shell.leftOpen)}

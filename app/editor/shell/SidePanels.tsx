@@ -9,6 +9,7 @@ import { MasksPanel } from "../masks/MasksPanel";
 import { Segmented, IconButton } from "../../ui/Controls";
 import { useShell, type LeftTab, type RightMode } from "./useShell";
 import { LooksTab } from "./LooksTab";
+import { EffectsTab } from "./EffectsTab";
 import { useSwitchRightMode } from "./useSwitchRightMode";
 import { HistoryTab } from "./HistoryTab";
 import { VersionsTab } from "./VersionsTab";
@@ -18,6 +19,7 @@ import { useCrop } from "../crop/useCrop";
 
 const LEFT_TABS: ReadonlyArray<{ id: LeftTab; label: string }> = [
   { id: "looks", label: "Looks" },
+  { id: "effects", label: "Effects" },
   { id: "history", label: "History" },
   { id: "versions", label: "Versions" },
   { id: "info", label: "Info" },
@@ -28,13 +30,14 @@ export function LeftPanel() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-1 px-3 pb-2 pt-3">
-        <Segmented className="flex-1" value={shell.leftTab} onChange={(tab) => { shell.setPreview(null); shell.setLeftTab(tab); }} options={LEFT_TABS} />
+        <Segmented className="min-w-0 flex-1 [&>button]:px-1" value={shell.leftTab} onChange={(tab) => { shell.setPreview(null); shell.setLeftTab(tab); }} options={LEFT_TABS} />
         <IconButton label="Close panel" shortcut="L" size="sm" onClick={() => { shell.setPreview(null); shell.setLeftOpen(false); }}>
           <IconX size={14} />
         </IconButton>
       </div>
       <div className="min-h-0 flex-1">
         {shell.leftTab === "looks" && <LooksTab />}
+        {shell.leftTab === "effects" && <EffectsTab />}
         {shell.leftTab === "history" && <HistoryTab />}
         {shell.leftTab === "versions" && <VersionsTab />}
         {shell.leftTab === "info" && <InfoTab />}
