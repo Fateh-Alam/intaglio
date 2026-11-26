@@ -74,10 +74,13 @@ test("browse categories, render thumbnails and apply studio looks", async ({ pag
   await expect(results.getByRole("button", { name: /^Characters/ })).toHaveCount(0);
   await expect(dither.locator('img[src^="data:image/jpeg"]')).toBeVisible();
   const thumbnail = await dither.locator("img").evaluate((image: HTMLImageElement) => ({
-    height: image.naturalHeight,
+    squareImage: image.naturalWidth === image.naturalHeight && image.naturalWidth >= 168,
+    squareTile: image.clientWidth === image.clientHeight
+      && image.clientWidth === image.parentElement?.clientWidth
+      && image.clientHeight === image.parentElement?.clientHeight,
     fit: getComputedStyle(image).objectFit,
   }));
-  expect(thumbnail).toEqual({ height: 224, fit: "contain" });
+  expect(thumbnail).toEqual({ squareImage: true, squareTile: true, fit: "cover" });
   await dither.click();
 
   await library.getByRole("radio", { name: "Studio looks" }).click();

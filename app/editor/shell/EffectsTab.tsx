@@ -36,10 +36,10 @@ function Thumbnail({ item, collection, renderer }: { item: Item; collection: Col
     return () => { cancelled = true; observer.disconnect(); };
   }, [item, collection, renderer]);
   return (
-    <span ref={ref} aria-hidden="true" className="relative grid h-14 w-[72px] shrink-0 place-items-center overflow-hidden rounded-[6px] bg-black/35 ring-1 ring-inset ring-white/10">
+    <span ref={ref} aria-hidden="true" className="relative isolate grid size-14 shrink-0 place-items-center overflow-hidden rounded-[8px] bg-[var(--ui-raised)] after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-1 after:ring-inset after:ring-white/[0.12]">
       {url
         // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={url} alt="" className="absolute inset-0 h-full w-full object-contain" draggable={false} />
+        ? <img src={url} alt="" className="absolute inset-0 size-full object-cover" draggable={false} />
         : <IconPhoto size={16} className="text-[var(--ui-text-3)]" />}
     </span>
   );

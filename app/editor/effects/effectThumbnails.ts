@@ -11,10 +11,10 @@ import type { GradeGraph } from "../../types/document";
 import type { CreativeEffect } from "./settings";
 import { IntaglioRenderer } from "../render/IntaglioRenderer";
 import { createLinearSourceTexture, loadImageTexture, type LinearSourceBuffer } from "../render/sourceTexture";
-import { cropSize } from "../../lib/cropGeometry";
+import { cropWithRatio } from "../../lib/cropGeometry";
 
-/** Longest edge of a thumbnail, in device pixels. */
-const THUMB_EDGE = 224;
+/** Square render size in device pixels. */
+const THUMB_EDGE = 192;
 // Keep the thumbnail context from uploading a second full-resolution photo.
 const THUMB_SOURCE_EDGE = 1024;
 
@@ -71,25 +71,24 @@ export class EffectThumbnailRenderer {
     if (!this.renderer) {
       this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, alpha: false, preserveDrawingBuffer: true });
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      this.renderer.setSize(THUMB_EDGE, THUMB_EDGE, false);
       this.graph = new IntaglioRenderer();
     }
     this.texture ??= this.loadTexture();
     const texture = await this.texture;
     if (this.disposed) return null;
     const image = texture.image as { width: number; height: number };
-    const cropped = cropSize(image.width, image.height, this.base.crop);
-    const scale = THUMB_EDGE / Math.max(cropped.width, cropped.height);
-    const width = Math.max(8, Math.round(cropped.width * scale));
-    const height = Math.max(8, Math.round(cropped.height * scale));
-    if (this.canvas.width !== width || this.canvas.height !== height) this.renderer.setSize(width, height, false);
+    // Crop the photo before running the effects so frames and other edge treatments
+    // extend to the edges of the tile.
+    const crop = cropWithRatio(this.base.crop, image.height / image.width);
     this.graph!.render({
       renderer: this.renderer,
       sourceTexture: texture,
-      settings: { ...this.base, creativeEffects: layers() },
+      settings: { ...this.base, crop, creativeEffects: layers() },
       gradeGraph: this.gradeGraph,
       target: null,
-      width,
-      height,
+      width: THUMB_EDGE,
+      height: THUMB_EDGE,
     });
     return this.canvas.toDataURL("image/jpeg", 0.82);
   }
