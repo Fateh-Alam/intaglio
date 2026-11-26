@@ -29,8 +29,9 @@ export function LeftPanel() {
   const shell = useShell();
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1 px-3 pb-2 pt-3">
-        <Segmented className="min-w-0 flex-1 [&>button]:px-1" value={shell.leftTab} onChange={(tab) => { shell.setPreview(null); shell.setLeftTab(tab); }} options={LEFT_TABS} />
+      <div className="flex items-center gap-1 px-3 pb-2 pt-1.5">
+        <Segmented appearance="tabs" label="Editor library tabs" className="flex-1 [&>button]:basis-auto [&>button]:px-1"
+          value={shell.leftTab} onChange={(tab) => { shell.setPreview(null); shell.setLeftTab(tab); }} options={LEFT_TABS} />
         <IconButton label="Close panel" shortcut="L" size="sm" onClick={() => { shell.setPreview(null); shell.setLeftOpen(false); }}>
           <IconX size={14} />
         </IconButton>
@@ -61,8 +62,8 @@ export function RightPanel() {
   if (crop.draft) return <div className="flex h-full flex-col"><CropControls /></div>;
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-[var(--ui-line)] px-3 py-2.5">
-        <Segmented size="md" className="w-full" value={shell.rightMode} onChange={changeMode} options={RIGHT_MODES} />
+      <div className="px-3 pt-1.5">
+        <Segmented appearance="tabs" label="Editor tools" className="w-full" value={shell.rightMode} onChange={changeMode} options={RIGHT_MODES} />
       </div>
       <div className="min-h-0 flex-1">
         {shell.rightMode === "develop" && <DevelopPanel />}

@@ -14,7 +14,7 @@ import { createLinearSourceTexture, loadImageTexture, type LinearSourceBuffer } 
 import { cropSize } from "../../lib/cropGeometry";
 
 /** Longest edge of a thumbnail, in device pixels. */
-const THUMB_EDGE = 120;
+const THUMB_EDGE = 224;
 // Keep the thumbnail context from uploading a second full-resolution photo.
 const THUMB_SOURCE_EDGE = 1024;
 

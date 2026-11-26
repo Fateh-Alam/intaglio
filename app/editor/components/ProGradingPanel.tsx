@@ -30,7 +30,7 @@ export function ProGradingPanel() {
   return <div className="flex h-full flex-col">
     <h2 className="sr-only">Pro grading</h2>
     <div className="px-3 pt-3">
-      <Segmented value={tab} onChange={setTab} options={[{ id: 'graph', label: 'Graph' }, { id: 'scopes', label: 'Scopes' }, { id: 'lut', label: 'LUT Studio' }]} />
+      <Segmented appearance="tabs" label="Grading tools" value={tab} onChange={setTab} options={[{ id: 'graph', label: 'Graph' }, { id: 'scopes', label: 'Scopes' }, { id: 'lut', label: 'LUT Studio' }]} />
     </div>
     <div className="ui-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
     {tab === 'graph' && <AdvancedGraphPanel graph={editor.gradeGraph} onGraphChange={editor.setGradeGraph} settings={editor.settings} updateSetting={editor.updateSetting} />}

@@ -22,6 +22,9 @@ interface ShellState {
   setLeftOpen: (open: boolean) => void;
   leftTab: LeftTab;
   setLeftTab: (tab: LeftTab) => void;
+  openEffects: () => void;
+  focusEffectsSearch: boolean;
+  setFocusEffectsSearch: (focus: boolean) => void;
   /** Opens the left panel on a tab, or closes it if that tab is already showing. */
   toggleLeft: (tab: LeftTab) => void;
   rightMode: RightMode;
@@ -80,6 +83,7 @@ const HISTOGRAM_POSITION_KEY = "intaglio.ui.histogram.position";
 export function ShellProvider({ children }: { children: React.ReactNode }) {
   const [leftOpen, setLeftOpen] = useState(false);
   const [leftTab, setLeftTab] = useState<LeftTab>("looks");
+  const [focusEffectsSearch, setFocusEffectsSearch] = useState(false);
   const [rightMode, setRightMode] = useState<RightMode>("develop");
   const [cropDraft, setCropDraft] = useState<CropDraft | null>(null);
   const [panelsHidden, setPanelsHidden] = useState(false);
@@ -107,6 +111,15 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     setLeftOpen,
     leftTab,
     setLeftTab,
+    openEffects: () => {
+      setPanelsHidden(false);
+      setPreview(null);
+      setLeftTab("effects");
+      setLeftOpen(true);
+      setFocusEffectsSearch(true);
+    },
+    focusEffectsSearch,
+    setFocusEffectsSearch,
     toggleLeft: (tab) => {
       if (leftOpen && leftTab === tab) setLeftOpen(false);
       else {
@@ -160,7 +173,7 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     setShowSafeGuides,
       videoExportOpen,
     setVideoExportOpen,
-  }), [leftOpen, leftTab, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking, histogramVisible, histogramDetached, histogramPosition, selectedTitleId, showSafeGuides, videoExportOpen]);
+  }), [leftOpen, leftTab, focusEffectsSearch, rightMode, cropDraft, panelsHidden, showClipping, surround, compare, splitPosition, preview, selectedComponentId, showMaskOverlay, picking, histogramVisible, histogramDetached, histogramPosition, selectedTitleId, showSafeGuides, videoExportOpen]);
 
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }

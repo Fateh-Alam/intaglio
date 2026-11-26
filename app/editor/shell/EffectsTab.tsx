@@ -13,9 +13,6 @@ import { useShell } from "./useShell";
 type Collection = "effects" | "looks";
 interface Item { id: string; name: string; group: string; layers: () => CreativeEffect[] }
 
-/** Fired by "Browse effects" so an already-open library still focuses its search. */
-export const BROWSE_EFFECTS_EVENT = "etch:browse-effects";
-
 const EFFECT_ITEMS: readonly Item[] = EFFECTS.map((effect) => ({ id: effect.id, name: effect.name, group: effect.group, layers: () => [createEffect(effect.id)] }));
 const LOOK_ITEMS: readonly Item[] = STUDIO_LOOKS.map((look) => ({ id: look.id, name: look.name, group: look.group, layers: () => createLookLayers(look) }));
 
@@ -39,10 +36,10 @@ function Thumbnail({ item, collection, renderer }: { item: Item; collection: Col
     return () => { cancelled = true; observer.disconnect(); };
   }, [item, collection, renderer]);
   return (
-    <span ref={ref} aria-hidden="true" className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-[8px] bg-white/[0.05] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+    <span ref={ref} aria-hidden="true" className="relative grid h-14 w-[72px] shrink-0 place-items-center overflow-hidden rounded-[6px] bg-black/35 ring-1 ring-inset ring-white/10">
       {url
         // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={url} alt="" className="h-full w-full object-cover" draggable={false} />
+        ? <img src={url} alt="" className="absolute inset-0 h-full w-full object-contain" draggable={false} />
         : <IconPhoto size={16} className="text-[var(--ui-text-3)]" />}
     </span>
   );
@@ -52,6 +49,7 @@ function Thumbnail({ item, collection, renderer }: { item: Item; collection: Col
 export function EffectsTab() {
   const { settings, updateSettings, imageSrc, rawSource, gradeGraph } = useEditorState();
   const shell = useShell();
+  const { focusEffectsSearch, setFocusEffectsSearch } = shell;
   const [collection, setCollection] = useState<Collection>("effects");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
@@ -93,11 +91,10 @@ export function EffectsTab() {
   }, [category, collection, query]);
 
   useEffect(() => {
-    searchRef.current?.focus({ preventScroll: true });
-    const focus = () => searchRef.current?.focus({ preventScroll: true });
-    window.addEventListener(BROWSE_EFFECTS_EVENT, focus);
-    return () => window.removeEventListener(BROWSE_EFFECTS_EVENT, focus);
-  }, []);
+    if (!focusEffectsSearch) return;
+    if (window.matchMedia("(min-width: 768px)").matches) searchRef.current?.focus({ preventScroll: true });
+    setFocusEffectsSearch(false);
+  }, [focusEffectsSearch, setFocusEffectsSearch]);
 
   const groups = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -142,6 +139,7 @@ export function EffectsTab() {
     }}>
       <div className="space-y-2 px-3 pb-2 pt-1">
         <Segmented
+          label="Effect collections"
           value={collection}
           onChange={(value) => { clearPreview(); setCategory(""); setCollection(value); }}
           options={[{ id: "effects", label: "Individual effects" }, { id: "looks", label: "Studio looks" }]}
@@ -177,11 +175,11 @@ export function EffectsTab() {
               const added = collection === "effects" && inStack.has(item.id);
               const active = previewing(item.id);
               return (
-                <div key={item.id} role="listitem" className={`flex items-center gap-1 rounded-[10px] pr-1 transition-colors ${active ? "bg-[var(--ui-accent-soft)]" : "hover:bg-white/[0.05]"}`}>
-                  <button type="button" onClick={() => add(item)} className="ui-focus flex min-w-0 flex-1 items-center gap-3 rounded-[10px] p-1.5 text-left">
+                <div key={item.id} role="listitem" className={`flex items-center gap-1 rounded-[9px] pr-1 transition-colors ${active ? "bg-[var(--ui-accent-soft)]" : "hover:bg-white/[0.05]"}`}>
+                  <button type="button" onClick={() => add(item)} className="ui-focus flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-[9px] p-1.5 text-left">
                     <Thumbnail item={item} collection={collection} renderer={renderer} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px] font-medium text-[var(--ui-text)]">{item.name}</span>
+                      <span className="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--ui-text)]">{item.name}</span>
                       <span className="sr-only">{item.group}</span>
                     </span>
                     {added && <IconCheck size={15} stroke={2.2} aria-label="In your stack" className="shrink-0 text-[var(--ui-accent-strong)]" />}
@@ -189,9 +187,10 @@ export function EffectsTab() {
                   <button
                     type="button"
                     aria-label={`Preview ${item.name}`}
+                    title={`Preview ${item.name}`}
                     aria-pressed={active}
                     onClick={() => togglePreview(item)}
-                    className={`ui-focus grid h-8 w-8 shrink-0 place-items-center rounded-[8px] transition-colors ${active ? "bg-[var(--ui-accent)] text-white" : "text-[var(--ui-text-2)] hover:bg-white/[0.08] hover:text-[var(--ui-text)]"}`}
+                    className={`ui-focus grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-[8px] transition-colors ${active ? "bg-[var(--ui-accent)] text-white" : "text-[var(--ui-text-2)] hover:bg-white/[0.08] hover:text-[var(--ui-text)]"}`}
                   >
                     <IconEye size={15} stroke={1.8} />
                   </button>

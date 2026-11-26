@@ -8,7 +8,6 @@ import { DevSlider } from "../../ui/DevSlider";
 import { Section } from "../../ui/Section";
 import { useEditorState } from "../hooks/useEditorState";
 import { useShell } from "../shell/useShell";
-import { BROWSE_EFFECTS_EVENT } from "../shell/EffectsTab";
 import type { EditorSettings } from "../../types/editor";
 import { EFFECT_BY_ID, type EffectDefinition } from "./catalog";
 import { DITHER_METHODS, DITHER_PALETTES, isDiffusionMethod, type CreativeEffect } from "./settings";
@@ -123,7 +122,7 @@ function LayerControls({ layer, definition, change, playing, togglePlayback }: {
 
 export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onToggle: (solo: boolean) => void }) {
   const { settings, updateSettings } = useEditorState();
-  const { setPreview, setVideoExportOpen, setLeftTab, setLeftOpen } = useShell();
+  const { setPreview, setVideoExportOpen, openEffects } = useShell();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const phaseRef = useRef(0);
@@ -141,11 +140,6 @@ export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onTo
     if (added) setActiveId(added.id);
   }
 
-  const openLibrary = () => {
-    setLeftTab("effects");
-    setLeftOpen(true);
-    window.dispatchEvent(new Event(BROWSE_EFFECTS_EVENT));
-  };
   const clearPreview = () => {
     setPlayingId(null);
     if (previewRef.current) {
@@ -212,7 +206,7 @@ export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onTo
     <Section title="Creative Effects" open={open} modified={stack.length > 0}
       onToggle={(solo) => { if (open) clearPreview(); onToggle(solo); }}
       onReset={() => modify("Clear creative effects", () => [])}>
-      <Button className="mb-2 w-full" icon={<IconPlus size={14} />} onClick={() => { clearPreview(); openLibrary(); }}>
+      <Button className="mb-2 w-full" icon={<IconPlus size={14} />} onClick={() => { clearPreview(); openEffects(); }}>
         Browse effects
       </Button>
       {stack.length === 0 && (

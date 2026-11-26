@@ -54,7 +54,7 @@ export function useShellCommands(): AppCommand[] {
     { id: "panel-masks", title: "Masks", section: "Local Adjustments", shortcut: "M", keywords: ["brush", "gradient", "radial", "local"], run: () => switchMode("masks") },
     { id: "panel-text", title: "Text & Watermark", section: "Output", shortcut: "T", keywords: ["title", "caption", "watermark"], run: () => switchMode("text") },
     { id: "panel-looks", title: "Browse Looks", section: "Looks", shortcut: "L", keywords: ["film", "preset", "recipe", "profile"], run: openLeft("looks") },
-    { id: "panel-effects", title: "Browse Effects", section: "Looks", keywords: ["creative", "special effects", "studio looks"], run: openLeft("effects") },
+    { id: "panel-effects", title: "Browse Effects", section: "Looks", keywords: ["creative", "special effects", "studio looks"], run: shell.openEffects },
     { id: "panel-history", title: "History", section: "Workflow", keywords: ["undo", "steps"], run: openLeft("history") },
     { id: "panel-versions", title: "Versions & Snapshots", section: "Workflow", keywords: ["virtual copy", "snapshot", "compare"], run: openLeft("versions") },
     { id: "panel-info", title: "Rating & Info", section: "Workflow", keywords: ["metadata", "stars", "flag", "keywords"], run: openLeft("info") },

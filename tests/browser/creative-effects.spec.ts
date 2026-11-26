@@ -58,13 +58,26 @@ test("browse categories, render thumbnails and apply studio looks", async ({ pag
   await page.goto("/editor?sample=1");
   await page.getByRole("button", { name: "Show editor library" }).click();
   const library = page.getByRole("complementary", { name: "Editor library" });
-  await library.getByRole("radio", { name: "Effects", exact: true }).click();
+  const tabs = library.getByRole("radiogroup", { name: "Editor library tabs" });
+  const looksTab = tabs.getByRole("radio", { name: "Looks", exact: true });
+  const effectsTab = tabs.getByRole("radio", { name: "Effects", exact: true });
+  await looksTab.press("End");
+  await expect(tabs.getByRole("radio", { name: "Info", exact: true })).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(looksTab).toBeChecked();
+  await page.keyboard.press("ArrowRight");
+  await expect(effectsTab).toBeChecked();
+  await expect(effectsTab).toBeFocused();
   await library.getByRole("combobox", { name: "Effect category" }).selectOption("Print & Paper");
   const results = library.getByRole("list", { name: "Effect results" });
   const dither = results.getByRole("button", { name: /^Dither Print/ });
   await expect(results.getByRole("button", { name: /^Characters/ })).toHaveCount(0);
   await expect(dither.locator('img[src^="data:image/jpeg"]')).toBeVisible();
-  expect(await dither.locator("img").evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  const thumbnail = await dither.locator("img").evaluate((image: HTMLImageElement) => ({
+    height: image.naturalHeight,
+    fit: getComputedStyle(image).objectFit,
+  }));
+  expect(thumbnail).toEqual({ height: 224, fit: "contain" });
   await dither.click();
 
   await library.getByRole("radio", { name: "Studio looks" }).click();
