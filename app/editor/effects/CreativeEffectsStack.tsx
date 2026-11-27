@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { IconArrowDown, IconArrowUp, IconEye, IconEyeOff, IconMovie, IconPlayerPause, IconPlayerPlay, IconPlus, IconTrash } from "@tabler/icons-react";
+import { useEffect, useRef, useState, type Ref } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { IconArrowDown, IconArrowUp, IconChevronRight, IconEye, IconEyeOff, IconMovie, IconPlayerPause, IconPlayerPlay, IconRotate2, IconTrash } from "@tabler/icons-react";
 import { hasAnimatedEffects } from "../render/videoExport";
 import { Button, IconButton, Switch } from "../../ui/Controls";
 import { DevSlider } from "../../ui/DevSlider";
-import { Section } from "../../ui/Section";
 import { useEditorState } from "../hooks/useEditorState";
 import { useShell } from "../shell/useShell";
 import type { EditorSettings } from "../../types/editor";
@@ -120,27 +120,23 @@ function LayerControls({ layer, definition, change, playing, togglePlayback }: {
   );
 }
 
-export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onToggle: (solo: boolean) => void }) {
+export function CreativeEffectsStack({ dockRef, clearLibraryPreview }: {
+  dockRef: Ref<HTMLElement>;
+  clearLibraryPreview: () => void;
+}) {
   const { settings, updateSettings } = useEditorState();
-  const { setPreview, setVideoExportOpen, openEffects } = useShell();
+  const { setPreview, setVideoExportOpen } = useShell();
+  const reduceMotion = useReducedMotion();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const phaseRef = useRef(0);
   const previewRef = useRef<EditorSettings | null>(null);
 
   const stack = settings.creativeEffects;
-
-  // A layer just added from the Effects library opens so its controls are ready.
-  const stackKey = stack.map((layer) => layer.id).join("|");
-  const [knownKey, setKnownKey] = useState(stackKey);
-  if (knownKey !== stackKey) {
-    const known = new Set(knownKey.split("|"));
-    const added = stack.find((layer) => !known.has(layer.id));
-    setKnownKey(stackKey);
-    if (added) setActiveId(added.id);
-  }
+  const editingLayer = stack.some((layer) => layer.id === activeId);
 
   const clearPreview = () => {
+    clearLibraryPreview();
     setPlayingId(null);
     if (previewRef.current) {
       const activePreview = previewRef.current;
@@ -150,17 +146,7 @@ export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onTo
   };
 
   useEffect(() => {
-    if (!open) return;
-    return () => {
-      const activePreview = previewRef.current;
-      if (activePreview) setPreview((current) => current === activePreview ? null : current);
-      previewRef.current = null;
-      setPlayingId(null);
-    };
-  }, [open, setPreview]);
-
-  useEffect(() => {
-    if (!open || !playingId) return;
+    if (!playingId) return;
     const selected = settings.creativeEffects.find((layer) => layer.id === playingId && layer.enabled);
     if (!selected) return;
     const started = performance.now();
@@ -188,7 +174,7 @@ export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onTo
       if (activePreview) setPreview((current) => current === activePreview ? null : current);
       previewRef.current = null;
     };
-  }, [open, playingId, setPreview, settings]);
+  }, [playingId, setPreview, settings]);
 
   const modify = (label: string, apply: (layers: CreativeEffect[]) => CreativeEffect[]) => {
     clearPreview();
@@ -203,26 +189,42 @@ export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onTo
   });
 
   return (
-    <Section title="Creative Effects" open={open} modified={stack.length > 0}
-      onToggle={(solo) => { if (open) clearPreview(); onToggle(solo); }}
-      onReset={() => modify("Clear creative effects", () => [])}>
-      <Button className="mb-2 w-full" icon={<IconPlus size={14} />} onClick={() => { clearPreview(); openEffects(); }}>
-        Browse effects
-      </Button>
-      {stack.length === 0 && (
-        <p className="mb-1 text-[11.5px] leading-relaxed text-[var(--ui-text-3)]">Opens the Effects library beside the photo. Every effect is shown on your own image.</p>
-      )}
+    <motion.section ref={dockRef} aria-label="Applied effects"
+      initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 14 }}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
+      className={`absolute inset-x-2 bottom-2 z-20 flex min-h-0 flex-col rounded-[12px] border border-[var(--ui-line-strong)] bg-[var(--ui-raised)] px-2 pb-2 shadow-[0_8px_22px_rgba(0,0,0,0.45)] ${editingLayer ? "max-h-[74%]" : "max-h-[min(52%,12rem)]"}`}>
+      <div className="flex min-h-8 shrink-0 items-center gap-1 pl-1">
+        <h2 className="min-w-0 flex-1 text-[12px] font-semibold text-[var(--ui-text)]">Applied effects</h2>
+        {hasAnimatedEffects(settings) && (
+          <IconButton label="Export as video…" size="sm" tooltipSide="top" onClick={() => { clearPreview(); setVideoExportOpen(true); }}>
+            <IconMovie size={15} stroke={1.8} />
+          </IconButton>
+        )}
+        {stack.length > 0 && (
+          <IconButton label="Clear applied effects" size="sm" tooltipSide="top" onClick={() => modify("Clear creative effects", () => [])}>
+            <IconRotate2 size={14} />
+          </IconButton>
+        )}
+      </div>
       {stack.length > 0 && (
-        <ol className="grid gap-1.5" aria-label="Creative effect stack">
+        <ol className="ui-scroll min-h-0 space-y-1 overflow-y-auto overscroll-contain" aria-label="Creative effect stack">
           {stack.map((layer, index) => {
             const definition = EFFECT_BY_ID.get(layer.effect)!;
             const expanded = layer.id === activeId;
             const change = (patch: Partial<CreativeEffect>, label: string) =>
               modify(`${definition.name} · ${label}`, (layers) => layers.map((item) => item.id === layer.id ? { ...item, ...patch } : item));
             return (
-              <li key={layer.id} className="min-w-0 rounded-[8px] border border-[var(--ui-line)] bg-black/10">
-                <div className="flex min-w-0 items-center px-1 py-0.5">
-                  <IconButton label={`${layer.enabled ? "Hide" : "Show"} ${definition.name}`} size="sm"
+              <motion.li key={layer.id}
+                layout={reduceMotion ? false : "position"}
+                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.16 }}
+                className="min-w-0 rounded-[8px] border border-[var(--ui-line)] bg-black/10">
+                <div className="flex min-w-0 items-center px-1">
+                  <span aria-hidden="true" className="ml-1 w-4 shrink-0 text-center text-[10px] tabular-nums text-[var(--ui-text-2)]">{index + 1}</span>
+                  <IconButton label={`${layer.enabled ? "Hide" : "Show"} ${definition.name}`} size="sm" tooltipSide="top"
                     onClick={() => change({ enabled: !layer.enabled }, layer.enabled ? "Hide" : "Show")}>
                     {layer.enabled ? <IconEye size={14} /> : <IconEyeOff size={14} />}
                   </IconButton>
@@ -230,12 +232,13 @@ export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onTo
                     clearPreview();
                     setActiveId(expanded ? null : layer.id);
                   }}
-                    className={`ui-focus min-w-0 flex-1 truncate rounded-[5px] px-1 py-1.5 text-left text-[11.5px] ${layer.enabled ? "text-[var(--ui-text)]" : "text-[var(--ui-text-3)]"}`}>
-                    {definition.name}
+                    className={`ui-focus flex min-w-0 flex-1 items-center gap-1 rounded-[5px] px-1 py-1.5 text-left text-[11.5px] ${layer.enabled ? "text-[var(--ui-text)]" : "text-[var(--ui-text-2)]"}`}>
+                    <span className="truncate">{definition.name}</span>
+                    <IconChevronRight size={12} aria-hidden="true" className={`shrink-0 text-[var(--ui-text-2)] ${expanded ? "rotate-90" : ""}`} />
                   </button>
-                  <IconButton label={`Move ${definition.name} up`} size="sm" disabled={index === 0} onClick={() => move(layer.id, -1)}><IconArrowUp size={13} /></IconButton>
-                  <IconButton label={`Move ${definition.name} down`} size="sm" disabled={index === stack.length - 1} onClick={() => move(layer.id, 1)}><IconArrowDown size={13} /></IconButton>
-                  <IconButton label={`Remove ${definition.name}`} size="sm" onClick={() => modify(`Remove ${definition.name}`, (layers) => layers.filter(({ id }) => id !== layer.id))}><IconTrash size={13} /></IconButton>
+                  <IconButton label={`Move ${definition.name} up`} size="sm" tooltipSide="top" disabled={index === 0} onClick={() => move(layer.id, -1)}><IconArrowUp size={13} /></IconButton>
+                  <IconButton label={`Move ${definition.name} down`} size="sm" tooltipSide="top" disabled={index === stack.length - 1} onClick={() => move(layer.id, 1)}><IconArrowDown size={13} /></IconButton>
+                  <IconButton label={`Remove ${definition.name}`} size="sm" tooltipSide="top" onClick={() => modify(`Remove ${definition.name}`, (layers) => layers.filter(({ id }) => id !== layer.id))}><IconTrash size={13} /></IconButton>
                 </div>
                 {expanded && (
                   <LayerControls key={layer.id} layer={layer} definition={definition} change={change} playing={playingId === layer.id}
@@ -247,16 +250,11 @@ export function CreativeEffectsSection({ open, onToggle }: { open: boolean; onTo
                       }
                     }} />
                 )}
-              </li>
+              </motion.li>
             );
           })}
         </ol>
       )}
-      {hasAnimatedEffects(settings) && (
-        <Button className="mt-2 w-full" icon={<IconMovie size={14} stroke={1.8} />} onClick={() => { clearPreview(); setVideoExportOpen(true); }}>
-          Export as video…
-        </Button>
-      )}
-    </Section>
+    </motion.section>
   );
 }

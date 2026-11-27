@@ -2,6 +2,7 @@
 
 import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { IconCheck, IconEye, IconPhoto, IconSearch } from "@tabler/icons-react";
+import { AnimatePresence } from "framer-motion";
 import type { EditorSettings } from "../../types/editor";
 import { Segmented, Switch } from "../../ui/Controls";
 import { useEditorState } from "../hooks/useEditorState";
@@ -9,6 +10,7 @@ import { EFFECT_GROUPS, EFFECTS } from "../effects/catalog";
 import { createEffect, type CreativeEffect } from "../effects/settings";
 import { createLookLayers, STUDIO_GROUPS, STUDIO_LOOKS } from "../effects/studioLooks";
 import { EffectThumbnailRenderer } from "../effects/effectThumbnails";
+import { CreativeEffectsStack } from "../effects/CreativeEffectsStack";
 import { useShell } from "./useShell";
 
 type Collection = "effects" | "looks";
@@ -72,6 +74,20 @@ export function EffectsTab() {
   const previewRef = useRef<EffectPreview | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const stackDockRef = useRef<HTMLElement>(null);
+  const [stackHeight, setStackHeight] = useState(0);
+  const hasAppliedEffects = settings.creativeEffects.length > 0;
+
+  useEffect(() => {
+    if (!hasAppliedEffects || !stackDockRef.current) return;
+    const dock = stackDockRef.current;
+    const measure = () => setStackHeight(dock.offsetHeight);
+    const observer = new ResizeObserver(measure);
+    measure();
+    observer.observe(dock);
+    return () => observer.disconnect();
+  }, [hasAppliedEffects]);
+  const resultPadding = (hasAppliedEffects ? stackHeight : 0) + 16;
 
   // Thumbnails show the photo as it was graded when the library opened, without
   // its current effects; reopening the library refreshes them.
@@ -152,9 +168,10 @@ export function EffectsTab() {
       event.preventDefault();
       event.stopPropagation();
     }}>
-      <div className="space-y-2 px-3 pb-2 pt-1">
+      <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-2 px-3 pb-2 pt-1 md:grid-cols-1">
         <Segmented
           label="Effect collections"
+          className="col-span-2 md:col-span-1"
           value={collection}
           onChange={(value) => { clearPreview(); setCategory(""); setCollection(value); }}
           options={[{ id: "effects", label: "Individual effects" }, { id: "looks", label: "Studio looks" }]}
@@ -173,56 +190,64 @@ export function EffectsTab() {
         </label>
         <select aria-label="Effect category" value={category}
           onChange={(event) => { clearPreview(); setCategory(event.target.value); }}
-          className="ui-focus h-7 w-full rounded-[8px] bg-[var(--ui-control)] px-2 text-[12px] text-[var(--ui-text)] ring-1 ring-inset ring-[var(--ui-line)]">
+          className="ui-focus h-8 min-w-0 w-full rounded-[8px] bg-[var(--ui-control)] px-2 text-[12px] text-[var(--ui-text)] ring-1 ring-inset ring-[var(--ui-line)] md:h-7">
           <option value="">All categories</option>
           {(collection === "effects" ? EFFECT_GROUPS : STUDIO_GROUPS).map((group) => <option key={group}>{group}</option>)}
         </select>
         {collection === "looks" && (
-          <Switch label="Add to current stack" checked={append} onChange={(checked) => { clearPreview(); setAppend(checked); }} hint="Off replaces your effects with the look's layers" />
+          <div className="col-span-2 md:col-span-1">
+            <Switch label="Add to current stack" checked={append} onChange={(checked) => { clearPreview(); setAppend(checked); }} hint="Off replaces your effects with the look's layers" />
+          </div>
         )}
       </div>
 
-      <div ref={resultsRef} role="list" aria-label="Effect results" className="ui-scroll min-h-0 flex-1 overflow-y-auto px-2 pb-4">
-        {Object.entries(groups).map(([group, items]) => (
-          <section key={group} className="mb-2" aria-label={group}>
-            <div className="sticky top-0 z-10 bg-[var(--ui-panel)] px-1.5 py-2 text-[10.5px] font-medium uppercase tracking-[0.08em] text-[var(--ui-text-3)]">{group}</div>
-            {items.map((item) => {
-              const added = collection === "effects" && inStack.has(item.id);
-              const active = activePreview?.id === item.id;
-              const held = heldPreview?.id === item.id;
-              return (
-                <div key={item.id} role="listitem" className={`flex items-center gap-1 rounded-[9px] pr-1 transition-colors ${active ? "bg-[var(--ui-accent-soft)]" : "hover:bg-white/[0.05]"}`}>
-                  <button type="button" onClick={() => add(item)} className="ui-focus flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-[9px] p-1.5 text-left">
-                    <Thumbnail item={item} collection={collection} renderer={renderer}
-                      onPointerEnter={(event) => {
-                        if (event.pointerType !== "touch") showPreview(item, "hover");
-                      }}
-                      onPointerLeave={() => {
-                        const current = previewRef.current;
-                        if (current?.source === "hover" && current.id === item.id) clearPreview(current.held);
-                      }} />
-                    <span className="min-w-0 flex-1">
-                      <span className="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--ui-text)]">{item.name}</span>
-                      <span className="sr-only">{item.group}</span>
-                    </span>
-                    {added && <IconCheck size={15} stroke={2.2} aria-label="In your stack" className="shrink-0 text-[var(--ui-accent-strong)]" />}
-                  </button>
-                  <button
-                    type="button"
-                    aria-label={`Preview ${item.name}`}
-                    title={`Preview ${item.name}`}
-                    aria-pressed={held}
-                    onClick={() => held ? clearPreview() : showPreview(item, "eye")}
-                    className={`ui-focus grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-[8px] transition-colors ${held ? "bg-[var(--ui-accent)] text-white" : "text-[var(--ui-text-2)] hover:bg-white/[0.08] hover:text-[var(--ui-text)]"}`}
-                  >
-                    <IconEye size={15} stroke={1.8} />
-                  </button>
-                </div>
-              );
-            })}
-          </section>
-        ))}
-        {empty && <p className="px-2 py-8 text-center text-[12px] text-[var(--ui-text-3)]">Nothing matches “{query}”.</p>}
+      <div className="relative min-h-0 flex-1">
+        <div ref={resultsRef} role="list" aria-label="Effect results" className="ui-scroll h-full overflow-y-auto px-2"
+          style={{ paddingBottom: resultPadding, scrollPaddingBottom: resultPadding }}>
+          {Object.entries(groups).map(([group, items]) => (
+            <section key={group} className="mb-2" aria-label={group}>
+              <div className="bg-[var(--ui-panel)] px-1.5 py-2 text-[10.5px] font-medium uppercase tracking-[0.08em] text-[var(--ui-text-3)] md:sticky md:top-0 md:z-10">{group}</div>
+              {items.map((item) => {
+                const added = collection === "effects" && inStack.has(item.id);
+                const active = activePreview?.id === item.id;
+                const held = heldPreview?.id === item.id;
+                return (
+                  <div key={item.id} role="listitem" className={`flex items-center gap-1 rounded-[9px] pr-1 transition-colors ${active ? "bg-[var(--ui-accent-soft)]" : "hover:bg-white/[0.05]"}`}>
+                    <button type="button" onClick={() => add(item)} className="ui-focus flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-[9px] p-1.5 text-left">
+                      <Thumbnail item={item} collection={collection} renderer={renderer}
+                        onPointerEnter={(event) => {
+                          if (event.pointerType !== "touch") showPreview(item, "hover");
+                        }}
+                        onPointerLeave={() => {
+                          const current = previewRef.current;
+                          if (current?.source === "hover" && current.id === item.id) clearPreview(current.held);
+                        }} />
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 text-[13px] font-medium leading-snug text-[var(--ui-text)]">{item.name}</span>
+                        <span className="sr-only">{item.group}</span>
+                      </span>
+                      {added && <IconCheck size={15} stroke={2.2} aria-label="In your stack" className="shrink-0 text-[var(--ui-accent-strong)]" />}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Preview ${item.name}`}
+                      title={`Preview ${item.name}`}
+                      aria-pressed={held}
+                      onClick={() => held ? clearPreview() : showPreview(item, "eye")}
+                      className={`ui-focus grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-[8px] transition-colors ${held ? "bg-[var(--ui-accent)] text-white" : "text-[var(--ui-text-2)] hover:bg-white/[0.08] hover:text-[var(--ui-text)]"}`}
+                    >
+                      <IconEye size={15} stroke={1.8} />
+                    </button>
+                  </div>
+                );
+              })}
+            </section>
+          ))}
+          {empty && <p className="px-2 py-8 text-center text-[12px] text-[var(--ui-text-3)]">Nothing matches “{query}”.</p>}
+        </div>
+        <AnimatePresence initial={false}>
+          {hasAppliedEffects && <CreativeEffectsStack key="applied-effects" dockRef={stackDockRef} clearLibraryPreview={clearPreview} />}
+        </AnimatePresence>
       </div>
     </div>
   );

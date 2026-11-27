@@ -8,7 +8,6 @@ test("animated Creative Effects export as a looping H.264 MP4", async ({ page })
   await page.goto("/editor?sample=1");
   await expect(page.getByRole("slider", { name: "Exposure", exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Creative Effects", exact: true }).click();
   await page.getByRole("button", { name: "Browse effects" }).click();
   await page.getByRole("searchbox", { name: "Search effects and looks" }).fill("ripple");
   await page.getByRole("list", { name: "Effect results" }).getByRole("button", { name: /^Ripple/ }).first().click();

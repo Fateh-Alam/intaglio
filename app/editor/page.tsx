@@ -92,7 +92,7 @@ function EditorLayout() {
               exit={{ opacity: 0, x: -16 }}
               transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
               className={`z-30 w-full shrink-0 border-[var(--ui-line)] bg-[var(--ui-panel)] md:relative md:w-[280px] md:border-r md:shadow-none ${browsingEffects
-                ? "max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:h-[46dvh] max-md:border-t"
+                ? "max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:h-[51dvh] max-md:border-t"
                 : "max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:max-w-[320px] max-md:border-r max-md:shadow-2xl"}`}
               aria-label="Editor library"
             >
@@ -105,7 +105,7 @@ function EditorLayout() {
 
         {!shell.panelsHidden && (
           <aside
-            className={`h-[46dvh] shrink-0 border-t border-[var(--ui-line)] bg-[var(--ui-panel)] md:h-auto md:w-[328px] md:border-l md:border-t-0 ${browsingEffects ? "max-md:invisible" : ""}`}
+            className={`shrink-0 border-t border-[var(--ui-line)] bg-[var(--ui-panel)] md:h-auto md:w-[328px] md:border-l md:border-t-0 ${browsingEffects ? "max-md:invisible max-md:h-[51dvh]" : "max-md:h-[46dvh]"}`}
             aria-label="Edit controls"
           >
             <RightPanel />

@@ -94,7 +94,6 @@ test("crop and straighten remain identical on save, reopen and export with a bru
   await page.getByRole("slider", { name: "Exposure", exact: true }).press("End");
 
   await page.getByRole("radio", { name: "Edit" }).click();
-  await page.getByRole("button", { name: "Creative Effects", exact: true }).click();
   await page.getByRole("button", { name: "Browse effects" }).click();
   await page.getByRole("searchbox", { name: "Search effects and looks" }).fill("color overlay");
   await page.getByRole("list", { name: "Effect results" }).getByRole("button", { name: /^Color Overlay/ }).click();

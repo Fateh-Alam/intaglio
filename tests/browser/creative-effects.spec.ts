@@ -6,7 +6,6 @@ test("preview, edit, reorder and save a creative effect stack", async ({ page })
   await page.clock.install();
   await page.goto("/editor");
   await page.getByText("Sample Photograph", { exact: true }).click();
-  await page.getByRole("button", { name: "Creative Effects", exact: true }).click();
 
   const search = page.getByRole("searchbox", { name: "Search effects and looks" });
   const stack = page.getByRole("list", { name: "Creative effect stack" });
@@ -37,6 +36,8 @@ test("preview, edit, reorder and save a creative effect stack", async ({ page })
   await expect(ditherPreview).toHaveAttribute("aria-pressed", "false");
 
   await dither.click();
+  await expect(page.getByRole("complementary", { name: "Edit controls" }).getByRole("list", { name: "Creative effect stack" })).toHaveCount(0);
+  await stack.getByRole("button", { name: "Dither", exact: true }).click();
   await page.getByRole("button", { name: "Play effect", exact: true }).click();
   await expect(page.getByText("Preview", { exact: true })).toBeVisible();
   await page.clock.runFor(250);
@@ -101,7 +102,6 @@ test("browse categories, render thumbnails and apply studio looks", async ({ pag
   await expect(library.getByRole("combobox", { name: "Effect category" })).toHaveValue("");
   await library.getByRole("searchbox").fill("instant frame");
   const stack = page.getByRole("list", { name: "Creative effect stack" });
-  await page.getByRole("button", { name: /^Creative Effects/ }).click();
   const look = results.getByRole("button", { name: /^Instant Frame/ });
   const preview = results.getByRole("button", { name: "Preview Instant Frame" });
   await look.locator("img").hover();
@@ -127,22 +127,43 @@ test("browse categories, render thumbnails and apply studio looks", async ({ pag
   await expect(page.getByText("Preview", { exact: true })).toHaveCount(0);
 });
 
-test("keep the photo visible when browsing effects on a phone", async ({ page }) => {
+test("browse, reorder and remove applied effects beside the photo on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/editor?sample=1");
   await page.getByRole("button", { name: "Continue anyway" }).click();
-  await page.getByRole("button", { name: "Creative Effects", exact: true }).click();
   await page.getByRole("button", { name: "Browse effects" }).click();
   const library = page.getByRole("complementary", { name: "Editor library" });
   await expect(library).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Edit controls" })).toBeHidden();
+  const applied = library.getByRole("region", { name: "Applied effects" });
+  const catalog = library.getByRole("list", { name: "Effect results" });
+  await expect(applied).toHaveCount(0);
   await library.getByRole("searchbox").fill("dither");
   await library.getByRole("button", { name: "Preview Dither", exact: true }).click();
   await expect(page.getByText("Preview", { exact: true })).toBeVisible();
+  await expect(applied).toHaveCount(0);
   const photo = await page.getByTestId("photo-frame").boundingBox();
   const panel = await library.boundingBox();
   expect(photo!.y + photo!.height).toBeLessThan(panel!.y);
   await library.getByRole("button", { name: /^Dither Print/ }).click();
+  const stack = library.getByRole("list", { name: "Creative effect stack" });
+  await expect(stack.getByRole("button", { name: "Remove Dither" })).toBeVisible();
+  await expect.poll(async () => {
+    const tray = (await applied.boundingBox())!;
+    const results = (await catalog.boundingBox())!;
+    return Math.round(results.y + results.height - tray.y - tray.height);
+  }).toBe(8);
+  await library.getByRole("searchbox").fill("fluted");
+  await library.getByRole("button", { name: /^Fluted Glass Glass/ }).click();
+  await stack.getByRole("button", { name: "Move Fluted Glass up" }).click();
+  await expect(stack.getByRole("listitem").first()).toContainText("Fluted Glass");
+  await stack.getByRole("button", { name: "Remove Dither" }).click();
+  await expect(stack.getByRole("listitem")).toHaveCount(1);
+  await expect(library.getByRole("list", { name: "Effect results" })).toBeVisible();
   await library.getByRole("button", { name: "Close panel" }).click();
-  await expect(page.getByRole("list", { name: "Creative effect stack" }).getByRole("button", { name: "Remove Dither" })).toBeVisible();
+  await page.getByRole("button", { name: "Browse effects" }).click();
+  await expect(stack.getByRole("button", { name: "Remove Fluted Glass" })).toBeVisible();
+  await stack.getByRole("button", { name: "Remove Fluted Glass" }).click();
+  await expect(applied).toHaveCount(0);
+  await expect(catalog).toBeVisible();
 });

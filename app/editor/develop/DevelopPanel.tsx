@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
+import { IconLayersIntersect } from "@tabler/icons-react";
+import { Button } from "../../ui/Controls";
 import { readPreference, writePreference } from "../../ui/storage";
 import { useEditorState } from "../hooks/useEditorState";
 import { useShell } from "../shell/useShell";
 import { useDevelop } from "./useDevelop";
 import { HistogramView } from "./HistogramView";
 import { formatHistogramCaption } from "./histogramLayout";
-import { CreativeEffectsSection } from "../effects/CreativeEffectsSection";
 import { LookSection } from "./LookSection";
 import { BasicSection } from "./BasicSection";
 import { ToneCurveSection } from "./ToneCurveSection";
@@ -15,8 +16,9 @@ import { ColorMixerSection } from "./ColorMixerSection";
 import { ColorGradingSection } from "./ColorGradingSection";
 import { DetailSection, EffectsSection, FilmResponseSection, GeometrySection } from "./EffectsSections";
 
-const SECTIONS = ["look", "basic", "curve", "mixer", "grading", "detail", "geometry", "effects", "creative", "film"] as const;
+const SECTIONS = ["look", "basic", "curve", "mixer", "grading", "detail", "geometry", "effects", "film"] as const;
 type SectionId = (typeof SECTIONS)[number];
+type StoredSectionId = SectionId | "creative";
 
 const OPEN_KEY = "intaglio.develop.open";
 const DEFAULT_OPEN: SectionId[] = ["look", "basic"];
@@ -29,8 +31,9 @@ export function DevelopSections() {
   const shell = useShell();
   const dev = useDevelop();
   const [open, setOpen] = useState<Set<SectionId>>(() => new Set(
-    readPreference<SectionId[]>(OPEN_KEY, DEFAULT_OPEN, (value): value is SectionId[] =>
-      Array.isArray(value) && value.every((id) => (SECTIONS as readonly unknown[]).includes(id))),
+    readPreference<StoredSectionId[]>(OPEN_KEY, DEFAULT_OPEN, (value): value is StoredSectionId[] =>
+      Array.isArray(value) && value.every((id) => id === "creative" || (SECTIONS as readonly unknown[]).includes(id)))
+      .filter((id): id is SectionId => id !== "creative"),
   ));
 
   const toggle = (id: SectionId) => (solo: boolean) => {
@@ -50,7 +53,13 @@ export function DevelopSections() {
   return (
     <>
       <LookSection {...props("look")} onBrowse={() => { shell.setLeftTab("looks"); shell.setLeftOpen(true); }} />
-      {!dev.local && <CreativeEffectsSection open={open.has("creative")} onToggle={toggle("creative")} />}
+      {!dev.local && (
+        <div className="border-b border-[var(--ui-line)] px-3 py-1.5">
+          <Button variant="ghost" className="w-full justify-start" icon={<IconLayersIntersect size={15} />} onClick={shell.openEffects}>
+            Browse effects
+          </Button>
+        </div>
+      )}
       <BasicSection {...props("basic")} />
       <ToneCurveSection {...props("curve")} />
       <ColorMixerSection {...props("mixer")} />
