@@ -1,5 +1,7 @@
 import type { TextOverlaySettings } from "../../components/CinematicTextOverlay";
 import type { WatermarkSettings } from "../../types/editor";
+import { drawTitles, requiredFonts } from "../text/titleEngine";
+import { resolveTitles } from "../text/titleModel";
 
 export interface OverlayRenderInput {
   text: TextOverlaySettings;
@@ -21,46 +23,15 @@ const anchor = (position: WatermarkSettings["position"], width: number, height: 
   }
 };
 
-function transformedText(text: string, transform: TextOverlaySettings["customTextTransform"]): string {
-  if (transform === "uppercase") return text.toUpperCase();
-  if (transform === "lowercase") return text.toLowerCase();
-  if (transform === "capitalize") return text.replace(/\b\p{L}/gu, (character) => character.toUpperCase());
-  return text;
-}
-
-function drawBlock(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, size: number, settings: TextOverlaySettings, meta = false): void {
-  if (!value.trim()) return;
-  ctx.save();
-  ctx.globalAlpha = settings.opacity;
-  ctx.fillStyle = meta ? "rgba(255,255,255,0.78)" : "#ffffff";
-  ctx.textAlign = settings.textAlign === "justify" ? "left" : settings.textAlign;
-  ctx.textBaseline = "middle";
-  ctx.shadowColor = settings.shadowColor;
-  ctx.shadowBlur = settings.shadowBlur;
-  ctx.shadowOffsetY = settings.shadowDistance;
-  const family = settings.customFontEnabled && settings.customFontName.trim() ? `"${settings.customFontName.trim()}"` : meta ? "Inter" : "Bebas Neue";
-  const style = settings.customFontEnabled ? settings.customFontStyle : "normal";
-  const weight = settings.customFontEnabled ? settings.customFontWeight : meta ? "500" : "400";
-  ctx.font = `${style} ${weight} ${Math.max(8, size)}px ${family}, sans-serif`;
-  const lines = transformedText(value, settings.customTextTransform).split("\n");
-  const lineHeight = size * settings.lineHeight;
-  lines.forEach((line, index) => ctx.fillText(line, x, y + (index - (lines.length - 1) / 2) * lineHeight));
-  ctx.restore();
-}
-
 export async function ensureOverlayFonts(input: OverlayRenderInput): Promise<void> {
   if (typeof document === "undefined" || !document.fonts) return;
-  const families = new Set(["Inter", "Bebas Neue"]);
-  if (input.text.customFontEnabled && input.text.customFontName.trim()) families.add(input.text.customFontName.trim());
-  await Promise.all(Array.from(families, (family) => document.fonts.load(`16px "${family}"`).catch(() => [])));
+  const fonts = new Set(["600 16px Inter", ...requiredFonts(resolveTitles(input.text))]);
+  await Promise.all(Array.from(fonts, (font) => document.fonts.load(font).catch(() => [])));
 }
 
 function drawOverlaysDirect(ctx: CanvasRenderingContext2D, width: number, height: number, input: OverlayRenderInput): void {
   const scale = Math.min(width, height);
-  const text = input.text;
-  if (text.dateEnabled) drawBlock(ctx, [text.dateText, text.locationText].filter(Boolean).join(" · "), width * 0.5 + text.dateX / 100 * width, height * 0.2 + text.dateY / 100 * height, scale * text.fontSize * 0.022, text, true);
-  if (text.subtitleEnabled) drawBlock(ctx, text.subtitleText, width * 0.5 + text.subtitleX / 100 * width, height * (1 - text.subtitleY / 100), scale * text.fontSize * 0.055, text);
-  if (text.billingBlockEnabled) drawBlock(ctx, text.billingBlockText, width * 0.5 + text.billingX / 100 * width, height * (1 - text.billingY / 100), scale * text.fontSize * 0.018, text, true);
+  drawTitles(ctx, resolveTitles(input.text), width, height);
 
   const watermark = input.watermark;
   if (watermark.enabled && watermark.text.trim()) {

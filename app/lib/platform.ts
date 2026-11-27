@@ -34,6 +34,15 @@ export async function saveFile(blob: Blob, filename: string): Promise<boolean> {
   return true;
 }
 
+/** Ask for a destination folder on Mac and return the filename actually saved. */
+export async function saveVideoFile(blob: Blob, filename: string): Promise<string | null> {
+  if (isDesktopApp()) {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    return invokeDesktop<string | null>("save_video", bytes, { headers: { "x-etch-filename": encodeURIComponent(filename) } });
+  }
+  return await saveFile(blob, filename) ? filename : null;
+}
+
 /** Tells the user something went wrong. A native alert sheet on desktop. */
 export async function showError(message: string, title = "Etch"): Promise<void> {
   if (isDesktopApp()) {

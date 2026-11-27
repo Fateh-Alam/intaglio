@@ -67,6 +67,11 @@ const finalDisplayFragmentShader = `
   uniform vec2 uTexSize;
   uniform bool uNearest;
   uniform float uGrid;
+  // True-pixel mapping, in device pixels: photo origin (x, y from top), device
+  // pixels per image pixel, and the canvas height. uTexOrigin is the render
+  // target's offset into the image, in image pixels from the top-left.
+  uniform vec4 uPixelMap;
+  uniform vec2 uTexOrigin;
   varying vec2 vUv;
 
   ${CROP_GLSL}
@@ -77,7 +82,15 @@ const finalDisplayFragmentShader = `
     vec2 imageUv = mix(uView.xy, uView.zw, vUv);
     vec2 texUv = (imageUv - uRender.xy) / (uRender.zw - uRender.xy);
     vec2 texel = texUv * uTexSize;
-    if (uNearest) texUv = (floor(texel) + 0.5) / uTexSize;
+    if (uNearest) {
+      // Map this device pixel straight to an image pixel. Interpolated
+      // coordinates drift by fractions of a pixel across the frame and flip
+      // to the neighboring pixel somewhere, which shows as a seam.
+      float imageX = (gl_FragCoord.x - uPixelMap.x) / uPixelMap.z;
+      float imageYFromTop = (uPixelMap.w - gl_FragCoord.y - uPixelMap.y) / uPixelMap.z;
+      texel = vec2(imageX - uTexOrigin.x, uTexSize.y - (imageYFromTop - uTexOrigin.y));
+      texUv = (floor(texel) + 0.5) / uTexSize;
+    }
     vec4 after = texture2D(uTexture, texUv);
     bool showBefore = uSplit >= 1.5 || (uSplit >= 0.0 && imageUv.x < uSplit);
     vec4 color = after;
@@ -198,6 +211,8 @@ export default function ImagePlane({
     uTexSize: { value: new THREE.Vector2(1, 1) },
     uNearest: { value: false },
     uGrid: { value: 0 },
+    uPixelMap: { value: new THREE.Vector4(0, 0, 1, 1) },
+    uTexOrigin: { value: new THREE.Vector2(0, 0) },
   }), []);
 
   // Pro-Grade Render Graph Pipeline
@@ -427,8 +442,19 @@ export default function ImagePlane({
       // magnify with hard edges so pixels read as pixels, not blur.
       const devicePerTexel = loupe ? (loupe.layout.visible.width * dpr) / ((shown.x1 - shown.x0) / (held.x1 - held.x0) * renderSize.width) : 0;
       const truePixels = plan !== undefined && plan.resolution >= 0.999;
-      materialRef.current.uniforms.uNearest.value = truePixels && devicePerTexel >= 0.999;
+      const nearest = truePixels && devicePerTexel >= 0.999;
+      materialRef.current.uniforms.uNearest.value = nearest;
       materialRef.current.uniforms.uGrid.value = truePixels && devicePerTexel >= PIXEL_GRID_SCALE - 0.001 ? devicePerTexel : 0;
+      if (nearest && loupe && plan) {
+        // Snap the photo's origin to whole device pixels so pixel centers land on image pixel centers.
+        materialRef.current.uniforms.uPixelMap.value.set(
+          Math.round(loupe.layout.photo.left * dpr),
+          Math.round(loupe.layout.photo.top * dpr),
+          Math.round(devicePerTexel * 1000) / 1000,
+          state.gl.domElement.height,
+        );
+        materialRef.current.uniforms.uTexOrigin.value.set(plan.mode === "tile" ? plan.tile.offsetX : 0, plan.mode === "tile" ? plan.tile.offsetY : 0);
+      }
     }
   });
 

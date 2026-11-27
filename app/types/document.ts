@@ -196,6 +196,8 @@ export interface WatermarkDocument {
 
 export interface OverlayDocument {
   textBlocks: TextBlock[];
+  /** Layered titles and captions (v1). Older readers fall back to textBlocks. */
+  titles?: import("../editor/text/titleModel").TitleDocument;
   watermark: WatermarkDocument;
 }
 

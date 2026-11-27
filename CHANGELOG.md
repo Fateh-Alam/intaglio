@@ -1,5 +1,11 @@
 # Etch Changelog
 
+## 1.0.0-rc.2 for macOS
+
+- Added the local photo library with folder import, cached camera previews, keyboard culling, ratings, and selected batch export.
+- Brought the web editor's Titles, Grade mode, and Creative Effects sidebar to Mac. Effects can preview on the Metal canvas before they are applied.
+- Animated Creative Effects export as H.264 MP4 to a folder you choose. A new export gets a numbered suffix if its filename is already in use.
+
 ## 1.0.0-rc.1 for macOS
 
 - Bloom and halation use the same spread at Fit, at 100% zoom, and in exports. Film grain stays anchored to the photo and softens as it becomes too fine for the preview to resolve.

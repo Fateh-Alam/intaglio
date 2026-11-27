@@ -1,6 +1,6 @@
 {
   "name": "etch",
-  "version": "1.0.0-rc.1",
+  "version": "1.0.0-rc.2",
   "private": true,
   "packageManager": "pnpm@11.5.1",
   "engines": {
@@ -23,7 +23,7 @@
     "test:e2e": "node scripts/e2e-smoke.mjs",
     "test:browser": "playwright test",
     "test:offline": "playwright test tests/browser/offline.spec.ts",
-    "build:cloudflare": "node scripts/prepare-public-runtime.mjs && opennextjs-cloudflare build",
+    "build:cloudflare": "node scripts/prepare-public-runtime.mjs && opennextjs-cloudflare build && node scripts/cloudflare-static-sw.mjs",
     "preview": "pnpm build:cloudflare && opennextjs-cloudflare preview",
     "deploy": "pnpm build:cloudflare && opennextjs-cloudflare deploy",
     "upload": "pnpm build:cloudflare && opennextjs-cloudflare upload",
@@ -46,6 +46,7 @@
     "framer-motion": "^12.23.26",
     "html-to-image": "^1.11.13",
     "libraw-wasm": "1.6.0",
+    "mediabunny": "1.66.2",
     "next": "16.2.12",
     "react": "19.2.0",
     "react-dom": "19.2.0",

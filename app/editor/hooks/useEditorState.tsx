@@ -994,6 +994,7 @@ function useEditorStateController() {
       billingY: (1 - (billing?.y ?? 0.95)) * 100,
       customFontEnabled: Boolean(subtitle?.fontAssetId),
       customFontName: subtitle?.fontFamily ?? current.customFontName,
+      titles: document.overlays.titles,
     }));
     setAssetMetadata(hydrateAssetMetadata(document.metadata as Partial<AssetMetadataSettings>));
     setWatermark(hydrateWatermark({

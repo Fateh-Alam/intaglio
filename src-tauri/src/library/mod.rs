@@ -4,8 +4,7 @@ mod preview;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 use std::{
-    fs::{self, OpenOptions},
-    io::Write,
+    fs,
     path::{Path, PathBuf},
     sync::{Mutex, MutexGuard},
     time::UNIX_EPOCH,
@@ -427,44 +426,7 @@ pub async fn library_export_begin(
 }
 
 fn save_export(folder: &Path, name: &str, bytes: &[u8]) -> Result<String> {
-    if name.is_empty()
-        || Path::new(name).file_name().and_then(|n| n.to_str()) != Some(name)
-        || name.starts_with('.')
-    {
-        return Err("Invalid export filename.".into());
-    }
-    let input = Path::new(name);
-    let stem = input
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .ok_or("Invalid export name.")?;
-    let extension = input
-        .extension()
-        .and_then(|s| s.to_str())
-        .ok_or("Missing export extension.")?;
-    if !matches!(extension, "jpg" | "png" | "webp") {
-        return Err("Unsupported export extension.".into());
-    }
-    for copy in 1..=100_000 {
-        let name = if copy == 1 {
-            name.to_string()
-        } else {
-            format!("{stem}-{copy}.{extension}")
-        };
-        let path = folder.join(&name);
-        let mut file = match OpenOptions::new().write(true).create_new(true).open(&path) {
-            Ok(file) => file,
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(text(error)),
-        };
-        if let Err(error) = file.write_all(bytes) {
-            drop(file);
-            let _ = fs::remove_file(&path);
-            return Err(text(error));
-        }
-        return Ok(name);
-    }
-    Err("The export folder has too many files with this name.".into())
+    crate::export_files::save_unique(folder, name, bytes, &["jpg", "png", "webp"])
 }
 
 #[tauri::command]

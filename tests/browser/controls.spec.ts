@@ -690,7 +690,7 @@ test.describe("control honesty regression contract", () => {
     await openCalibrationChart(page);
     const baseline = await samplePhotoFrame(page);
 
-    await openSection(page, "Creative Effects");
+    await page.getByRole("button", { name: "Browse effects", exact: true }).click();
 
     // Verify all 6 single-color effects show strictly 1 color picker with an honest label that changes pixels
     const singleColorEffects = [
@@ -707,11 +707,11 @@ test.describe("control honesty regression contract", () => {
     const stack = page.getByRole("list", { name: "Creative effect stack" });
 
     for (const item of singleColorEffects) {
-      await page.getByRole("button", { name: "Browse effects", exact: true }).click();
       await search.fill(item.name);
       await results.locator("button").filter({ has: page.getByText(item.name, { exact: true }) }).first().click();
 
       const applied = await waitForDiffAbove(page, baseline, 0.5, `Creative effect ${item.name}`);
+      await stack.getByRole("button", { name: item.name, exact: true }).click();
       const pickers = stack.locator('input[type="color"]');
       await expect(pickers, `${item.name} must show exactly 1 active color picker`).toHaveCount(1);
       await expect(stack.getByText(item.slot, { exact: true })).toBeVisible();
@@ -724,10 +724,10 @@ test.describe("control honesty regression contract", () => {
     }
 
     // Also verify Dither controls including interior Phase (0.5) & Invert tone mapping
-    await page.getByRole("button", { name: "Browse effects", exact: true }).click();
     await search.fill("Dither");
     await results.locator("button").filter({ has: page.getByText("Dither", { exact: true }) }).first().click();
     const ditherBase = await waitForDiffAbove(page, baseline, 5.0, "Creative Dither");
+    await stack.getByRole("button", { name: "Dither", exact: true }).click();
 
     const phase = stack.getByRole("slider", { name: "Phase", exact: true });
     await setSliderByTyping(page, phase, "50");

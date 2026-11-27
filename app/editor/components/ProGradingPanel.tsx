@@ -7,10 +7,11 @@ import { bakeGradeLut } from '../render/bakeGradeLut';
 import { Button, Segmented } from '../../ui/Controls';
 import { DevSlider } from '../../ui/DevSlider';
 import { SubHeading } from '../../ui/Section';
-import { IconChevronLeft, IconDownload, IconFileImport, IconSparkles } from '@tabler/icons-react';
+import { IconDownload, IconFileImport, IconSparkles } from '@tabler/icons-react';
 import { saveFile } from "../../lib/platform";
 
-export function ProGradingPanel({ onClose }: { onClose: () => void }) {
+/** The Grade mode: node graph, scopes and LUT Studio. Opt-in, so Edit stays simple. */
+export function ProGradingPanel() {
   const editor = useEditorState();
   const [tab, setTab] = useState<'graph' | 'scopes' | 'lut'>('graph');
   const [size, setSize] = useState<33 | 65>(33);
@@ -27,14 +28,9 @@ export function ProGradingPanel({ onClose }: { onClose: () => void }) {
     finally { setBaking(false); }
   };
   return <div className="flex h-full flex-col">
-    <div className="border-b border-[var(--ui-line)] px-3 pb-3 pt-2.5">
-      <div className="mb-2.5 flex h-8 items-center gap-1">
-        <button type="button" aria-label="Back to Edit" onClick={onClose} className="ui-focus -ml-1 flex h-8 items-center gap-1 rounded-[8px] pl-1 pr-2.5 text-[12px] font-medium text-[var(--ui-text-2)] transition-colors hover:bg-white/[0.06] hover:text-[var(--ui-text)]">
-          <IconChevronLeft size={15} stroke={2} /> Edit
-        </button>
-        <h2 className="flex-1 text-right text-[12.5px] font-semibold tracking-[-0.01em] text-[var(--ui-text)]">Pro grading</h2>
-      </div>
-      <Segmented size="md" value={tab} onChange={setTab} options={[{ id: 'graph', label: 'Graph' }, { id: 'scopes', label: 'Scopes' }, { id: 'lut', label: 'LUT Studio' }]} />
+    <h2 className="sr-only">Pro grading</h2>
+    <div className="px-3 pt-3">
+      <Segmented appearance="tabs" label="Grading tools" value={tab} onChange={setTab} options={[{ id: 'graph', label: 'Graph' }, { id: 'scopes', label: 'Scopes' }, { id: 'lut', label: 'LUT Studio' }]} />
     </div>
     <div className="ui-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
     {tab === 'graph' && <AdvancedGraphPanel graph={editor.gradeGraph} onGraphChange={editor.setGradeGraph} settings={editor.settings} updateSetting={editor.updateSetting} />}

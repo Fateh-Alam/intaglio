@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { motion, PanInfo } from "framer-motion";
+import type { TitleDocument } from "../editor/text/titleModel";
 
 /**
  * CinematicTextOverlay: Renders the film-emulation text over the image.
@@ -67,6 +68,9 @@ export interface TextOverlaySettings {
   customFontStyle: "normal" | "italic";
   customTextTransform: "none" | "uppercase" | "lowercase" | "capitalize";
   customFontVariant: "normal" | "small-caps";
+
+  /** Layered titles and captions. When absent, the fields above are migrated on read. */
+  titles?: TitleDocument;
 }
 
 export const DEFAULT_TEXT_OVERLAY: TextOverlaySettings = {

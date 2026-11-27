@@ -24,8 +24,10 @@ import { FloatingHistogram } from "./develop/FloatingHistogram";
 import { createDefaultGradeGraph } from "../lib/gradeGraph";
 import { moveGradeNode } from "./render/compileGradeGraph";
 import { LibraryView } from "./library/LibraryView";
+import { VideoExportModal } from "./components/VideoExportModal";
 
 const subscribeDesktop = () => () => {};
+
 
 function EditorLayout() {
   const {
@@ -45,6 +47,7 @@ function EditorLayout() {
   }, () => setGradeGraph(moveGradeNode(createDefaultGradeGraph(), "curve", 1)));
   const commands = [...appCommands, ...useShellCommands(desktop ? openLibrary : undefined)];
   useShellShortcuts(Boolean(imageSrc) && !isCommandBarOpen && !isShortcutHelpOpen && !libraryOpen);
+  const browsingEffects = shell.leftOpen && shell.leftTab === "effects" && !shell.panelsHidden;
   useDesktopBridge({
     commands,
     openFile: (file) => { setLibraryOpen(false); void openDroppedFile(file); },
@@ -98,6 +101,7 @@ function EditorLayout() {
       <BatchExportModal />
       <EditorModals />
       <FloatingHistogram />
+      <VideoExportModal />
 
       {!shell.panelsHidden && <TopBar onOpenLibrary={desktop ? openLibrary : undefined} />}
 
@@ -110,8 +114,10 @@ function EditorLayout() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -16 }}
               transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-              className="absolute inset-y-0 left-0 z-30 w-full max-w-[320px] shrink-0 border-r border-[var(--ui-line)] bg-[var(--ui-panel)] shadow-2xl md:relative md:w-[280px] md:shadow-none"
-              aria-label="Looks, history, versions and info"
+              className={`z-30 w-full shrink-0 border-[var(--ui-line)] bg-[var(--ui-panel)] md:relative md:w-[280px] md:border-r md:shadow-none ${browsingEffects
+                ? "max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:h-[51dvh] max-md:border-t"
+                : "max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:max-w-[320px] max-md:border-r max-md:shadow-2xl"}`}
+              aria-label="Editor library"
             >
               <LeftPanel />
             </motion.aside>
@@ -122,7 +128,7 @@ function EditorLayout() {
 
         {!shell.panelsHidden && (
           <aside
-            className="h-[46dvh] shrink-0 border-t border-[var(--ui-line)] bg-[var(--ui-panel)] md:h-auto md:w-[328px] md:border-l md:border-t-0"
+            className={`shrink-0 border-t border-[var(--ui-line)] bg-[var(--ui-panel)] md:h-auto md:w-[328px] md:border-l md:border-t-0 ${browsingEffects ? "max-md:invisible max-md:h-[51dvh]" : "max-md:h-[46dvh]"}`}
             aria-label="Edit controls"
           >
             <RightPanel />

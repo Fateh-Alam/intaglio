@@ -70,6 +70,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .separator()
         .item(&item(app, "export-image", "Export…", Some("CmdOrCtrl+E"))?)
         .item(&item(app, "batch-export", "Batch Export…", None)?)
+        .item(&item(app, "export-video", "Export Video…", None)?)
         .separator()
         .close_window()
         .build()?;
@@ -107,6 +108,9 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .separator()
         .item(&item(app, "panel-edit", "Edit Whole Photo", None)?)
         .item(&item(app, "panel-masks", "Masks", None)?)
+        .item(&item(app, "panel-text", "Titles & Watermark", None)?)
+        .item(&item(app, "panel-grade", "Grade", None)?)
+        .item(&item(app, "panel-effects", "Browse Effects", None)?)
         .item(&item(app, "panel-looks", "Browse Looks", None)?)
         .item(&item(app, "panel-history", "History", None)?)
         .separator()

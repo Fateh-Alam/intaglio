@@ -32,7 +32,7 @@ test("a snapshot captures the edit and stays independent of Before and later edi
   await expect.poll(() => pixel(0.25)).toBeGreaterThan(240);
   await page.getByRole("button", { name: "Show before" }).click();
   await expect.poll(() => pixel(0.25)).toBeCloseTo(128, 0);
-  await page.getByRole("button", { name: "Show looks & history" }).click();
+  await page.getByRole("button", { name: "Show editor library" }).click();
   await page.getByRole("radio", { name: "Versions" }).click();
   await page.getByRole("button", { name: "Take snapshot" }).click();
   const compare = page.getByRole("button", { name: "Compare with current" });

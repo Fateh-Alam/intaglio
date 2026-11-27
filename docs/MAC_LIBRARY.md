@@ -23,4 +23,4 @@ Re-run the native checks with `ETCH_LIBRARY_SHOOT=<folder> cargo test --manifest
 
 ## Mac and web
 
-The Mac prerelease and the local library build use the editor lineage preceding web main `64e3679`. The web branch has newer film-grade titles and captions, animated Creative Effects MP4 export, the revised Grade mode, the dedicated Creative Effects sidebar, hover previews and docked applied effects. The Mac-specific library and native viewport remain desktop features. See the [release-to-web comparison](https://github.com/Fateh-Alam/intaglio/compare/v1.0.0-rc.1...main).
+Etch for Mac 1.0.0-rc.2 includes the web editor through `64e3679`, covering titles and captions, MP4 export for animated Creative Effects, the revised Grade mode, and the searchable Effects sidebar with previews and docked applied effects. The photo library and native Metal viewport are available in the Mac app. See the [editor changes since rc.1](https://github.com/Fateh-Alam/intaglio/compare/v1.0.0-rc.1...64e36792b785a5c1dba461d2231dca692f56bdee).

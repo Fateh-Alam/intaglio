@@ -9,7 +9,7 @@ test('opt-in grading controls, scopes and color-grade LUT export', async ({ page
   await page.getByText('Sample Photograph', { exact: true }).click();
   await expect(page.getByRole('slider', { name: 'Exposure', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Pro grading', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Open pro grading workspace…' }).click();
+  await page.getByRole('radio', { name: 'Grade', exact: true }).click();
   await page.getByLabel('Selected grade node').selectOption('develop');
   await page.getByLabel('Enabled', { exact: true }).uncheck();
   await expect(page.getByLabel('Enabled', { exact: true })).not.toBeChecked();
@@ -29,7 +29,7 @@ test('opt-in grading controls, scopes and color-grade LUT export', async ({ page
   expect(cube.split('\n').filter(line => /^-?\d+\.\d+ /.test(line))).toHaveLength(33**3);
   expect(cube).not.toMatch(/NaN|Infinity/);
   await page.screenshot({ path: testInfo.outputPath('grading-lut.png') });
-  await page.getByRole('button', { name: 'Back to Edit', exact: true }).click();
+  await page.getByRole('radio', { name: 'Edit', exact: true }).click();
   await expect(page.getByRole('slider', { name: 'Exposure', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
 });

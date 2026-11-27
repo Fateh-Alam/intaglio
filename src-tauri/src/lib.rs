@@ -3,9 +3,11 @@
 //! Hosts the static export of the web editor (`out/`) in the system webview and
 //! gives it native file saving and dialogs. `etch-core` attaches here later.
 
-mod menu;
+#[cfg(target_os = "macos")]
+mod export_files;
 #[cfg(target_os = "macos")]
 mod library;
+mod menu;
 #[cfg(target_os = "macos")]
 mod native_viewport;
 mod opened_files;
@@ -64,6 +66,40 @@ async fn save_file(app: AppHandle, window: WebviewWindow, request: Request<'_>) 
         recent::remember(&app, &path);
     }
     Ok(true)
+}
+
+#[cfg(target_os = "macos")]
+#[tauri::command]
+async fn save_video(
+    app: AppHandle,
+    window: WebviewWindow,
+    request: Request<'_>,
+) -> Result<Option<String>, String> {
+    let InvokeBody::Raw(bytes) = request.body() else {
+        return Err("Expected the video's bytes.".into());
+    };
+    let name = request
+        .headers()
+        .get(FILENAME_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map(suggested_file_name)
+        .unwrap_or_else(|| "Etch.mp4".to_owned());
+    let Some(choice) = app
+        .dialog()
+        .file()
+        .set_parent(&window)
+        .set_title("Choose MP4 export folder")
+        .blocking_pick_folder()
+    else {
+        return Ok(None);
+    };
+    let folder = choice.into_path().map_err(|error| error.to_string())?;
+    let bytes = bytes.to_vec();
+    tauri::async_runtime::spawn_blocking(move || {
+        export_files::save_unique(&folder, &name, &bytes, &["mp4"]).map(Some)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 fn message_kind(kind: Option<&str>) -> MessageDialogKind {
@@ -139,6 +175,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             save_file,
+            #[cfg(target_os = "macos")]
+            save_video,
             show_message,
             ask_confirm,
             opened_files::take_opened_files,

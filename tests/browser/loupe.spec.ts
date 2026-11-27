@@ -130,7 +130,6 @@ test("true 1:1 loupe shows real image pixels with a brush mask and Creative Effe
   await expect(page.getByRole("group", { name: "Navigator" })).toBeHidden();
 
   // Creative Effects render the whole frame at full resolution behind the loupe.
-  await page.getByRole("button", { name: "Creative Effects", exact: true }).click();
   await page.getByRole("button", { name: "Browse effects" }).click();
   await page.getByRole("searchbox", { name: "Search effects and looks" }).fill("color overlay");
   await page.getByRole("list", { name: "Effect results" }).getByRole("button", { name: /^Color Overlay/ }).click();

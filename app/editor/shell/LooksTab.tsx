@@ -61,6 +61,7 @@ export function LooksTab() {
     <div className="flex h-full flex-col" onPointerLeave={() => shell.setPreview(null)}>
       <div className="space-y-2 px-3 pb-2 pt-1">
         <Segmented
+          label="Look collections"
           value={collection}
           onChange={(value) => { setCollection(value); shell.setPreview(null); }}
           options={[{ id: "films", label: "Film stocks" }, { id: "recipes", label: "Recipes" }]}

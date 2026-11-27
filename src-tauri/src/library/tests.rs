@@ -69,6 +69,12 @@ fn export_avoids_overwriting_and_rejects_an_outside_destination() {
     assert_eq!(fs::read(scratch.0.join("frame.jpg")).unwrap(), b"original");
     assert_eq!(fs::read(scratch.0.join("frame-2.jpg")).unwrap(), b"output");
     assert!(save_export(&scratch.0, "../frame.jpg", b"no").is_err());
+    assert!(save_export(&scratch.0, "loop.mp4", b"video").is_err());
+
+    let save_video = |bytes: &[u8]| crate::export_files::save_unique(&scratch.0, "loop.mp4", bytes, &["mp4"]);
+    assert_eq!(save_video(b"first").unwrap(), "loop.mp4");
+    assert_eq!(save_video(b"second").unwrap(), "loop-2.mp4");
+    assert_eq!(fs::read(scratch.0.join("loop.mp4")).unwrap(), b"first");
 }
 
 #[test]
