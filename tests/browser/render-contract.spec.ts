@@ -14,7 +14,7 @@ test("preview readback and decoded PNG export satisfy the full render contract",
   expect(result.metrics?.tiled.meanDeltaE, `${testInfo.project.name} tiled mean CIEDE2000; diagnostics ${JSON.stringify(result.metrics)}`).toBeLessThanOrEqual(0.25);
   expect(result.metrics?.tiled.p99DeltaE, `${testInfo.project.name} tiled p99 CIEDE2000; diagnostics ${JSON.stringify(result.metrics)}`).toBeLessThanOrEqual(0.75);
   const stages = result.metrics?.stages as Record<string, { ssim: number; meanDeltaE: number }>;
-  for (const key of ["croppedMasks", "croppedCreative"]) {
+  for (const key of ["croppedMasks", "croppedCreative", "bloom", "halation", "grain"]) {
     expect(stages[key]?.ssim, key).toBeGreaterThanOrEqual(0.9995);
     expect(stages[key]?.meanDeltaE, key).toBeLessThanOrEqual(0.25);
   }
@@ -33,6 +33,11 @@ test("preview readback and decoded PNG export satisfy the full render contract",
   expect(correctness?.graphChangesPixels.meanDeltaE).toBeGreaterThan(2);
   expect(correctness?.graphOpacityChangesPixels.meanDeltaE).toBeGreaterThan(1);
   expect(correctness?.graphLutRoundTrip.meanDeltaE).toBeLessThan(1);
+  const scale = result.metrics?.effectScale as Record<string, number>;
+  for (const key of ["bloom2", "bloom4", "halation2", "halation4"]) {
+    expect(scale[key], `${key} mean channel error between Fit and reduced full-size export`).toBeLessThan(3);
+  }
+  expect(scale.grain2, "grain mean channel error between Fit and reduced full-size export").toBeLessThan(1.5);
   expect(result.metrics?.signatures.png).toBe("89504e470d0a1a0a");
   expect(result.metrics?.signatures.jpeg).toBe("ffd8ff");
   expect(result.metrics?.signatures.webp.slice(0, 8)).toBe("52494646");

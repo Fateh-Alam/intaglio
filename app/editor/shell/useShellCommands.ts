@@ -6,7 +6,7 @@ import { useSwitchRightMode } from "./useSwitchRightMode";
 import { useCrop } from "../crop/useCrop";
 
 /** View commands for the ⌘K palette; they mirror the shell's keyboard shortcuts. */
-export function useShellCommands(): AppCommand[] {
+export function useShellCommands(openLibrary?: () => void): AppCommand[] {
   const shell = useShell();
   const switchMode = useSwitchRightMode();
   const crop = useCrop();
@@ -15,6 +15,7 @@ export function useShellCommands(): AppCommand[] {
     shell.setLeftOpen(true);
   };
   return [
+    ...(openLibrary ? [{ id: "open-library", title: "Open Library", section: "File", run: openLibrary }] : []),
     { id: "view-crop", title: crop.draft ? "Apply Crop" : "Crop & Straighten", section: "Develop", shortcut: "R", keywords: ["horizon", "aspect", "frame"], run: () => { if (crop.draft) crop.apply(); else crop.open(); } },
     { id: "view-before", title: "Show Before", section: "View", shortcut: "\\", keywords: ["compare", "original"], run: () => shell.setCompare(shell.compare === "before" ? "off" : "before") },
     { id: "view-split", title: "Before / After Split", section: "View", shortcut: "Y", keywords: ["compare", "wipe"], run: () => shell.setCompare(shell.compare === "split" ? "off" : "split") },

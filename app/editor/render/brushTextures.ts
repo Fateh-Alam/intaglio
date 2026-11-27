@@ -13,6 +13,10 @@ export function setLiveBrushStroke(maskId: string, stroke: BrushStroke | null) {
   listeners.forEach((listener) => listener());
 }
 
+export function getLiveBrushStroke(maskId: string): BrushStroke | undefined {
+  return liveStrokes.get(maskId);
+}
+
 export function onBrushTexturesChanged(listener: () => void): () => void {
   listeners.add(listener);
   return () => { listeners.delete(listener); };

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RenderPass } from '../RenderPass';
+import { RenderPass, textureFromRenderInput, type RenderInput } from '../RenderPass';
 import { EditorSettings } from '../../../types/editor';
 import { FILM_EMULATION_SHADER_CHUNK } from '../../../lib/filmShaderChunk';
 import { FILM_EMULATIONS } from '../../../lib/filmEmulations';
@@ -32,7 +32,8 @@ vec3 rgb2hsl(vec3 color) {
         hsl.y = 0.0;
     } else {
         float d = maxColor - minColor;
-        hsl.y = hsl.z > 0.5 ? d / (2.0 - maxColor - minColor) : d / (maxColor + minColor);
+        // Bounded so channels above 1 can't divide by zero (NaN spreads through the glows).
+        hsl.y = clamp(hsl.z > 0.5 ? d / max(2.0 - maxColor - minColor, 1e-6) : d / max(maxColor + minColor, 1e-6), 0.0, 1.0);
         if (maxColor == color.r) {
             hsl.x = (color.g - color.b) / d + (color.g < color.b ? 6.0 : 0.0);
         } else if (maxColor == color.g) {
@@ -115,10 +116,10 @@ export class FilmEmulationPass extends RenderPass {
 
   public render(
     renderer: THREE.WebGLRenderer,
-    readBuffer: THREE.WebGLRenderTarget,
+    readBuffer: RenderInput,
     writeBuffer: THREE.WebGLRenderTarget | null
   ): void {
-    this.material.uniforms.tDiffuse.value = readBuffer.texture;
+    this.material.uniforms.tDiffuse.value = textureFromRenderInput(readBuffer);
     
     renderer.setRenderTarget(writeBuffer);
     this.fsQuad.render(renderer);

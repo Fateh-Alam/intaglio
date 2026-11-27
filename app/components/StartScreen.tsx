@@ -10,6 +10,7 @@ interface StartScreenProps {
   onOpenImage: () => void;
   onOpenArchive: () => void;
   onTrySample: () => void;
+  onOpenLibrary?: () => void;
   /** Called with a file dropped anywhere on the screen. */
   onDropFile?: (file: File) => void;
 }
@@ -23,7 +24,7 @@ const ASSURANCES = [
 const ease = [0.2, 0.8, 0.2, 1] as const;
 
 /** The first screen: one calm place to bring a photo in. */
-export default function StartScreen({ onOpenImage, onOpenArchive, onTrySample, onDropFile }: StartScreenProps) {
+export default function StartScreen({ onOpenImage, onOpenArchive, onTrySample, onDropFile, onOpenLibrary }: StartScreenProps) {
   const [dragging, setDragging] = useState(false);
   const depth = useRef(0);
 
@@ -72,9 +73,12 @@ export default function StartScreen({ onOpenImage, onOpenArchive, onTrySample, o
           <BrandMark size={20} />
           <span className="text-[13px] font-semibold tracking-[-0.01em]">Etch</span>
         </Link>
-        <Link href="/changelog" className="ui-focus rounded-[8px] px-2.5 py-1.5 text-[12px] text-[var(--ui-text-3)] transition-colors hover:text-[var(--ui-text)]">
+        <div className="flex items-center gap-2">
+          {onOpenLibrary && <button type="button" onClick={onOpenLibrary} className="ui-focus rounded-md border border-[var(--ui-line-strong)] px-3 py-1.5 text-[13px] text-[var(--ui-text)] hover:bg-white/10">Open Library</button>}
+          <Link href="/changelog" className="ui-focus rounded-[8px] px-2.5 py-1.5 text-[12px] text-[var(--ui-text-3)] transition-colors hover:text-[var(--ui-text)]">
           What’s new
-        </Link>
+          </Link>
+        </div>
       </header>
 
       <main className="relative z-10 flex flex-1 items-center justify-center px-4 pb-16 pt-4">

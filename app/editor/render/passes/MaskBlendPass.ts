@@ -147,8 +147,8 @@ void main() {
     }
   }
 
-  if (uCoverageOnly) gl_FragColor = vec4(baseColor.rgb, finalMask);
-  else gl_FragColor = vec4(mix(baseColor.rgb, gradedColor.rgb, finalMask * uPlateOpacity), 1.0);
+  if (uCoverageOnly) gl_FragColor = vec4(baseColor.rgb, finalMask * baseColor.a);
+  else gl_FragColor = vec4(mix(baseColor.rgb, gradedColor.rgb, finalMask * uPlateOpacity), baseColor.a);
 }
 `;
 

@@ -102,7 +102,10 @@ vec3 applyOklchChannel(
   float hue = lch.z;
   if (hue < 0.0) hue += 6.28318530718;
 
-  float w = hueWeight(hue, center, width);
+  // A grey has no hue: OKLab returns rounding noise there, so without this
+  // guard a band could brighten or darken neutrals at random (and differently
+  // per GPU). Bands fade in with colorfulness, reaching full strength at C=0.02.
+  float w = hueWeight(hue, center, width) * smoothstep(0.0, 0.02, lch.y);
 
   // Skip if this pixel's hue is outside the channel's influence zone
   if (w < 0.001) return color;

@@ -43,6 +43,7 @@ const manifestPath = path.join(bundleDir, "latest.json");
 writeFileSync(manifestPath, `${JSON.stringify(buildUpdateManifest({ version, signature, notes: process.env.ETCH_RELEASE_NOTES ?? "" }), null, 2)}\n`);
 
 const dmg = path.join(bundleDir, "dmg", `Etch_${version}_aarch64.dmg`);
+const prerelease = version.includes("-rc.") ? " --prerelease" : "";
 console.log(`
 Release files for Etch ${version}:
   ${dmg}
@@ -50,5 +51,5 @@ Release files for Etch ${version}:
   ${manifestPath}
 
 Publish them (installed copies update from ${releaseAssetUrl(version)}):
-  gh release create v${version} "${dmg}" "${path.join(bundleDir, "macos", UPDATE_ARCHIVE)}" "${manifestPath}" --title "Etch ${version}" --notes "…"
+  gh release create v${version} "${dmg}" "${path.join(bundleDir, "macos", UPDATE_ARCHIVE)}" "${manifestPath}"${prerelease} --title "Etch ${version}" --notes "…"
 `);

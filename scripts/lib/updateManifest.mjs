@@ -13,7 +13,9 @@ export function releaseAssetUrl(version, asset = UPDATE_ARCHIVE, repo = RELEASES
  * `signature` is the contents of the `.sig` file Tauri writes next to the archive.
  */
 export function buildUpdateManifest({ version, signature, notes = "", date = new Date() }) {
-  if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Version must look like 1.2.3, got "${version}".`);
+  if (!/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-rc\.[1-9]\d*)?$/.test(version)) {
+    throw new Error(`Version must look like 1.2.3 or 1.2.3-rc.1, got "${version}".`);
+  }
   if (!signature?.trim()) throw new Error("The update archive has no signature. Build with the update key.");
   return {
     version,

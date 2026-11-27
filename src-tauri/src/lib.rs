@@ -5,6 +5,8 @@
 
 mod menu;
 #[cfg(target_os = "macos")]
+mod library;
+#[cfg(target_os = "macos")]
 mod native_viewport;
 mod opened_files;
 mod recent;
@@ -119,6 +121,8 @@ pub fn run() {
         })
         .menu(menu::build)
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            tauri::Manager::manage(app, library::Library::default());
             recent::refresh_menu(app.handle());
             updates::schedule(app.handle());
             Ok(())
@@ -141,15 +145,43 @@ pub fn run() {
             opened_files::read_opened_file,
             opened_files::pick_file,
             #[cfg(target_os = "macos")]
+            library::library_catalog,
+            #[cfg(target_os = "macos")]
+            library::library_import,
+            #[cfg(target_os = "macos")]
+            library::library_mark,
+            #[cfg(target_os = "macos")]
+            library::library_read,
+            #[cfg(target_os = "macos")]
+            library::library_preview,
+            #[cfg(target_os = "macos")]
+            library::library_export_begin,
+            #[cfg(target_os = "macos")]
+            library::library_export_write,
+            #[cfg(target_os = "macos")]
+            library::library_export_end,
+            #[cfg(target_os = "macos")]
             native_viewport::viewport_open,
             #[cfg(target_os = "macos")]
             native_viewport::viewport_load,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_load_linear,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_set_comparison,
             #[cfg(target_os = "macos")]
             native_viewport::viewport_update,
             #[cfg(target_os = "macos")]
             native_viewport::viewport_close,
             #[cfg(target_os = "macos")]
             native_viewport::viewport_log,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_set_lut,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_sample,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_capture_snapshot,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_pick_mask_color,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Etch");

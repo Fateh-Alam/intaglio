@@ -36,7 +36,7 @@ function MenuAction({ label, shortcut, onSelect, children }: { label: string; sh
 
 const Separator = () => <div className="my-1 h-px bg-white/[0.07]" />;
 
-export function TopBar() {
+export function TopBar({ onOpenLibrary }: { onOpenLibrary?: () => void } = {}) {
   const {
     imageName, history, historyIndex, handleUndo, handleRedo, openImagePicker, openProjectPicker, openRecipePicker, handleSaveProjectSession,
     setIsPresetModalOpen, setIsBatchExportOpen, setIsProofSheetOpen, setIsExportModalOpen,
@@ -51,6 +51,7 @@ export function TopBar() {
         <div className="hidden items-center gap-2 px-1.5 text-[var(--ui-text)] min-[360px]:flex">
           <BrandMark />
         </div>
+        {onOpenLibrary && <button type="button" onClick={onOpenLibrary} className="ui-focus rounded-[8px] px-2.5 py-2 text-[12.5px] text-[var(--ui-text-2)] hover:bg-white/[0.06] hover:text-[var(--ui-text)]">Library</button>}
         <Popover
           side="bottom"
           align="start"

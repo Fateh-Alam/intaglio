@@ -59,6 +59,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .build()?;
 
     let file = SubmenuBuilder::new(app, "File")
+        .item(&item(app, "open-library", "Open Library", None)?)
         .item(&item(app, "open-image", "Open Photograph…", Some("CmdOrCtrl+O"))?)
         .item(&item(app, "load-project-session", "Open Project…", Some("CmdOrCtrl+Shift+O"))?)
         .item(&SubmenuBuilder::with_id(app, crate::recent::SUBMENU_ID, "Open Recent").build()?)

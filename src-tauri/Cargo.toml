@@ -27,6 +27,9 @@ opt-level = 3
 strip = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+memchr = "2"
+rusqlite = "0.37"
 etch-core = { path = "../crates/etch-core" }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 objc2 = "0.6"

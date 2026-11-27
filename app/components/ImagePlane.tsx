@@ -5,7 +5,9 @@ import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { EditorSettings, HistogramData } from "../types/editor";
 import { IntaglioRenderer } from "../editor/render/IntaglioRenderer";
-import { createLinearSourceTexture, type LinearSourceBuffer } from "../editor/render/sourceTexture";
+import { createLinearSourceTexture, PhotoTextureLoader, type LinearSourceBuffer } from "../editor/render/sourceTexture";
+import { glowPadding } from "../editor/render/glowLayout";
+import { TRANSFER_GLSL_CHUNK } from "../editor/render/shaders/transferChunk";
 import { onBrushTexturesChanged } from "../editor/render/brushTextures";
 import type { MaskColorSampler } from "../lib/maskGeometry";
 import { computeHistogramMetrics } from "../utils/histogram";
@@ -69,6 +71,7 @@ const finalDisplayFragmentShader = `
 
   ${CROP_GLSL}
   ${GEOMETRY_GLSL}
+  ${TRANSFER_GLSL_CHUNK}
 
   void main() {
     vec2 imageUv = mix(uView.xy, uView.zw, vUv);
@@ -78,13 +81,15 @@ const finalDisplayFragmentShader = `
     vec4 after = texture2D(uTexture, texUv);
     bool showBefore = uSplit >= 1.5 || (uSplit >= 0.0 && imageUv.x < uSplit);
     vec4 color = after;
-    if (showBefore) {
-      vec2 uv = imageUv;
-      if (uMatchCrop) uv = sourceUv(uncropUv(imageUv, uCrop), uGeometry.x, uGeometry.y,
-        uGeometry.z, uGeometry.w, uPerspective.x, uPerspective.y, uPerspective.z);
-      color = texture2D(uOriginalTexture, uv);
-      if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) color = vec4(0.0);
-    }
+    // The before image is sampled for every pixel (not inside the if) so mip
+    // selection has valid neighbours at the split line and the photo's edge.
+    vec2 beforeUv = imageUv;
+    if (uMatchCrop) beforeUv = sourceUv(uncropUv(imageUv, uCrop), uGeometry.x, uGeometry.y,
+      uGeometry.z, uGeometry.w, uPerspective.x, uPerspective.y, uPerspective.z);
+    vec4 before = texture2D(uOriginalTexture, beforeUv);
+    before.rgb = srgbEncodeExtended(before.rgb);
+    if (any(lessThan(beforeUv, vec2(0.0))) || any(greaterThan(beforeUv, vec2(1.0)))) before = vec4(0.0);
+    if (showBefore) color = before;
     if (uClipping > 0.5 && !showBefore) {
       float brightest = max(after.r, max(after.g, after.b));
       if (brightest >= 0.994) color.rgb = vec3(1.0, 0.2, 0.16);
@@ -135,7 +140,7 @@ export default function ImagePlane({
   onOutputSize?: (width: number, height: number) => void;
 }) {
   // The 8-bit display proxy doubles as the "original" for before/after.
-  const previewTexture = useLoader(THREE.TextureLoader, imageUrl);
+  const previewTexture = useLoader(PhotoTextureLoader, imageUrl);
   const { size, viewport, gl, invalidate } = useThree();
   const texture = useMemo(
     () => rawSource ? createLinearSourceTexture(rawSource, gl.capabilities.maxTextureSize) : previewTexture,
@@ -150,6 +155,7 @@ export default function ImagePlane({
   useEffect(() => onOutputSize?.(croppedSize.width, croppedSize.height), [croppedSize, onOutputSize]);
 
   const creative = hasCreativeEffects(settings.creativeEffects);
+  const glowMargin = glowPadding(settings, gradeGraph);
   const dpr = gl.getPixelRatio();
   // Loupe: where the zoomed photo sits and which pixels the render must produce.
   const loupe = useMemo(() => {
@@ -157,9 +163,9 @@ export default function ImagePlane({
     const fitCss = fitPhoto(size.width * 0.9, size.height * 0.9, aspect);
     const layout = loupeLayout(size, fitCss, view.zoom, view.cx, view.cy);
     if (layout.visible.width < 1 || layout.visible.height < 1) return null;
-    const plan: LoupeRenderPlan = planLoupeRender(layout, croppedSize, dpr, creative, gl.capabilities.maxTextureSize);
+    const plan: LoupeRenderPlan = planLoupeRender(layout, croppedSize, dpr, creative, gl.capabilities.maxTextureSize, glowMargin);
     return { layout, plan };
-  }, [view, size, aspect, croppedSize, dpr, creative, gl]);
+  }, [view, size, aspect, croppedSize, dpr, creative, gl, glowMargin]);
 
   const meshTransform = useMemo(() => {
     const toWorld = viewport.width / Math.max(1, size.width);
@@ -219,25 +225,6 @@ export default function ImagePlane({
   }), []);
 
   useEffect(() => () => maskCoverage.dispose(), [maskCoverage]);
-  const pendingMaskSample = useRef<{
-    x: number;
-    y: number;
-    resolve: (color: [number, number, number] | null) => void;
-  } | null>(null);
-  useEffect(() => {
-    if (!maskColorSamplerRef) return;
-    maskColorSamplerRef.current = (x, y) => new Promise((resolve) => {
-      pendingMaskSample.current?.resolve(null);
-      pendingMaskSample.current = { x, y, resolve };
-      invalidate();
-    });
-    return () => {
-      pendingMaskSample.current?.resolve(null);
-      pendingMaskSample.current = null;
-      maskColorSamplerRef.current = null;
-    };
-  }, [invalidate, maskColorSamplerRef]);
-
   // Fitted preview resolution: the screen size, capped at the image and 2560 px.
   const fitRender = useMemo(() => {
     const ratio = dpr * 0.9;
@@ -248,6 +235,55 @@ export default function ImagePlane({
     );
     return { width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)) };
   }, [aspect, croppedSize, size, dpr]);
+
+  // Picking requests a fresh 1×1 render at the selected image coordinate.
+  // A click can arrive between on-demand display frames or before the
+  // coverage buffer has been redrawn for the currently selected layer.
+  useEffect(() => {
+    if (!maskColorSamplerRef || !pickingMaskColor || !maskOverlayPlateId) return;
+    const probe = new IntaglioRenderer();
+    const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+    const coverage = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+    const plan = loupe?.plan;
+    const fullWidth = plan?.mode === "tile" ? plan.tile.fullWidth : plan?.width ?? fitRender.width;
+    const fullHeight = plan?.mode === "tile" ? plan.tile.fullHeight : plan?.height ?? fitRender.height;
+    const sample: MaskColorSampler = async (x, y) => {
+      if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+      const previous = gl.getRenderTarget();
+      try {
+        probe.render({
+          renderer: gl, sourceTexture: texture, settings, gradeGraph, target, width: 1, height: 1,
+          tile: {
+            fullWidth, fullHeight,
+            offsetX: Math.min(fullWidth - 1, Math.floor(x * fullWidth)),
+            offsetY: Math.min(fullHeight - 1, Math.floor(y * fullHeight)),
+            width: 1, height: 1,
+          },
+          maskOverlay: { plateId: maskOverlayPlateId, target: coverage },
+          liveBrush: true,
+        });
+        gl.setRenderTarget(coverage);
+        const context = gl.getContext() as WebGL2RenderingContext;
+        if (context.getParameter(context.IMPLEMENTATION_COLOR_READ_TYPE) === context.HALF_FLOAT) {
+          const pixel = new Uint16Array(4);
+          context.readPixels(0, 0, 1, 1, context.RGBA, context.HALF_FLOAT, pixel);
+          return [THREE.DataUtils.fromHalfFloat(pixel[0]), THREE.DataUtils.fromHalfFloat(pixel[1]), THREE.DataUtils.fromHalfFloat(pixel[2])];
+        }
+        const pixel = new Float32Array(4);
+        context.readPixels(0, 0, 1, 1, context.RGBA, context.FLOAT, pixel);
+        return [pixel[0], pixel[1], pixel[2]];
+      } finally {
+        gl.setRenderTarget(previous);
+      }
+    };
+    maskColorSamplerRef.current = sample;
+    return () => {
+      if (maskColorSamplerRef.current === sample) maskColorSamplerRef.current = null;
+      coverage.dispose();
+      target.dispose();
+      probe.dispose();
+    };
+  }, [maskColorSamplerRef, pickingMaskColor, maskOverlayPlateId, loupe, fitRender, settings, gradeGraph, gl, texture]);
 
   // Live brush painting updates mask textures outside React; redraw on change.
   const brushVersion = useRef(0);
@@ -368,28 +404,9 @@ export default function ImagePlane({
       });
       lastRender.current = { key, inputs };
     }
-    const held = plan?.window ?? { x0: 0, y0: 0, x1: 1, y1: 1 };
-    const sample = pendingMaskSample.current;
-    if (sample) {
-      pendingMaskSample.current = null;
-      const tx = (sample.x - held.x0) / (held.x1 - held.x0);
-      const ty = (sample.y - held.y0) / (held.y1 - held.y0);
-      if (inspectMask && pickingMaskColor && tx >= 0 && tx <= 1 && ty >= 0 && ty <= 1) {
-        const px = Math.max(0, Math.min(maskCoverage.width - 1, Math.floor(tx * maskCoverage.width)));
-        const py = Math.max(0, Math.min(maskCoverage.height - 1, Math.floor((1 - ty) * maskCoverage.height)));
-        const context = gl.getContext();
-        const pixel = new Float32Array(4);
-        gl.setRenderTarget(maskCoverage);
-        context.readPixels(px, py, 1, 1, context.RGBA, context.FLOAT, pixel);
-        sample.resolve([pixel[0], pixel[1], pixel[2]]);
-      } else {
-        sample.resolve(null);
-      }
-    }
     state.gl.setRenderTarget(oldRenderTarget);
     scheduleStats();
-
-    // 2. Update final display material uniforms
+    const held = plan?.window ?? { x0: 0, y0: 0, x1: 1, y1: 1 };
     if (materialRef.current) {
       materialRef.current.uniforms.uTexture.value = finalTarget.texture;
       materialRef.current.uniforms.uOriginalTexture.value = settings.compareTexture ?? previewTexture;

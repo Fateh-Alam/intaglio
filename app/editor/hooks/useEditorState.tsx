@@ -12,7 +12,9 @@ import { createLut3DTexture, parseCubeData, parseCubeLUT, serializeCubeLUT, type
 import { generatePaletteMatchLut } from "../../utils/colorTransfer";
 import { TUTORIAL_CONTENT, getSeenTutorials, markTutorialSeen } from "../../utils/tutorialContent";
 import { ExportEngine } from "../render/ExportEngine";
-import { loadRenderSource, type LinearSourceBuffer } from "../render/sourceTexture";
+import { dimensionsFromRenderInput } from "../render/RenderPass";
+import type { NativeSnapshotProvider } from "../render/nativeViewport";
+import { loadRenderSource, markPhotoTexture, type LinearSourceBuffer } from "../render/sourceTexture";
 import { DEFAULT_RAW_DEVELOP_STATE, type AssetReference, type GradeGraph, type IntaglioDocumentV2, type RawDevelopState, type RuntimeAssetStore } from "../../types/document";
 import { createRuntimeAssetStore, createIntaglioDocument } from "../../lib/intaglioDocument";
 import { createIntaglioContainer, openIntaglioContainer, triggerContainerDownload } from "../../lib/intaglioContainer";
@@ -91,6 +93,8 @@ function useEditorStateController() {
   const [rawProgress, setRawProgress] = useState<{ progress: number; stage: string } | null>(null);
   const rawAbortRef = useRef<AbortController | null>(null);
   const runtimeAssetsRef = useRef<RuntimeAssetStore>(createRuntimeAssetStore());
+  const comparisonRequest = useRef(0);
+  const nativeSnapshotProvider = useRef<NativeSnapshotProvider | null>(null);
   const [imageName, setImageName] = useState("Untitled Image");
   const [imageInfo, setImageInfo] = useState<ImageFileInfo | null>(null);
   const [gridOverlayMode, setGridOverlayMode] = useState<GridOverlayMode>("none");
@@ -480,6 +484,7 @@ function useEditorStateController() {
     key: EditorSettingKey,
     value: EditorSettingValue | string
   ) => {
+    if (key === "compareTexture" && value === null) comparisonRequest.current += 1;
     const newVal =
       typeof value === "string" &&
       !isNaN(parseFloat(value)) &&
@@ -1086,7 +1091,7 @@ function useEditorStateController() {
     else if (isRecipeFilename(file.name)) {
       if (imageSrc) void applyRecipeFile(file);
       else void showError(`Open a photo first, then open “${file.name}” to apply this look.`);
-    } else void loadImageFile(file);
+    } else return loadImageFile(file);
   }, [openProjectFile, loadImageFile, imageSrc, applyRecipeFile]);
 
   const handleCreateVirtualCopy = (requestedName?: string) => {
@@ -1125,28 +1130,63 @@ function useEditorStateController() {
   };
 
   const handleTakeSnapshot = async () => {
-    const canvas = document.querySelector<HTMLCanvasElement>("#main-editor-canvas");
-    if (!canvas) return;
-    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Could not encode comparison snapshot.")), "image/webp", 0.9));
-    const sha256 = await sha256Hex(blob);
-    const asset: AssetReference = {
-      id: `comparison-${sha256.slice(0, 16)}`,
-      kind: "comparison",
-      sha256,
-      path: `assets/comparisons/${sha256}.webp`,
-      mimeType: "image/webp",
-      byteLength: blob.size,
-      originalName: `snapshot-${new Date().toISOString()}.webp`,
-      createdAt: new Date().toISOString(),
-    };
-    runtimeAssetsRef.current.comparisonFiles.set(asset.id, blob);
-    setDocumentAssets((current) => [...current.filter((item) => item.id !== asset.id), asset]);
-    const url = URL.createObjectURL(blob);
-    setSnapshots((prev) => [...prev, { id: asset.id, url, date: Date.now() }]);
+    if (!imageSrc) return;
+    const assets = runtimeAssetsRef.current;
+    try {
+      // Render the edit in document coordinates, independent of viewport zoom,
+      // dividers, clipping alerts, and mask overlays.
+      let blob = await nativeSnapshotProvider.current?.().catch((error) => {
+        console.warn("Could not capture the Metal edit", error);
+        return null;
+      });
+      if (runtimeAssetsRef.current !== assets) return;
+      if (!blob) {
+        const texture = await loadRenderSource(imageSrc, rawSource);
+        const renderer = new ExportEngine();
+        try {
+          const sourceSize = dimensionsFromRenderInput(texture);
+          const { width, height } = cropSize(sourceSize.width, sourceSize.height, settings.crop);
+          const scale = Math.min(1, 2048 / Math.max(width, height));
+          blob = await renderer.exportImage(texture, settings, { gradeGraph, scale, format: "image/webp", quality: 0.85 });
+        } finally {
+          renderer.dispose();
+          texture.dispose();
+        }
+      }
+      const sha256 = await sha256Hex(blob);
+      const id = `comparison-${sha256.slice(0, 16)}`;
+      if (runtimeAssetsRef.current !== assets || assets.comparisonFiles.has(id)) return;
+      const createdAt = new Date().toISOString();
+      const asset: AssetReference = {
+        id,
+        kind: "comparison",
+        sha256,
+        path: `assets/comparisons/${sha256}.webp`,
+        mimeType: blob.type,
+        byteLength: blob.size,
+        originalName: `snapshot-${createdAt}.webp`,
+        createdAt,
+      };
+      assets.comparisonFiles.set(id, blob);
+      setDocumentAssets((current) => [...current, asset]);
+      const url = URL.createObjectURL(blob);
+      setSnapshots((prev) => [...prev, { id, url, date: Date.parse(createdAt) }]);
+    } catch (error) {
+      if (runtimeAssetsRef.current === assets) {
+        void showError(error instanceof Error ? `Snapshot failed: ${error.message}` : "Snapshot failed.");
+      }
+    }
   };
 
   const handleCompareSnapshot = (url: string) => {
+    const request = ++comparisonRequest.current;
+    const assets = runtimeAssetsRef.current;
     new THREE.TextureLoader().load(url, (tex) => {
+      if (comparisonRequest.current !== request || runtimeAssetsRef.current !== assets) {
+        tex.dispose();
+        return;
+      }
+      markPhotoTexture(tex);
       setSettings((prev) => {
         prev.compareTexture?.dispose();
         return {
@@ -1160,6 +1200,7 @@ function useEditorStateController() {
   };
 
   const handleDeleteSnapshot = (id: string) => {
+    comparisonRequest.current += 1;
     setSnapshots((current) => {
       const removed = current.find((snapshot) => snapshot.id === id);
       if (removed) URL.revokeObjectURL(removed.url);
@@ -1643,6 +1684,7 @@ function useEditorStateController() {
     gradeGraph, setGradeGraph,
     rawDevelop, rawProgress,
     rawSource,
+    nativeSnapshotProvider,
     cancelRawDecode: () => rawAbortRef.current?.abort(),
     updateSetting,
     updateSettings,

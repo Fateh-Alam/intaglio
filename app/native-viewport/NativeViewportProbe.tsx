@@ -7,9 +7,27 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { DevSlider } from "../ui/DevSlider";
 import { isDesktopApp } from "../lib/platform";
+import { createEffect } from "../editor/effects/settings";
+import { glyphAtlasPixels } from "../editor/render/creative/glyphAtlas";
 
-type Settings = Record<string, number>;
-interface FrameTiming { submitMs: number; gpuDoneMs?: number | null }
+type Settings = Record<string, unknown>;
+
+// Exercises every fused stage: tone curve, color mixer and three-way grading.
+const SAMPLE_GRADE: Settings = {
+  curvePoints: {
+    master: [{ x: 0, y: 0 }, { x: 0.25, y: 0.18 }, { x: 0.75, y: 0.84 }, { x: 1, y: 1 }],
+    red: [{ x: 0, y: 0.03 }, { x: 0.5, y: 0.55 }, { x: 1, y: 1 }],
+    green: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+    blue: [{ x: 0, y: 0 }, { x: 0.5, y: 0.44 }, { x: 1, y: 0.95 }],
+  },
+  hslBlueSat: 0.5,
+  hslOrangeHue: 0.2,
+  colorGrading: { shadows: { h: 0.55, s: 0.5, l: 0 }, midtones: { h: 0, s: 0, l: 0 }, highlights: { h: 0.08, s: 0.4, l: 0 }, balance: 0 },
+  // A local adjustment: lift the wheel arch, so the multi-pass path is measured too.
+  masks: [{ id: "spot", name: "Radial", type: "radial", blendMode: "ADD", opacity: 1, params: { center: { x: 0.55, y: 0.6 }, radius: 0.25, radiusX: 0.25, radiusY: 0.2, angle: 0, feather: 0.6, invert: false } }],
+  adjustmentLayers: [{ id: "lift", name: "Lift", maskIds: ["spot"], opacity: 1, blendMode: "normal", params: { brightness: 0.6, shadows: 0.4 } }],
+};
+interface FrameTiming { frame: number; latencyMs: number; submitMs: number; gpuDoneMs?: number | null; presented: boolean }
 
 const CONTROLS: { key: string; label: string; min: number; max: number }[] = [
   { key: "brightness", label: "Exposure", min: -2, max: 2 },
@@ -38,56 +56,59 @@ async function invoke<T>(command: string, args?: Record<string, unknown> | Uint8
 
 export default function NativeViewportProbe(): React.ReactElement {
   const areaRef = useRef<HTMLDivElement>(null);
-  const [settings, setSettings] = useState<Settings>({});
+  const [settings, setSettings] = useState<Settings>(SAMPLE_GRADE);
   const [status, setStatus] = useState("Starting…");
   const [stats, setStats] = useState<string[]>([]);
-  const [live, setLive] = useState("");
-  const latest = useRef<Settings>({});
-  const inFlight = useRef(false);
-  const pending = useRef(false);
-  const roundTrips = useRef<number[]>([]);
-
+  const latest = useRef<Settings>(SAMPLE_GRADE);
+  const [graded, setGraded] = useState(true);
+  const [effect, setEffect] = useState("");
+  const gradedRef = useRef(true);
   const area = () => {
     const rect = areaRef.current?.getBoundingClientRect();
     return rect ? [rect.x, rect.y, rect.width, rect.height] : [0, 0, 0, 0];
   };
 
-  // Latest-wins: at most one frame in flight, and the newest settings always land.
-  const push = useCallback(async () => {
-    if (inFlight.current) {
-      pending.current = true;
-      return;
-    }
-    inFlight.current = true;
-    do {
-      pending.current = false;
-      const started = performance.now();
-      await invoke<FrameTiming>("viewport_update", { settings: latest.current, area: area() });
-      roundTrips.current = [...roundTrips.current.slice(-119), performance.now() - started];
-      setLive(`Live sliders: median ${percentile(roundTrips.current, 0.5).toFixed(2)} ms per frame (last ${roundTrips.current.length})`);
-    } while (pending.current);
-    inFlight.current = false;
+  // Fire and forget: the render thread folds bursts of slider events into one frame.
+  const push = useCallback(() => {
+    void invoke("viewport_update", { settings: latest.current, area: area() });
   }, []);
 
   const benchmark = useCallback(async () => {
+    // 1. One input at a time, each waiting for its frame: the cost of a frame.
     const trips: number[] = [];
     const gpu: number[] = [];
-    const submit: number[] = [];
+    const rustOne: number[] = [];
+    let shown = 0;
     for (let i = 0; i < 120; i += 1) {
-      const value = Math.sin(i / 12) * 1.5;
       const started = performance.now();
-      const timing = await invoke<FrameTiming>("viewport_update", { settings: { ...latest.current, brightness: value }, area: area(), measure: true });
+      const timing = await invoke<FrameTiming>("viewport_update", { settings: { ...latest.current, brightness: Math.sin(i / 12) * 1.5 }, area: area(), measure: true });
       trips.push(performance.now() - started);
-      submit.push(timing.submitMs);
       if (timing.gpuDoneMs != null) gpu.push(timing.gpuDoneMs);
+      rustOne.push(timing.latencyMs);
+      if (timing.presented) shown += 1;
     }
+    // 2. A 120 Hz slider drag: inputs keep coming without waiting, as a hand
+    //    on a trackpad would send them. Time each input until its frame is done.
+    const sends: Promise<{ wait: number; timing: FrameTiming }>[] = [];
+    for (let i = 0; i < 120; i += 1) {
+      const sentAt = performance.now();
+      sends.push(invoke<FrameTiming>("viewport_update", { settings: { ...latest.current, brightness: Math.cos(i / 10) * 1.5 }, area: area(), measure: true })
+        .then((timing) => ({ wait: performance.now() - sentAt, timing })));
+      await new Promise((resolve) => setTimeout(resolve, 1000 / 120));
+    }
+    const drag = await Promise.all(sends);
+    const dragWaits = drag.map((entry) => entry.wait);
+    const rustDrag = drag.map((entry) => entry.timing.latencyMs);
+    const frames = new Set(drag.map((entry) => entry.timing.frame)).size;
     await invoke("viewport_update", { settings: latest.current, area: area() });
     const lines = [
-      `Slider → frame done (JS round trip, waits for GPU): median ${percentile(trips, 0.5).toFixed(2)} ms, p95 ${percentile(trips, 0.95).toFixed(2)} ms`,
-      `Rust encode + submit: median ${percentile(submit, 0.5).toFixed(2)} ms · GPU finished after: median ${percentile(gpu, 0.5).toFixed(2)} ms, p95 ${percentile(gpu, 0.95).toFixed(2)} ms`,
+      `${gradedRef.current ? "With the sample grade (every stage on)." : "Base develop only."}`,
+      `One at a time — engine (input reaches Rust → frame done): median ${percentile(rustOne, 0.5).toFixed(2)} ms, p95 ${percentile(rustOne, 0.95).toFixed(2)} ms · seen from the page: median ${percentile(trips, 0.5).toFixed(2)} ms, p95 ${percentile(trips, 0.95).toFixed(2)} ms (GPU work median ${percentile(gpu, 0.5).toFixed(2)} ms)`,
+      `120 Hz drag — engine: median ${percentile(rustDrag, 0.5).toFixed(2)} ms, p95 ${percentile(rustDrag, 0.95).toFixed(2)} ms · seen from the page: median ${percentile(dragWaits, 0.5).toFixed(2)} ms, p95 ${percentile(dragWaits, 0.95).toFixed(2)} ms · 120 inputs drawn in ${frames} frames`,
+      shown === 120 ? "All frames were shown on screen." : `${120 - shown} of 120 frames were drawn offscreen because the window was hidden.`,
     ];
     setStats(lines);
-    await invoke("viewport_log", { message: `benchmark (120 frames): ${lines.join(" | ")}` });
+    await invoke("viewport_log", { message: `benchmark: ${lines.join(" | ")}` });
   }, []);
 
   useEffect(() => {
@@ -108,7 +129,7 @@ export default function NativeViewportProbe(): React.ReactElement {
         const bytes = new Uint8Array(await (await fetch("/demo.jpg")).arrayBuffer());
         const [width, height] = await invoke<[number, number]>("viewport_load", bytes);
         if (cancelled) return;
-        await invoke("viewport_update", { area: area() });
+        await invoke("viewport_update", { settings: latest.current, area: area() });
         setStatus(`etch-core on ${info.gpu} (${info.backend}) · photo ${width}×${height}`);
         await invoke("viewport_log", { message: `opened on ${info.gpu} (${info.backend}), photo ${width}x${height}` });
         await benchmark();
@@ -118,7 +139,7 @@ export default function NativeViewportProbe(): React.ReactElement {
       }
     })();
 
-    const observer = new ResizeObserver(() => void push());
+    const observer = new ResizeObserver(() => push());
     if (areaRef.current) observer.observe(areaRef.current);
     return () => {
       cancelled = true;
@@ -129,11 +150,44 @@ export default function NativeViewportProbe(): React.ReactElement {
     };
   }, [benchmark, push]);
 
+  const toggleGrade = (on: boolean) => {
+    const sliders = Object.fromEntries(CONTROLS.map((control) => [control.key, latest.current[control.key] ?? 0]));
+    const next = {
+      ...(on ? SAMPLE_GRADE : {}),
+      ...sliders,
+      creativeEffects: latest.current.creativeEffects ?? [],
+    };
+    latest.current = next;
+    gradedRef.current = on;
+    setGraded(on);
+    setSettings(next);
+    push();
+  };
+
+  const changeEffect = async (id: string) => {
+    const layer = id === "characters" || id === "dither" || id === "mosaic" ? createEffect(id, "viewport-sample") : null;
+    const next = { ...latest.current, creativeEffects: layer ? [layer] : [] };
+    const ramp = layer?.glyphs;
+    latest.current = next;
+    setSettings(next);
+    setEffect(id);
+    try {
+      await invoke("viewport_update", {
+        settings: next,
+        area: area(),
+        glyphAtlases: ramp ? [{ ramp, pixels: Array.from(glyphAtlasPixels(ramp)) }] : [],
+        measure: true,
+      });
+    } catch (error) {
+      setStatus(`Native viewport failed: ${error}`);
+    }
+  };
+
   const set = (key: string, value: number) => {
     const next = { ...latest.current, [key]: value };
     latest.current = next;
     setSettings(next);
-    void push();
+    push();
   };
 
   return (
@@ -145,13 +199,13 @@ export default function NativeViewportProbe(): React.ReactElement {
         <a href="/editor/" className="text-[12px] text-[var(--ui-text-2)] hover:text-[var(--ui-text)]">← Back to the editor</a>
         <h1 className="text-[13px] font-semibold">Native viewport test</h1>
         <p className="text-[11.5px] leading-relaxed text-[var(--ui-text-2)]">
-          The photo is drawn by the Rust engine on Metal, under this page. These sliders send settings only; no pixels cross the bridge.
+          The Rust engine draws the photo on Metal. Sliders send settings, and character effects send a small glyph atlas when selected.
         </p>
         {CONTROLS.map((control) => (
           <DevSlider
             key={control.key}
             label={control.label}
-            value={settings[control.key] ?? 0}
+            value={(settings[control.key] as number | undefined) ?? 0}
             min={control.min}
             max={control.max}
             defaultValue={0}
@@ -159,12 +213,24 @@ export default function NativeViewportProbe(): React.ReactElement {
             onChange={(value) => set(control.key, value)}
           />
         ))}
+        <label className="flex items-center gap-2 text-[12px] text-[var(--ui-text-2)]">
+          <input type="checkbox" checked={graded} onChange={(event) => toggleGrade(event.target.checked)} />
+          Sample grade (tone curve, color mixer, split toning, a radial local adjustment)
+        </label>
+        <label className="flex items-center justify-between gap-2 text-[12px] text-[var(--ui-text-2)]">
+          Creative Effect
+          <select value={effect} onChange={(event) => void changeEffect(event.target.value)} className="rounded-md bg-white/10 px-2 py-1">
+            <option value="">None</option>
+            <option value="mosaic">Mosaic</option>
+            <option value="characters">Characters</option>
+            <option value="dither">Dither</option>
+          </select>
+        </label>
         <button type="button" onClick={() => void benchmark()} className="rounded-md bg-white/10 px-3 py-1.5 text-[12px] hover:bg-white/15">
           Run benchmark
         </button>
         <div className="space-y-1 text-[11px] leading-relaxed text-[var(--ui-text-2)]">
           {stats.map((line) => <p key={line}>{line}</p>)}
-          {live && <p>{live}</p>}
         </div>
       </aside>
     </main>

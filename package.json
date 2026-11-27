@@ -1,6 +1,6 @@
 {
   "name": "etch",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
   "private": true,
   "packageManager": "pnpm@11.5.1",
   "engines": {
@@ -28,7 +28,8 @@
     "deploy": "pnpm build:cloudflare && opennextjs-cloudflare deploy",
     "upload": "pnpm build:cloudflare && opennextjs-cloudflare upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
-    "qualify": "pnpm install --frozen-lockfile --config.confirmModulesPurge=false && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm test:browser && pnpm build:cloudflare"
+    "qualify": "pnpm install --frozen-lockfile --config.confirmModulesPurge=false && pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm test:browser && pnpm build:cloudflare",
+    "gen:film-wgsl": "node scripts/gen-film-wgsl.mjs"
   },
   "dependencies": {
     "@jsquash/jpeg": "1.6.0",

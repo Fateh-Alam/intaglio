@@ -11,7 +11,6 @@ void main() {
 
 const fragmentShader = `
 uniform sampler2D tDiffuse;
-uniform float uTime;
 uniform float uDither;
 uniform vec2 uFullSize;
 uniform vec2 uTileOffset;
@@ -27,40 +26,27 @@ vec3 linearToSrgb(vec3 c) {
   return mix(higher, lower, vec3(cutoff));
 }
 
-// Simple hash for dithering
-float hash(vec2 p) {
-  p = fract(p * vec2(123.34, 456.21));
-  p += dot(p, p + 45.32);
-  return fract(p.x * p.y);
+// Integer PCG hash matches etch-core on Metal. Keep upper bits so conversion
+// to float is exact, and subtract two independent samples for triangular noise.
+uint pcgHash(uint value) {
+  uint state = value * 747796405u + 2891336453u;
+  uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+  return (word >> 22u) ^ word;
 }
 
-// Triangular dither to prevent banding on 8-bit output
-float triangularDither(vec2 uv, float seed) {
-  float a = hash(uv + seed);
-  float b = hash(uv + seed + 19.19);
-  return a - b;
-}
-
-vec3 applyDither(vec3 srgb, vec2 uv, float seed) {
-  float d = triangularDither(uv, seed) / 255.0;
-  return srgb + vec3(d * uDither);
+float noiseAt(uvec2 pixel) {
+  return float(pcgHash(pixel.x + pcgHash(pixel.y)) >> 8u) / 16777216.0;
 }
 
 void main() {
   vec4 texColor = texture2D(tDiffuse, vUv);
-  vec2 globalUv = vec2(
-    (uTileOffset.x + vUv.x * uTileSize.x) / uFullSize.x,
-    (uFullSize.y - uTileOffset.y - uTileSize.y + vUv.y * uTileSize.y) / uFullSize.y
-  );
-  
-  // 1. Display Transform (Linear -> sRGB)
   vec3 color = linearToSrgb(texColor.rgb);
-  
-  // 2. Dithering
-  // Generate a deterministic seed based on UV so it's stable, or use uTime to crawl.
-  // The spec recommends a stable seed for export, subtle for preview. We'll use a static seed for now.
-  color = applyDither(color, floor(globalUv * uFullSize), 1.0);
-  
+  vec2 imageOffset = vec2(uTileOffset.x, uFullSize.y - uTileOffset.y - uTileSize.y);
+  uvec2 pixel = uvec2(floor(gl_FragCoord.xy + imageOffset));
+  float noise = (noiseAt(pixel) - noiseAt(pixel + uvec2(19u))) / 255.0;
+  vec3 dithered = color + noise * uDither;
+  bvec3 interior = bvec3(color.r > 0.0 && color.r < 1.0, color.g > 0.0 && color.g < 1.0, color.b > 0.0 && color.b < 1.0);
+  color = mix(color, dithered, interior);
   gl_FragColor = vec4(clamp(color, 0.0, 1.0), texColor.a);
 }
 `;
@@ -76,7 +62,6 @@ export class DisplayTransformPass extends RenderPass {
       uniforms: {
         tDiffuse: { value: null },
         uDither: { value: 1 },
-        uTime: { value: 0.0 },
         uFullSize: { value: new THREE.Vector2(1, 1) },
         uTileOffset: { value: new THREE.Vector2(0, 0) },
         uTileSize: { value: new THREE.Vector2(1, 1) },
@@ -91,9 +76,7 @@ export class DisplayTransformPass extends RenderPass {
     // Shaders inline
   }
 
-  public updateUniforms() {
-    this.material.uniforms.uTime.value = 0.0;
-  }
+  public updateUniforms() {}
 
   override setViewOffset(fullWidth: number, fullHeight: number, x: number, y: number, width: number, height: number): void {
     this.material.uniforms.uFullSize.value.set(fullWidth, fullHeight);

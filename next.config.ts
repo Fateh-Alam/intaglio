@@ -24,4 +24,6 @@ const nextConfig: NextConfig = {
 
 export default withSerwist(nextConfig);
 
-if (!isDesktop) import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());
+// Cloudflare bindings for `next dev` only. Starting it for `next start` (tests)
+// collides with any other checkout's local Workers runtime.
+if (!isDesktop && process.env.NODE_ENV === "development") import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());

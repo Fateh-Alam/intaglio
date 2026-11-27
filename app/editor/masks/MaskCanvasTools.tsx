@@ -52,7 +52,7 @@ function useDrag(onMove: (point: Point, event: PointerEvent) => void) {
   };
 }
 
-function RadialHandles({ mask, size, frame }: { mask: Extract<MaskLayer, { type: "radial" }>; size: Size; frame: React.RefObject<SVGSVGElement | null> }) {
+function RadialHandles({ mask, size, frame, zoom }: { zoom: number; mask: Extract<MaskLayer, { type: "radial" }>; size: Size; frame: React.RefObject<SVGSVGElement | null> }) {
   const { updateComponent } = useMasks();
   const aspect = size.width / size.height;
   const g = radialGeometry(mask.params, aspect);
@@ -79,7 +79,7 @@ function RadialHandles({ mask, size, frame }: { mask: Extract<MaskLayer, { type:
   const axisY = { x: -Math.sin(g.angle), y: Math.cos(g.angle) };
   const edgeX = { x: cx + axisX.x * rx, y: cy + axisX.y * rx };
   const edgeY = { x: cx - axisY.x * ry, y: cy - axisY.y * ry };
-  const rotate = { x: cx - axisY.x * (ry + 22), y: cy - axisY.y * (ry + 22) };
+  const rotate = { x: cx - axisY.x * (ry + 22 / zoom), y: cy - axisY.y * (ry + 22 / zoom) };
 
   const local = (point: Point) => {
     const dx = (point.x - g.cx) * size.width;
@@ -99,21 +99,21 @@ function RadialHandles({ mask, size, frame }: { mask: Extract<MaskLayer, { type:
 
   return (
     <g>
-      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} transform={`rotate(${degrees} ${cx} ${cy})`} fill="none" stroke="white" strokeWidth={1.5} strokeOpacity={0.9} style={{ filter: "drop-shadow(0 0 2px rgba(0,0,0,0.7))" }} />
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} transform={`rotate(${degrees} ${cx} ${cy})`} fill="none" stroke="white" strokeWidth={1.5 / zoom} strokeOpacity={0.9} style={{ filter: `drop-shadow(0 0 ${2 / zoom}px rgba(0,0,0,0.7))` }} />
       {g.feather > 0.02 && (
-        <ellipse cx={cx} cy={cy} rx={rx * (1 - g.feather)} ry={ry * (1 - g.feather)} transform={`rotate(${degrees} ${cx} ${cy})`} fill="none" stroke="white" strokeOpacity={0.55} strokeDasharray="4 4" />
+        <ellipse cx={cx} cy={cy} rx={rx * (1 - g.feather)} ry={ry * (1 - g.feather)} transform={`rotate(${degrees} ${cx} ${cy})`} fill="none" stroke="white" strokeOpacity={0.55} strokeWidth={1 / zoom} strokeDasharray={`${4 / zoom} ${4 / zoom}`} />
       )}
-      <line x1={edgeY.x} y1={edgeY.y} x2={rotate.x} y2={rotate.y} stroke="white" strokeOpacity={0.6} />
-      <circle cx={cx} cy={cy} r={7} className={HANDLE} strokeWidth={1} onPointerDown={(event) => frame.current && startMove(event, frame.current)} />
-      <circle cx={cx} cy={cy} r={2.5} className="pointer-events-none fill-black/60" />
-      <circle cx={edgeX.x} cy={edgeX.y} r={5} className={HANDLE} onPointerDown={(event) => frame.current && startWidth(event, frame.current)} />
-      <circle cx={edgeY.x} cy={edgeY.y} r={5} className={HANDLE} onPointerDown={(event) => frame.current && startHeight(event, frame.current)} />
-      <circle cx={rotate.x} cy={rotate.y} r={4.5} className="cursor-alias fill-[#5b9bff] stroke-white" strokeWidth={1.5} onPointerDown={(event) => frame.current && startRotate(event, frame.current)} />
+      <line x1={edgeY.x} y1={edgeY.y} x2={rotate.x} y2={rotate.y} stroke="white" strokeOpacity={0.6} strokeWidth={1 / zoom} />
+      <circle cx={cx} cy={cy} r={7 / zoom} className={HANDLE} strokeWidth={1 / zoom} onPointerDown={(event) => frame.current && startMove(event, frame.current)} />
+      <circle cx={cx} cy={cy} r={2.5 / zoom} className="pointer-events-none fill-black/60" />
+      <circle cx={edgeX.x} cy={edgeX.y} r={5 / zoom} className={HANDLE} strokeWidth={1 / zoom} onPointerDown={(event) => frame.current && startWidth(event, frame.current)} />
+      <circle cx={edgeY.x} cy={edgeY.y} r={5 / zoom} className={HANDLE} strokeWidth={1 / zoom} onPointerDown={(event) => frame.current && startHeight(event, frame.current)} />
+      <circle cx={rotate.x} cy={rotate.y} r={4.5 / zoom} className="cursor-alias fill-[#5b9bff] stroke-white" strokeWidth={1.5 / zoom} onPointerDown={(event) => frame.current && startRotate(event, frame.current)} />
     </g>
   );
 }
 
-function LinearHandles({ mask, size, frame }: { mask: Extract<MaskLayer, { type: "linear" }>; size: Size; frame: React.RefObject<SVGSVGElement | null> }) {
+function LinearHandles({ mask, size, frame, zoom }: { zoom: number; mask: Extract<MaskLayer, { type: "linear" }>; size: Size; frame: React.RefObject<SVGSVGElement | null> }) {
   const { updateComponent } = useMasks();
   const g = linearGeometry(mask.params, size.width / size.height);
   const write = (patch: Partial<LinearMaskParams>) =>
@@ -125,7 +125,7 @@ function LinearHandles({ mask, size, frame }: { mask: Extract<MaskLayer, { type:
   const normal = { x: -(e.y - s.y) / length, y: (e.x - s.x) / length };
   const span = Math.hypot(size.width, size.height) * 1.5;
   const line = (p: Point, opacity: number, dashed = false) => (
-    <line x1={p.x - normal.x * span} y1={p.y - normal.y * span} x2={p.x + normal.x * span} y2={p.y + normal.y * span} stroke="white" strokeOpacity={opacity} strokeWidth={1.25} strokeDasharray={dashed ? "5 5" : undefined} style={{ filter: "drop-shadow(0 0 2px rgba(0,0,0,0.7))" }} />
+    <line x1={p.x - normal.x * span} y1={p.y - normal.y * span} x2={p.x + normal.x * span} y2={p.y + normal.y * span} stroke="white" strokeOpacity={opacity} strokeWidth={1.25 / zoom} strokeDasharray={dashed ? `${5 / zoom} ${5 / zoom}` : undefined} style={{ filter: `drop-shadow(0 0 ${2 / zoom}px rgba(0,0,0,0.7))` }} />
   );
   const startDrag = useDrag((point) => write({ start: point }));
   const endDrag = useDrag((point) => write({ end: point }));
@@ -143,14 +143,14 @@ function LinearHandles({ mask, size, frame }: { mask: Extract<MaskLayer, { type:
       {line(s, 0.95)}
       {line(m, 0.5, true)}
       {line(e, 0.95)}
-      <line x1={s.x} y1={s.y} x2={e.x} y2={e.y} stroke="white" strokeOpacity={0.6} />
-      <circle cx={s.x} cy={s.y} r={6} className={HANDLE} onPointerDown={(event) => frame.current && startDrag(event, frame.current)} />
-      <circle cx={e.x} cy={e.y} r={6} className={HANDLE} onPointerDown={(event) => frame.current && endDrag(event, frame.current)} />
+      <line x1={s.x} y1={s.y} x2={e.x} y2={e.y} stroke="white" strokeOpacity={0.6} strokeWidth={1 / zoom} />
+      <circle cx={s.x} cy={s.y} r={6 / zoom} className={HANDLE} strokeWidth={1 / zoom} onPointerDown={(event) => frame.current && startDrag(event, frame.current)} />
+      <circle cx={e.x} cy={e.y} r={6 / zoom} className={HANDLE} strokeWidth={1 / zoom} onPointerDown={(event) => frame.current && endDrag(event, frame.current)} />
       <circle
         cx={m.x}
         cy={m.y}
-        r={7}
-        className={HANDLE}
+        r={7 / zoom}
+        className={HANDLE} strokeWidth={1 / zoom}
         onPointerDown={(event) => {
           if (!frame.current) return;
           moveDrag.current = { origin: toImage(frame.current, event.clientX, event.clientY), start: g.start, end: g.end };
@@ -161,7 +161,7 @@ function LinearHandles({ mask, size, frame }: { mask: Extract<MaskLayer, { type:
   );
 }
 
-function BrushTool({ mask, size }: { mask: Extract<MaskLayer, { type: "brush" }>; size: Size }) {
+function BrushTool({ mask, size, zoom }: { zoom: number; mask: Extract<MaskLayer, { type: "brush" }>; size: Size }) {
   const { brushSize, setBrushSize, brushFeather, setBrushFeather, brushErasing } = useEditorState();
   const { updateComponent } = useMasks();
   const surfaceRef = useRef<HTMLDivElement>(null);
@@ -270,9 +270,9 @@ function BrushTool({ mask, size }: { mask: Extract<MaskLayer, { type: "brush" }>
     >
       {cursor && (
         <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
-          <circle cx={cursor.x} cy={cursor.y} r={radius} fill="none" stroke="white" strokeWidth={1.25} style={{ filter: "drop-shadow(0 0 1.5px rgba(0,0,0,0.9))" }} />
-          {brushFeather > 0.05 && <circle cx={cursor.x} cy={cursor.y} r={radius * (1 - brushFeather)} fill="none" stroke="white" strokeOpacity={0.6} strokeDasharray="3 3" />}
-          <text x={cursor.x} y={cursor.y + 4} textAnchor="middle" className="fill-white text-[13px] font-semibold" style={{ filter: "drop-shadow(0 0 1.5px rgba(0,0,0,0.9))" }}>{erasing ? "−" : "+"}</text>
+          <circle cx={cursor.x} cy={cursor.y} r={radius} fill="none" stroke="white" strokeWidth={1.25 / zoom} style={{ filter: `drop-shadow(0 0 ${1.5 / zoom}px rgba(0,0,0,0.9))` }} />
+          {brushFeather > 0.05 && <circle cx={cursor.x} cy={cursor.y} r={radius * (1 - brushFeather)} fill="none" stroke="white" strokeOpacity={0.6} strokeWidth={1 / zoom} strokeDasharray={`${3 / zoom} ${3 / zoom}`} />}
+          <text x={cursor.x} y={cursor.y + 4 / zoom} textAnchor="middle" className="fill-white font-semibold" fontSize={13 / zoom} style={{ filter: `drop-shadow(0 0 ${1.5 / zoom}px rgba(0,0,0,0.9))` }}>{erasing ? "−" : "+"}</text>
         </svg>
       )}
     </div>
@@ -286,7 +286,7 @@ function hsvHue(r: number, g: number, b: number, high: number, chroma: number) {
 }
 
 /** On-photo editing for the selected mask part: handles, brush, or eyedropper. */
-export function MaskCanvasTools({ size, sampleColor, crop }: { size: Size; sampleColor: React.RefObject<MaskColorSampler | null>; crop: PhotoCrop }) {
+export function MaskCanvasTools({ size, sampleColor, crop, zoom = 1 }: { zoom?: number; size: Size; sampleColor: React.RefObject<MaskColorSampler | null>; crop: PhotoCrop }) {
   const shell = useShell();
   const masks = useMasks();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -302,6 +302,10 @@ export function MaskCanvasTools({ size, sampleColor, crop }: { size: Size; sampl
           if (!event.isPrimary || event.button !== 0) return;
           event.stopPropagation();
           const point = toImage(event.currentTarget, event.clientX, event.clientY);
+          // The tool can receive a click as the photo renderer is mounting.
+          for (let frame = 0; frame < 8 && !sampleColor.current; frame += 1) {
+            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          }
           const rgb = await sampleColor.current?.((point.x - crop.x) / crop.width, (point.y - crop.y) / crop.height);
           if (!rgb) return;
           const [r, g, b] = rgb.map((channel) => Math.max(0, channel));
@@ -326,15 +330,15 @@ export function MaskCanvasTools({ size, sampleColor, crop }: { size: Size; sampl
     );
   }
 
-  if (component.type === "brush") return <BrushTool key={component.id} mask={component} size={size} />;
+  if (component.type === "brush") return <BrushTool key={component.id} mask={component} size={size} zoom={zoom} />;
 
   if (component.type === "radial" || component.type === "linear") {
     return (
       <svg ref={svgRef} className="pointer-events-none absolute inset-0 h-full w-full touch-none overflow-visible" viewBox={`0 0 ${size.width} ${size.height}`}>
         <g className="pointer-events-auto">
           {component.type === "radial"
-            ? <RadialHandles mask={component} size={size} frame={svgRef} />
-            : <LinearHandles mask={component} size={size} frame={svgRef} />}
+            ? <RadialHandles mask={component} size={size} frame={svgRef} zoom={zoom} />
+            : <LinearHandles mask={component} size={size} frame={svgRef} zoom={zoom} />}
         </g>
       </svg>
     );

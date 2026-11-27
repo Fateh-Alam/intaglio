@@ -278,12 +278,14 @@ export const FILM_EMULATION_SHADER_CHUNK = `
     return color;
   }
 
+  // Looks use pow() and HSL, which turn negative (out-of-gamut) channels into
+  // NaN, and the glows after this pass would spread a NaN across the frame.
   vec3 applyFilmEmulation(vec3 color, int filmType, float strength) {
     if (filmType == 0) return color;
-    if (filmType <= 8) return applyFilmChunk_0(color, filmType, strength);
-    if (filmType <= 15) return applyFilmChunk_1(color, filmType, strength);
-    if (filmType <= 25) return applyFilmChunk_2(color, filmType, strength);
-    if (filmType <= 31) return applyFilmChunk_3(color, filmType, strength);
+    if (filmType <= 8) return applyFilmChunk_0(max(color, vec3(0.0)), filmType, strength);
+    if (filmType <= 15) return applyFilmChunk_1(max(color, vec3(0.0)), filmType, strength);
+    if (filmType <= 25) return applyFilmChunk_2(max(color, vec3(0.0)), filmType, strength);
+    if (filmType <= 31) return applyFilmChunk_3(max(color, vec3(0.0)), filmType, strength);
     return color;
   }
 `;
