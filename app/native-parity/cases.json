@@ -1,0 +1,1260 @@
+{
+  "defaults": {},
+  "exposure": {
+    "brightness": 0.8
+  },
+  "exposure-down": {
+    "brightness": -1.2
+  },
+  "contrast": {
+    "contrast": 0.5
+  },
+  "highlights": {
+    "highlights": -0.7
+  },
+  "shadows": {
+    "shadows": 0.6
+  },
+  "whites": {
+    "whites": 0.5
+  },
+  "blacks": {
+    "blacks": -0.5
+  },
+  "temperature": {
+    "temperature": 0.6
+  },
+  "tint": {
+    "tint": -0.4
+  },
+  "vibrance": {
+    "vibrance": 0.7
+  },
+  "saturation": {
+    "saturation": -0.5
+  },
+  "dehaze": {
+    "dehaze": 0.6
+  },
+  "film": {
+    "filmToeStrength": 0.6,
+    "filmShoulderStrength": 0.8,
+    "filmGamma": 1.1,
+    "colorCrossover": 0.5,
+    "lumaDesat": 0.4
+  },
+  "busy": {
+    "brightness": 0.4,
+    "contrast": 0.3,
+    "highlights": -0.5,
+    "shadows": 0.4,
+    "whites": 0.2,
+    "blacks": -0.2,
+    "temperature": -0.3,
+    "tint": 0.2,
+    "protectHighlights": true,
+    "vibrance": 0.3,
+    "saturation": 0.1,
+    "dehaze": 0.2
+  },
+  "tone-curve": {
+    "curvePoints": {
+      "master": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.25,
+          "y": 0.18
+        },
+        {
+          "x": 0.75,
+          "y": 0.84
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "red": [
+        {
+          "x": 0,
+          "y": 0.03
+        },
+        {
+          "x": 0.5,
+          "y": 0.55
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "green": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "blue": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.44
+        },
+        {
+          "x": 1,
+          "y": 0.95
+        }
+      ]
+    }
+  },
+  "inverting-curve": {
+    "curvePoints": {
+      "master": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "red": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "green": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "blue": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ]
+    }
+  },
+  "mixer": {
+    "hslRedHue": 0.4,
+    "hslOrangeSat": -0.6,
+    "hslYellowLum": 0.5,
+    "hslBlueSat": 0.8,
+    "hslBlueHue": -0.3,
+    "hslGreenLum": -0.6
+  },
+  "mixer-luminance": {
+    "hslRedLum": 0.8,
+    "hslOrangeLum": -0.8,
+    "hslYellowLum": 0.8,
+    "hslGreenLum": -0.8,
+    "hslAquaLum": 0.8,
+    "hslBlueLum": -0.8,
+    "hslPurpleLum": 0.8,
+    "hslMagentaLum": -0.8
+  },
+  "skin-protection": {
+    "hslOrangeSat": 0.9,
+    "hslRedHue": 0.6,
+    "safeSkinEnabled": true
+  },
+  "grading": {
+    "colorGrading": {
+      "shadows": {
+        "h": 0.55,
+        "s": 0.6,
+        "l": -0.2
+      },
+      "midtones": {
+        "h": 0.1,
+        "s": 0.2,
+        "l": 0
+      },
+      "highlights": {
+        "h": 0.08,
+        "s": 0.5,
+        "l": 0.15
+      },
+      "balance": 0.3
+    }
+  },
+  "everything": {
+    "brightness": 0.3,
+    "contrast": 0.2,
+    "vibrance": 0.2,
+    "curvePoints": {
+      "master": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.25,
+          "y": 0.18
+        },
+        {
+          "x": 0.75,
+          "y": 0.84
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "red": [
+        {
+          "x": 0,
+          "y": 0.03
+        },
+        {
+          "x": 0.5,
+          "y": 0.55
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "green": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "blue": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.44
+        },
+        {
+          "x": 1,
+          "y": 0.95
+        }
+      ]
+    },
+    "hslBlueSat": 0.5,
+    "hslOrangeHue": 0.2,
+    "colorGrading": {
+      "shadows": {
+        "h": 0.55,
+        "s": 0.4,
+        "l": 0
+      },
+      "midtones": {
+        "h": 0,
+        "s": 0,
+        "l": 0
+      },
+      "highlights": {
+        "h": 0.08,
+        "s": 0.3,
+        "l": 0
+      },
+      "balance": 0
+    }
+  },
+  "lut": {
+    "lutFile": "native-fixture.cube",
+    "lutStrength": 1
+  },
+  "lut-partial": {
+    "lutFile": "native-fixture.cube",
+    "lutStrength": 0.6
+  },
+  "lut-after-grade": {
+    "lutFile": "native-fixture.cube",
+    "lutStrength": 0.8,
+    "brightness": 0.3,
+    "hslBlueSat": 0.4,
+    "curvePoints": {
+      "master": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.25,
+          "y": 0.18
+        },
+        {
+          "x": 0.75,
+          "y": 0.84
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "red": [
+        {
+          "x": 0,
+          "y": 0.03
+        },
+        {
+          "x": 0.5,
+          "y": 0.55
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "green": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "blue": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.44
+        },
+        {
+          "x": 1,
+          "y": 0.95
+        }
+      ]
+    }
+  },
+  "crop": {
+    "crop": {
+      "x": 0.25,
+      "y": 0.125,
+      "width": 0.5,
+      "height": 0.75
+    }
+  },
+  "straighten": {
+    "rotate": 7,
+    "zoom": 1.15
+  },
+  "straighten-edges": {
+    "rotate": -12
+  },
+  "lens-distortion": {
+    "lensDistortion": 0.2,
+    "zoom": 0.95
+  },
+  "keystone": {
+    "keystoneH": 0.08,
+    "keystoneV": -0.06,
+    "zoom": 1.1
+  },
+  "anamorphic": {
+    "anamorphicDistortion": 0.2
+  },
+  "crop-straighten-grade": {
+    "crop": {
+      "x": 0.125,
+      "y": 0.125,
+      "width": 0.75,
+      "height": 0.75
+    },
+    "rotate": 4,
+    "zoom": 1.08,
+    "brightness": 0.25,
+    "hslBlueSat": 0.4,
+    "curvePoints": {
+      "master": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.25,
+          "y": 0.18
+        },
+        {
+          "x": 0.75,
+          "y": 0.84
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "red": [
+        {
+          "x": 0,
+          "y": 0.03
+        },
+        {
+          "x": 0.5,
+          "y": 0.55
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "green": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "blue": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.44
+        },
+        {
+          "x": 1,
+          "y": 0.95
+        }
+      ]
+    }
+  },
+  "local-radial": {
+    "masks": [
+      {
+        "id": "r",
+        "name": "Radial",
+        "type": "radial",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "center": {
+            "x": 0.4,
+            "y": 0.45
+          },
+          "radius": 0.3,
+          "radiusX": 0.3,
+          "radiusY": 0.22,
+          "angle": 20,
+          "feather": 0.5,
+          "invert": false
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "r"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": 0.6,
+          "temperature": 0.3
+        }
+      }
+    ]
+  },
+  "local-linear": {
+    "masks": [
+      {
+        "id": "l",
+        "name": "Linear",
+        "type": "linear",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "angle": 0,
+          "position": 0.5,
+          "feather": 0.2,
+          "invert": false,
+          "start": {
+            "x": 0.5,
+            "y": 0.0
+          },
+          "end": {
+            "x": 0.5,
+            "y": 0.6
+          }
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "l"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": -0.5,
+          "dehaze": 0.3
+        }
+      }
+    ]
+  },
+  "local-luminance": {
+    "masks": [
+      {
+        "id": "lu",
+        "name": "Lum",
+        "type": "luminosity",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "colorSpace": "oklab",
+          "target": 0.75,
+          "range": 0.15,
+          "feather": 0.1
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "lu"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": -0.6,
+          "saturation": 0.3
+        }
+      }
+    ]
+  },
+  "local-color": {
+    "masks": [
+      {
+        "id": "c",
+        "name": "Color",
+        "type": "colorRange",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "colorSpace": "oklch",
+          "targetHue": 0.72,
+          "hueWidth": 0.12,
+          "targetChroma": 0,
+          "chromaRange": 0.1
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "c"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "saturation": 0.6,
+          "hslBlueHue": 0.4
+        }
+      }
+    ]
+  },
+  "local-legacy": {
+    "masks": [
+      {
+        "id": "ll",
+        "name": "Legacy lum",
+        "type": "luminosity",
+        "blendMode": "ADD",
+        "opacity": 0.8,
+        "params": {
+          "target": 0.3,
+          "range": 0.2,
+          "feather": 0.1
+        }
+      },
+      {
+        "id": "lc",
+        "name": "Legacy color",
+        "type": "colorRange",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "targetHue": 0.05,
+          "hueWidth": 0.1,
+          "targetChroma": 0.6,
+          "chromaRange": 0.4
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "ll",
+          "lc"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": 0.5,
+          "tint": 0.3
+        }
+      }
+    ]
+  },
+  "local-brush": {
+    "masks": [
+      {
+        "id": "b",
+        "name": "Brush",
+        "type": "brush",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "strokes": [
+            {
+              "id": "s1",
+              "points": [
+                {
+                  "x": 0.15,
+                  "y": 0.7,
+                  "pressure": 1,
+                  "t": 0
+                },
+                {
+                  "x": 0.5,
+                  "y": 0.55,
+                  "pressure": 0.8,
+                  "t": 1
+                },
+                {
+                  "x": 0.85,
+                  "y": 0.75,
+                  "pressure": 1,
+                  "t": 2
+                }
+              ],
+              "size": 0.6,
+              "feather": 0.5,
+              "flow": 1,
+              "opacity": 0.9,
+              "mode": "paint"
+            },
+            {
+              "id": "s2",
+              "points": [
+                {
+                  "x": 0.5,
+                  "y": 0.6,
+                  "pressure": 1,
+                  "t": 0
+                }
+              ],
+              "size": 0.3,
+              "feather": 0.3,
+              "flow": 1,
+              "opacity": 1,
+              "mode": "erase"
+            }
+          ]
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "b"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": 0.7,
+          "contrast": 0.3
+        }
+      }
+    ]
+  },
+  "local-stack": {
+    "brightness": 0.15,
+    "curvePoints": {
+      "master": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.25,
+          "y": 0.18
+        },
+        {
+          "x": 0.75,
+          "y": 0.84
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "red": [
+        {
+          "x": 0,
+          "y": 0.03
+        },
+        {
+          "x": 0.5,
+          "y": 0.55
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "green": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "blue": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.44
+        },
+        {
+          "x": 1,
+          "y": 0.95
+        }
+      ]
+    },
+    "masks": [
+      {
+        "id": "r",
+        "name": "Radial",
+        "type": "radial",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "center": {
+            "x": 0.4,
+            "y": 0.45
+          },
+          "radius": 0.3,
+          "radiusX": 0.3,
+          "radiusY": 0.22,
+          "angle": 20,
+          "feather": 0.5,
+          "invert": false
+        }
+      },
+      {
+        "id": "l2",
+        "name": "Linear",
+        "type": "linear",
+        "blendMode": "SUBTRACT",
+        "opacity": 1,
+        "params": {
+          "angle": 0,
+          "position": 0.5,
+          "feather": 0.2,
+          "invert": false,
+          "start": {
+            "x": 0.5,
+            "y": 0.0
+          },
+          "end": {
+            "x": 0.5,
+            "y": 0.6
+          }
+        }
+      },
+      {
+        "id": "lu2",
+        "name": "Lum",
+        "type": "luminosity",
+        "blendMode": "INTERSECT",
+        "opacity": 1,
+        "params": {
+          "colorSpace": "oklab",
+          "target": 0.75,
+          "range": 0.15,
+          "feather": 0.1
+        }
+      },
+      {
+        "id": "b",
+        "name": "Brush",
+        "type": "brush",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "strokes": [
+            {
+              "id": "s1",
+              "points": [
+                {
+                  "x": 0.15,
+                  "y": 0.7,
+                  "pressure": 1,
+                  "t": 0
+                },
+                {
+                  "x": 0.5,
+                  "y": 0.55,
+                  "pressure": 0.8,
+                  "t": 1
+                },
+                {
+                  "x": 0.85,
+                  "y": 0.75,
+                  "pressure": 1,
+                  "t": 2
+                }
+              ],
+              "size": 0.6,
+              "feather": 0.5,
+              "flow": 1,
+              "opacity": 0.9,
+              "mode": "paint"
+            },
+            {
+              "id": "s2",
+              "points": [
+                {
+                  "x": 0.5,
+                  "y": 0.6,
+                  "pressure": 1,
+                  "t": 0
+                }
+              ],
+              "size": 0.3,
+              "feather": 0.3,
+              "flow": 1,
+              "opacity": 1,
+              "mode": "erase"
+            }
+          ]
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "r",
+          "l2"
+        ],
+        "opacity": 0.7,
+        "blendMode": "normal",
+        "params": {
+          "brightness": 0.5,
+          "colorGrading": {
+            "shadows": {
+              "h": 0.55,
+              "s": 0.5,
+              "l": 0
+            },
+            "midtones": {
+              "h": 0,
+              "s": 0,
+              "l": 0
+            },
+            "highlights": {
+              "h": 0.08,
+              "s": 0.4,
+              "l": 0
+            },
+            "balance": 0
+          }
+        }
+      },
+      {
+        "id": "p2",
+        "name": "p2",
+        "maskIds": [
+          "b",
+          "lu2"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": -0.4,
+          "vibrance": 0.5
+        }
+      }
+    ]
+  },
+  "local-cropped": {
+    "crop": {
+      "x": 0.25,
+      "y": 0.125,
+      "width": 0.5,
+      "height": 0.75
+    },
+    "masks": [
+      {
+        "id": "r",
+        "name": "Radial",
+        "type": "radial",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "center": {
+            "x": 0.4,
+            "y": 0.45
+          },
+          "radius": 0.3,
+          "radiusX": 0.3,
+          "radiusY": 0.22,
+          "angle": 20,
+          "feather": 0.5,
+          "invert": false
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "r"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": 0.6
+        }
+      }
+    ]
+  },
+  "local-legacy-shapes": {
+    "masks": [
+      {
+        "id": "lr",
+        "name": "Legacy radial",
+        "type": "radial",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "center": {
+            "x": 0.6,
+            "y": 0.4
+          },
+          "radius": 0.25,
+          "feather": 0.1,
+          "invert": false
+        }
+      },
+      {
+        "id": "ln",
+        "name": "Legacy linear",
+        "type": "linear",
+        "blendMode": "ADD",
+        "opacity": 1,
+        "params": {
+          "angle": 0.15,
+          "position": 0.5,
+          "feather": 0.2,
+          "invert": true
+        }
+      }
+    ],
+    "adjustmentLayers": [
+      {
+        "id": "p1",
+        "name": "p1",
+        "maskIds": [
+          "lr"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": 0.6
+        }
+      },
+      {
+        "id": "p2",
+        "name": "p2",
+        "maskIds": [
+          "ln"
+        ],
+        "opacity": 1,
+        "blendMode": "normal",
+        "params": {
+          "brightness": -0.5,
+          "temperature": -0.4
+        }
+      }
+    ]
+  },
+  "film-kodak_portra_400": {
+    "filmEmulation": "kodak_portra_400"
+  },
+  "film-fujifilm_velvia_50": {
+    "filmEmulation": "fujifilm_velvia_50"
+  },
+  "film-kodak_tri_x_400": {
+    "filmEmulation": "kodak_tri_x_400"
+  },
+  "film-cinestill_800t": {
+    "filmEmulation": "cinestill_800t"
+  },
+  "film-ilford_hp5": {
+    "filmEmulation": "ilford_hp5"
+  },
+  "film-fujifilm_pro_400h": {
+    "filmEmulation": "fujifilm_pro_400h"
+  },
+  "film-kodak_ektar_100": {
+    "filmEmulation": "kodak_ektar_100"
+  },
+  "film-wes_anderson": {
+    "filmEmulation": "wes_anderson"
+  },
+  "film-teal_and_orange": {
+    "filmEmulation": "teal_and_orange"
+  },
+  "film-cyberpunk": {
+    "filmEmulation": "cyberpunk"
+  },
+  "film-matrix": {
+    "filmEmulation": "matrix"
+  },
+  "film-bleach_bypass": {
+    "filmEmulation": "bleach_bypass"
+  },
+  "film-vintage_70s": {
+    "filmEmulation": "vintage_70s"
+  },
+  "film-polaroid_fade": {
+    "filmEmulation": "polaroid_fade"
+  },
+  "film-noir": {
+    "filmEmulation": "noir"
+  },
+  "film-agfa_apx_100": {
+    "filmEmulation": "agfa_apx_100"
+  },
+  "film-kodachrome_64": {
+    "filmEmulation": "kodachrome_64"
+  },
+  "film-fuji_superia_400": {
+    "filmEmulation": "fuji_superia_400"
+  },
+  "film-ilford_pan_f_50": {
+    "filmEmulation": "ilford_pan_f_50"
+  },
+  "film-kodak_gold_200": {
+    "filmEmulation": "kodak_gold_200"
+  },
+  "film-lomography_cn_800": {
+    "filmEmulation": "lomography_cn_800"
+  },
+  "film-fomapan_400": {
+    "filmEmulation": "fomapan_400"
+  },
+  "film-cinestill_50d": {
+    "filmEmulation": "cinestill_50d"
+  },
+  "film-kodak_vision3_500t": {
+    "filmEmulation": "kodak_vision3_500t"
+  },
+  "film-fuji_provia_100f": {
+    "filmEmulation": "fuji_provia_100f"
+  },
+  "film-intaglio_amber_plate": {
+    "filmEmulation": "intaglio_amber_plate"
+  },
+  "film-intaglio_prussian_ink": {
+    "filmEmulation": "intaglio_prussian_ink"
+  },
+  "film-intaglio_celadon": {
+    "filmEmulation": "intaglio_celadon"
+  },
+  "film-intaglio_carta": {
+    "filmEmulation": "intaglio_carta"
+  },
+  "film-intaglio_verdigris": {
+    "filmEmulation": "intaglio_verdigris"
+  },
+  "film-intaglio_obsidian": {
+    "filmEmulation": "intaglio_obsidian"
+  },
+  "film-half-strength": {
+    "filmEmulation": "fujifilm_velvia_50",
+    "filmEmulationStrength": 0.6
+  },
+  "bloom": {
+    "bloom": 0.8,
+    "bloomThreshold": 0.4,
+    "bloomRadius": 1.5
+  },
+  "halation": {
+    "halation": 0.9,
+    "halationThreshold": 0.4,
+    "halationRadius": 1.2
+  },
+  "vignette": {
+    "vignette": 0.6
+  },
+  "aberration": {
+    "aberration": 0.03
+  },
+  "anamorphic-streaks": {
+    "anamorphicStreaks": 0.9
+  },
+  "god-light": {
+    "godLightStrength": 0.8,
+    "godLightX": 0.3,
+    "godLightY": 0.7,
+    "godLightSpecular": 0.5,
+    "godLightRim": 0.6,
+    "godLightFalloff": 1.5,
+    "godLightColorR": 1.0,
+    "godLightColorG": 0.8,
+    "godLightColorB": 0.6
+  },
+  "grain": {
+    "grain": 0.2
+  },
+  "film-border": {
+    "filmBorder": true
+  },
+  "sharpen": {
+    "sharpness": 0.6
+  },
+  "sharpen-negative": {
+    "sharpness": -0.4
+  },
+  "structure": {
+    "structure": 0.5
+  },
+  "global-stack": {
+    "brightness": 0.2,
+    "filmEmulation": "cinestill_800t",
+    "halation": 0.4,
+    "halationThreshold": 0.5,
+    "bloom": 0.3,
+    "bloomThreshold": 0.5,
+    "vignette": 0.3,
+    "grain": 0.05,
+    "sharpness": 0.3,
+    "structure": 0.2,
+    "crop": {
+      "x": 0.125,
+      "y": 0.125,
+      "width": 0.75,
+      "height": 0.75
+    },
+    "adjustmentLayers": [
+      {
+        "id": "stack-layer",
+        "name": "stack-layer",
+        "maskIds": [],
+        "opacity": 0.8,
+        "blendMode": "normal",
+        "params": {
+          "saturation": 0.3
+        }
+      }
+    ]
+  },
+  "creative-duotone": { "creativeEffects": [{ "effect": "duotone" }] },
+  "creative-mosaic": { "creativeEffects": [{ "effect": "mosaic", "size": 72 }] },
+  "creative-print": { "creativeEffects": [{ "effect": "halftone", "size": 90, "angle": 12 }] },
+  "creative-material": { "creativeEffects": [{ "effect": "chrome" }] },
+  "creative-signal": { "creativeEffects": [{ "effect": "scanline", "phase": 0.4, "opacity": 0.7 }] },
+  "creative-finishing": { "creativeEffects": [{ "effect": "color-overlay" }] },
+  "creative-glyphs": { "creativeEffects": [{ "effect": "characters", "glyphs": " .:@█", "size": 95 }] },
+  "creative-ordered-dither": { "creativeEffects": [{ "effect": "dither", "dither": "bayer8", "angle": 17, "phase": 0.3 }] },
+  "creative-diffusion": { "creativeEffects": [{ "effect": "dither", "dither": "floyd", "palette": "custom", "customPalette": ["#201020", "#80a060", "#d0ffc0"], "detail": 0.55 }] },
+  "creative-pixel-sort": { "creativeEffects": [{ "effect": "pixel-sort", "angle": -90, "detail": 0.18, "size": 95 }] },
+  "creative-stack": {
+    "brightness": 0.18,
+    "filmEmulation": "cinestill_800t",
+    "crop": { "x": 0.125, "y": 0.125, "width": 0.75, "height": 0.75 },
+    "creativeEffects": [
+      { "effect": "scanline", "phase": 0.31, "opacity": 0.45 },
+      { "effect": "mosaic", "size": 75, "opacity": 0.6 },
+      { "effect": "color-overlay", "opacity": 0.6 }
+    ]
+  },
+  "raw-defaults": { "linearSource": true },
+  "raw-exposure": { "linearSource": true, "brightness": 4.0, "highlights": -0.25 },
+  "custom-film-then-develop": {
+    "filmEmulation": "kodak_portra_400",
+    "customNodes": [{ "kind": "film", "opacity": 0.65 }, { "kind": "develop", "params": { "brightness": 0.65, "contrast": 0.2 } }, { "kind": "lut", "enabled": false }]
+  },
+  "custom-develop-then-film": {
+    "filmEmulation": "kodak_portra_400",
+    "customNodes": [{ "kind": "develop", "params": { "brightness": 0.65, "contrast": 0.2 } }, { "kind": "film", "opacity": 0.65 }, { "kind": "lut", "enabled": false }]
+  },
+  "custom-lut-glow-and-sharpen": {
+    "lutFile": "native-fixture.cube", "halationRadius": 0.8, "bloomRadius": 0.9, "vignette": 0.2,
+    "customNodes": [{ "kind": "halation", "params": { "halation": 0.4 } }, { "kind": "lut", "params": { "lutStrength": 0.55 } }, { "kind": "sharpen", "params": { "sharpness": 0.45 } }, { "kind": "bloom", "opacity": 0.6, "params": { "bloom": 0.35 } }, { "kind": "optical" }]
+  },
+  "custom-plate-opacity": {
+    "hslBlueSat": 0.4, "brightness": 2.0,
+    "masks": [{ "id": "spot", "name": "Spot", "type": "radial", "blendMode": "ADD", "opacity": 1, "params": { "center": { "x": 0.5, "y": 0.5 }, "radiusX": 0.33, "radiusY": 0.27, "angle": 0, "feather": 0.5, "invert": false } }],
+    "adjustmentLayers": [{ "id": "local", "name": "Local contrast", "maskIds": ["spot"], "opacity": 1, "blendMode": "normal", "params": { "brightness": 0.9 } }],
+    "customNodes": [{ "kind": "oklch-mixer" }, { "kind": "plate-composite", "opacity": 0.5 }, { "kind": "develop", "enabled": false }, { "kind": "lut", "enabled": false }]
+  },
+  "icc-display-p3": { "iccSource": "native-p3.png" },
+  "icc-adobe-rgb": { "iccSource": "native-adobe-rgb.png" },
+  "icc-display-p3-custom": {
+    "iccSource": "native-p3.png", "filmEmulation": "kodak_portra_400",
+    "customNodes": [{ "kind": "film", "opacity": 0.65 }, { "kind": "develop", "params": { "brightness": 0.65 } }, { "kind": "lut", "enabled": false }]
+  }
+}

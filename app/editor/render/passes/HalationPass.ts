@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { dimensionsFromRenderInput, RenderPass } from '../RenderPass';
 import { EditorSettings } from '../../../types/editor';
 import { PRO_RENDER_TARGET_OPTIONS } from '../PingPongTarget';
+import { glowAxis } from '../glowLayout';
 
 const brightPassVertexShader = `
 varying vec2 vUv;
@@ -96,6 +97,7 @@ export class HalationPass extends RenderPass {
 
   private strength: number = 0.0;
   private radius: number = 1.0;
+  private span = new THREE.Vector2(1, 1);
 
   constructor() {
     super();
@@ -146,6 +148,14 @@ export class HalationPass extends RenderPass {
     this.compositeMaterial.uniforms.uStrength.value = this.strength;
   }
 
+  override setViewOffset(fullWidth: number, fullHeight: number, _x: number, _y: number, width: number, height: number) {
+    this.span.set(width / fullWidth, height / fullHeight);
+  }
+
+  override clearViewOffset() {
+    this.span.set(1, 1);
+  }
+
   public render(
     renderer: THREE.WebGLRenderer,
     readBuffer: THREE.WebGLRenderTarget | THREE.Texture,
@@ -163,17 +173,12 @@ export class HalationPass extends RenderPass {
 
     const inputTexture = (readBuffer as THREE.WebGLRenderTarget).texture ?? readBuffer;
 
-    let width = 256;
-    let height = 256;
-    if ((readBuffer as THREE.WebGLRenderTarget).width !== undefined) {
-      width = Math.max(1, Math.floor((readBuffer as THREE.WebGLRenderTarget).width / 4));
-      height = Math.max(1, Math.floor((readBuffer as THREE.WebGLRenderTarget).height / 4));
-    } else {
-      const dimensions = dimensionsFromRenderInput(readBuffer);
-      width = Math.max(1, Math.floor(dimensions.width / 4));
-      height = Math.max(1, Math.floor(dimensions.height / 4));
-    }
-    
+    const dimensions = dimensionsFromRenderInput(readBuffer);
+    const horizontal = glowAxis(this.effectSize.width, this.span.x, dimensions.width, this.radius);
+    const vertical = glowAxis(this.effectSize.height, this.span.y, dimensions.height, this.radius);
+    const { size: width } = horizontal;
+    const { size: height } = vertical;
+
     if (this.renderTargetBright.width !== width || this.renderTargetBright.height !== height) {
       this.renderTargetBright.setSize(width, height);
       this.renderTargetBlurH.setSize(width, height);
@@ -190,7 +195,7 @@ export class HalationPass extends RenderPass {
 
     // 2. Horizontal Blur
     this.blurMaterial.uniforms.tDiffuse.value = this.renderTargetBright.texture;
-    this.blurMaterial.uniforms.uDirection.value.set(this.radius * 2.0, 0.0);
+    this.blurMaterial.uniforms.uDirection.value.set(horizontal.direction, 0.0);
     this.fsQuad.material = this.blurMaterial;
     renderer.setRenderTarget(this.renderTargetBlurH);
     renderer.clear();
@@ -198,7 +203,7 @@ export class HalationPass extends RenderPass {
 
     // 3. Vertical Blur
     this.blurMaterial.uniforms.tDiffuse.value = this.renderTargetBlurH.texture;
-    this.blurMaterial.uniforms.uDirection.value.set(0.0, this.radius * 2.0);
+    this.blurMaterial.uniforms.uDirection.value.set(0.0, vertical.direction);
     this.fsQuad.material = this.blurMaterial;
     renderer.setRenderTarget(this.renderTargetBlurV);
     renderer.clear();

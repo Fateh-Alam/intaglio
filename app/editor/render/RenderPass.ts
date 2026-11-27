@@ -64,6 +64,7 @@ class FullScreenQuad {
 export abstract class RenderPass {
   public enabled: boolean = true;
   protected fsQuad: FullScreenQuad;
+  protected effectSize = { width: 1, height: 1 };
 
   constructor() {
     this.fsQuad = new FullScreenQuad();
@@ -100,6 +101,11 @@ export abstract class RenderPass {
   }
 
   public clearViewOffset() {}
+
+  /** Unscaled cropped document dimensions for effects expressed in photo pixels. */
+  public setEffectSize(width: number, height: number) {
+    this.effectSize = { width, height };
+  }
 
   /** Source passes receive the decoded source texture before each graph run. */
   public setSource(texture: THREE.Texture) {

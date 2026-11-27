@@ -14,6 +14,7 @@ const fragmentShader = `
 uniform sampler2D tDiffuse;
 uniform vec2 uResolution;
 uniform vec2 uFullSize;
+uniform vec2 uEffectSize;
 uniform vec2 uTileOffset;
 uniform vec2 uTileSize;
 uniform float uTime;
@@ -42,8 +43,37 @@ float linearToSrgbScalar(float c) {
   return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
 }
 
-float random(vec2 st) {
-  return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+// Integer hash (PCG) of a pixel: the same on every GPU, so grain is part of
+// the document. fract(sin(x)) differed between browsers and the Mac app.
+uint pcgHash(uint v) {
+  uint state = v * 747796405u + 2891336453u;
+  uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+  return (word >> 22u) ^ word;
+}
+
+float grainNoise(vec2 pixel) {
+  uvec2 p = uvec2(max(pixel, vec2(0.0)));
+  return float(pcgHash(p.x + pcgHash(p.y)) >> 8u) / 16777216.0;
+}
+
+float filteredGrain(vec2 center, vec2 footprint) {
+  float scale = max(footprint.x, footprint.y);
+  if (scale <= 1.001) return grainNoise(floor(center) + uTime);
+  // Average the grain under the output pixel. Fine grain drops away once
+  // the preview can no longer resolve individual grains.
+  if (scale >= 3.0) return 0.5;
+  vec2 first = center - footprint * 0.5;
+  vec2 last = center + footprint * 0.5;
+  vec2 start = floor(first);
+  float sum = 0.0;
+  for (int y = 0; y < 4; y++) {
+    for (int x = 0; x < 4; x++) {
+      vec2 cell = start + vec2(float(x), float(y));
+      vec2 coverage = max(vec2(0.0), min(last, cell + 1.0) - max(first, cell));
+      sum += coverage.x * coverage.y * (grainNoise(cell + uTime) - 0.5);
+    }
+  }
+  return 0.5 + (1.0 - smoothstep(2.0, 3.0, scale)) * sum / (footprint.x * footprint.y);
 }
 
 void main() {
@@ -111,7 +141,7 @@ void main() {
   }
   
   if (uGrainStrength > 0.0) {
-    float noise = random(floor(globalUv * uFullSize) + uTime);
+    float noise = filteredGrain(globalUv * uEffectSize, uEffectSize / uFullSize);
     float luma = getLuma(color);
     
     // Film grain is typically most visible in midtones, present in shadows, 
@@ -156,6 +186,7 @@ export class OpticalFXPass extends RenderPass {
         tDiffuse: { value: null },
         uResolution: { value: new THREE.Vector2(1, 1) },
         uFullSize: { value: new THREE.Vector2(1, 1) },
+        uEffectSize: { value: new THREE.Vector2(1, 1) },
         uTileOffset: { value: new THREE.Vector2(0, 0) },
         uTileSize: { value: new THREE.Vector2(1, 1) },
         uTime: { value: 0.0 },
@@ -243,6 +274,7 @@ export class OpticalFXPass extends RenderPass {
 
     const inputTexture = (readBuffer as THREE.WebGLRenderTarget).texture ?? readBuffer;
     this.material.uniforms.tDiffuse.value = inputTexture;
+    this.material.uniforms.uEffectSize.value.set(this.effectSize.width, this.effectSize.height);
     
     if ((readBuffer as THREE.WebGLRenderTarget).width !== undefined) {
       const width = (readBuffer as THREE.WebGLRenderTarget).width;

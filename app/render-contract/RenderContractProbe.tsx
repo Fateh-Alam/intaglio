@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { DEFAULT_TEXT_OVERLAY, type TextOverlaySettings } from "../components/CinematicTextOverlay";
 import { DEFAULT_SETTINGS } from "../editor/pageTypes";
 import { ExportEngine } from "../editor/render/ExportEngine";
+import { markPhotoTexture } from "../editor/render/sourceTexture";
 import { IntaglioRenderer } from "../editor/render/IntaglioRenderer";
 import { ensureOverlayFonts, renderOverlays } from "../editor/render/overlayCompositor";
 import { measureParity, type ParityMetrics } from "../lib/parityMetrics";
@@ -83,16 +84,65 @@ const overlays: { text: TextOverlaySettings; watermark: WatermarkSettings } = {
 async function pixelsFromBlob(blob: Blob): Promise<Uint8ClampedArray> {
   const image = await createImageBitmap(blob);
   const canvas = document.createElement("canvas");
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
+  canvas.width = image.width;
+  canvas.height = image.height;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("Decode context is unavailable.");
   context.drawImage(image, 0, 0);
   image.close();
-  return context.getImageData(0, 0, WIDTH, HEIGHT).data;
+  return context.getImageData(0, 0, canvas.width, canvas.height).data;
 }
 
-interface ProbeMetrics { combined: ParityMetrics; raster: ParityMetrics; pngRoundTrip: ParityMetrics; decodedRasterOverlay: ParityMetrics; tiled: ParityMetrics; tiledNeutral: ParityMetrics; jpeg90: ParityMetrics; webp90: ParityMetrics; signatures: { png: string; jpeg: string; webp: string }; stages: Record<string, ParityMetrics>; correctness: Record<string, ParityMetrics> }
+interface ProbeMetrics { combined: ParityMetrics; raster: ParityMetrics; pngRoundTrip: ParityMetrics; decodedRasterOverlay: ParityMetrics; tiled: ParityMetrics; tiledNeutral: ParityMetrics; jpeg90: ParityMetrics; webp90: ParityMetrics; signatures: { png: string; jpeg: string; webp: string }; stages: Record<string, ParityMetrics>; correctness: Record<string, ParityMetrics>; effectScale: Record<string, number> }
+
+async function effectScaleChecks(renderer: THREE.WebGLRenderer, graph: IntaglioRenderer, exporter: ExportEngine) {
+  const source = document.createElement("canvas");
+  source.width = 64;
+  source.height = 64;
+  const context = source.getContext("2d")!;
+  const texture = markPhotoTexture(new THREE.CanvasTexture(source));
+  const output: Record<string, number> = {};
+  const preview = document.createElement("canvas");
+  const previewContext = preview.getContext("2d", { willReadFrequently: true })!;
+  try {
+    for (const [name, patch, factors] of [
+      ["bloom", { bloom: 0.65, bloomThreshold: 0.55 }, [2, 4]],
+      ["halation", { halation: 0.65, halationThreshold: 0.55 }, [2, 4]],
+      ["grain", { grain: 0.18 }, [2]],
+    ] as const) {
+      context.fillStyle = name === "grain" ? "#808080" : "#282828";
+      context.fillRect(0, 0, 64, 64);
+      if (name !== "grain") {
+        context.fillStyle = "#f5f5f5";
+        context.fillRect(32, 0, 32, 64);
+      }
+      texture.needsUpdate = true;
+      const settings = { ...DEFAULT_SETTINGS, ...patch };
+      const full = await pixelsFromBlob(await exporter.exportImage(texture, settings, { format: "image/png" }));
+      for (const factor of factors) {
+        const size = 64 / factor;
+        preview.width = preview.height = size;
+        renderer.setRenderTarget(null);
+        renderer.setSize(size, size, false);
+        graph.render({ renderer, sourceTexture: texture, settings, target: null, width: size, height: size });
+        previewContext.drawImage(renderer.domElement, 0, 0);
+        const fit = previewContext.getImageData(0, 0, size, size).data;
+        let error = 0;
+        for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+          let average = 0;
+          for (let dy = 0; dy < factor; dy++) for (let dx = 0; dx < factor; dx++) {
+            average += full[((y * factor + dy) * 64 + x * factor + dx) * 4];
+          }
+          error += Math.abs(average / factor ** 2 - fit[(y * size + x) * 4]);
+        }
+        output[`${name}${factor}`] = error / size ** 2;
+      }
+    }
+    return output;
+  } finally {
+    texture.dispose();
+  }
+}
 
 function identityLut(): THREE.Data3DTexture {
   const size = 17;
@@ -113,7 +163,7 @@ function canvasBlob(canvas: HTMLCanvasElement): Promise<Blob> {
 
 async function runProbe(): Promise<ProbeMetrics> {
   const inputCanvas = sourceCanvas();
-  const sourceTexture = new THREE.CanvasTexture(inputCanvas);
+  const sourceTexture = markPhotoTexture(new THREE.CanvasTexture(inputCanvas));
   const lut = fixtureLut();
   const settings = fixtureSettings(lut);
   const previewCanvas = document.createElement("canvas");
@@ -176,6 +226,8 @@ async function runProbe(): Promise<ProbeMetrics> {
           masks: settings.masks,
         }),
         grain: await tilePair({ ...DEFAULT_SETTINGS, grain: settings.grain }),
+        bloom: await tilePair({ ...DEFAULT_SETTINGS, bloom: 0.6, bloomThreshold: 0.45 }),
+        halation: await tilePair({ ...DEFAULT_SETTINGS, halation: 0.6, halationThreshold: 0.45 }),
       };
       const decodedRaster = await createImageBitmap(rasterPng);
       const decodedComposite = document.createElement("canvas");
@@ -210,6 +262,7 @@ async function runProbe(): Promise<ProbeMetrics> {
         signatures: { png: await signature(png, 8), jpeg: await signature(jpeg90, 3), webp: await signature(webp90, 12) },
         stages: { ...stages, croppedCreative: measureParity(croppedPreview, await exportPixels(croppedCreative)) },
         correctness: { ...correctness, ...await gradingChecks(renderer, sourceTexture, WIDTH, HEIGHT) },
+        effectScale: await effectScaleChecks(renderer, intaglioRenderer, exportEngine),
       };
     } finally {
       exportEngine.dispose();

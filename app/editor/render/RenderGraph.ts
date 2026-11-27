@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { EditorSettings } from "../../types/editor";
+import { hasCreativeEffects } from "../effects/settings";
 import { RenderPass, type RenderInput, dimensionsFromRenderInput, textureFromRenderInput } from "./RenderPass";
 import { PingPongTarget } from "./PingPongTarget";
 import { MaskBlendPass } from "./passes/MaskBlendPass";
@@ -9,6 +10,7 @@ import type { GradeGraph } from "../../types/document";
 import { DisplayTransformPass } from "./passes/DisplayTransformPass";
 import { gradeNodeSettings } from "./gradeNodeSettings";
 import { compileGradeGraph } from "./compileGradeGraph";
+import { cropSize } from "../../lib/cropGeometry";
 
 export interface RenderRuntimeResources {
   gradeGraph?: GradeGraph;
@@ -78,10 +80,15 @@ export class RenderGraph {
   }
 
   render(renderer: THREE.WebGLRenderer, settings: EditorSettings, inputTexture: THREE.Texture, finalTarget?: THREE.WebGLRenderTarget, runtime: RenderRuntimeResources = {}): void {
+    const source = dimensionsFromRenderInput(inputTexture, 1);
+    const reference = cropSize(source.width, source.height, settings.crop);
+    this.globalPasses.forEach((pass) => pass.setEffectSize(reference.width, reference.height));
     if (runtime.gradeGraph) { this.renderSaved(renderer, settings, inputTexture, finalTarget, runtime); return; }
+    // Creative Effects use the unquantized display signal. Final display dither
+    // would perturb palette thresholds and the inputs to error diffusion.
+    (this.globalPasses[5] as DisplayTransformPass).setDither(!runtime.colorOnly && !hasCreativeEffects(settings.creativeEffects));
     const overlay = runtime.maskOverlay;
     this.maskBlendPass?.pruneBrushes(settings.masks);
-    const source = dimensionsFromRenderInput(inputTexture, 1);
     const sourceAspect = source.width / Math.max(source.height, 1);
     this.sourcePasses.forEach((pass) => pass.setSource(inputTexture));
     let accumulator = this.runPasses(renderer, this.sourcePasses, settings, inputTexture);
@@ -118,7 +125,7 @@ export class RenderGraph {
 
   private renderSaved(renderer: THREE.WebGLRenderer, settings: EditorSettings, input: THREE.Texture, target: THREE.WebGLRenderTarget | undefined, runtime: RenderRuntimeResources): void {
     const nodes = compileGradeGraph(runtime.gradeGraph!);
-    (this.globalPasses[5] as DisplayTransformPass).setDither(!runtime.colorOnly);
+    (this.globalPasses[5] as DisplayTransformPass).setDither(!runtime.colorOnly && !hasCreativeEffects(settings.creativeEffects));
     const passes = new Map([
       ['geometry', this.sourcePasses[0]], ['develop', this.platePasses[0]],
       ['curve', this.platePasses[1]], ['oklch-mixer', this.platePasses[2]],

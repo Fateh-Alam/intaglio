@@ -33,7 +33,7 @@ export function PhotoCanvas() {
   const {
     settings, imageSrc, rawSource, histogram, setHistogram, textOverlay, setTextOverlay, watermark,
     performanceMode, compositionGuide, activePlateId, imageBounds, setImageBounds, gridOverlayMode,
-    roiMode, sourceROI, setSourceROI, rawProgress, cancelRawDecode,
+    roiMode, sourceROI, setSourceROI, rawProgress, cancelRawDecode, nativeSnapshotProvider,
   } = editor;
 
   const [loupe, setLoupe] = useState<LoupeState>(FIT_LOUPE);
@@ -75,6 +75,7 @@ export function PhotoCanvas() {
   const pan = layout?.pan ?? { x: 0, y: 0 };
   const view = useMemo(() => layout ? { zoom, cx: layout.cx, cy: layout.cy, pan: layout.pan } : undefined, [layout, zoom]);
   const currentScale = zoomed ? loupe.scale! : null;
+  const maskClip = zoomed && layout ? `inset(${layout.window.y0 * 100}% ${(1 - layout.window.x1) * 100}% ${(1 - layout.window.y1) * 100}% ${layout.window.x0 * 100}%)` : undefined;
 
   // A new photo or a new crop starts fitted.
   const cropKey = `${settings.crop.x},${settings.crop.y},${settings.crop.width},${settings.crop.height}`;
@@ -256,7 +257,7 @@ export function PhotoCanvas() {
 
   return (
     <div
-      className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden transition-colors duration-300"
+      className="etch-photo-surface relative flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden transition-colors duration-300"
       style={{ background: SURROUND_COLORS[shell.surround] }}
       ref={surfaceRef}
       onPointerDownCapture={onPointerDownCapture}
@@ -276,6 +277,8 @@ export function PhotoCanvas() {
         >
           <CinematicEditor
             gradeGraph={gradeGraph}
+            nativeSurround={SURROUND_COLORS[shell.surround]}
+            snapshotProvider={displaySettings === settings ? nativeSnapshotProvider : undefined}
             settings={displaySettings}
             imageUrl={imageSrc}
             rawSource={rawSource}
@@ -304,7 +307,7 @@ export function PhotoCanvas() {
             >
               {cropping && <CropOverlay crop={crop} />}
               {masksMode && !shell.preview && (
-                <div className={isFullCrop(displayedCrop) ? "absolute inset-0" : "absolute inset-0 overflow-hidden"}>
+                <div className={isFullCrop(displayedCrop) ? "absolute inset-0" : "absolute inset-0 overflow-hidden"} style={{ clipPath: maskClip }}>
                   <div className="absolute" style={{
                     left: -imageBounds.width * displayedCrop.x / displayedCrop.width,
                     top: -imageBounds.height * displayedCrop.y / displayedCrop.height,
@@ -313,7 +316,7 @@ export function PhotoCanvas() {
                   }}>
                     <MaskCanvasTools
                       size={{ width: imageBounds.width / displayedCrop.width, height: imageBounds.height / displayedCrop.height }}
-                      sampleColor={maskColorSamplerRef} crop={displayedCrop}
+                      sampleColor={maskColorSamplerRef} crop={displayedCrop} zoom={zoom}
                     />
                   </div>
                 </div>

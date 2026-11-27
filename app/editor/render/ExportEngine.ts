@@ -7,6 +7,8 @@ import { ensureOverlayFonts, renderOverlays } from './overlayCompositor';
 import { encodeCanvasWasm } from './wasmCodecs';
 import { hasCreativeEffects } from '../effects/settings';
 import { cropSize } from '../../lib/cropGeometry';
+import { glowPadding } from './glowLayout';
+import { dimensionsFromRenderInput } from './RenderPass';
 
 export interface ExportOptions {
   gradeGraph?: import("../../types/document").GradeGraph;
@@ -153,8 +155,12 @@ export class ExportEngine {
     stitchCanvas.height = totalHeight;
     const stitchCtx = stitchCanvas.getContext('2d')!;
 
-    const effectOverlap = Math.min(128, Math.max(32, Math.ceil(Math.max(totalWidth, totalHeight) * 0.002)));
-    const coreSize = Math.max(1, maxSize - effectOverlap * 2);
+    const baseline = Math.min(128, Math.max(32, Math.ceil(Math.max(totalWidth, totalHeight) * 0.002)));
+    const source = dimensionsFromRenderInput(sourceTexture);
+    const { width, height } = cropSize(source.width, source.height, settings.crop);
+    const glow = glowPadding(settings, options.gradeGraph) * Math.max(totalWidth / width, totalHeight / height);
+    const effectOverlap = Math.min(Math.max(0, Math.floor((maxSize - 4) / 8) * 4), Math.ceil(Math.max(baseline, glow) / 4) * 4);
+    const coreSize = Math.max(1, Math.floor((maxSize - effectOverlap * 2) / 4) * 4);
     const tilesX = Math.ceil(totalWidth / coreSize);
     const tilesY = Math.ceil(totalHeight / coreSize);
 

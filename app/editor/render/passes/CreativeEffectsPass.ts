@@ -11,6 +11,7 @@ import { finishing } from "../creative/finishing";
 import { studio } from "../creative/studio";
 import { ditherRgba, sortRgba } from "../creative/raster";
 import { effectFragment, fullScreenVertex } from "../creative/shader";
+import { createGlyphCanvas } from "../creative/glyphAtlas";
 
 const shaders: Record<EffectId, string> = { ...print, ...geometric, ...signal, ...materials, ...finishing, ...studio };
 const copyFragment = `
@@ -79,27 +80,7 @@ export class CreativeEffectsPass extends RenderPass {
   private atlas(ramp: string): THREE.Texture {
     const saved = this.atlases.get(ramp);
     if (saved) return saved;
-    const glyphs = Array.from(ramp);
-    const glyphWidth = 40, glyphHeight = 56;
-    const canvas = document.createElement("canvas");
-    canvas.width = glyphWidth * glyphs.length;
-    canvas.height = glyphHeight;
-    const context = canvas.getContext("2d")!;
-    context.fillStyle = "#000";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#fff";
-    context.font = "bold 46px monospace";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    glyphs.forEach((glyph, index) => {
-      context.save();
-      context.beginPath();
-      context.rect(index * glyphWidth, 0, glyphWidth, glyphHeight);
-      context.clip();
-      context.fillText(glyph, (index + 0.5) * glyphWidth, glyphHeight * 0.51, glyphWidth);
-      context.restore();
-    });
-    const atlas = new THREE.CanvasTexture(canvas);
+    const atlas = new THREE.CanvasTexture(createGlyphCanvas(ramp));
     atlas.minFilter = THREE.LinearFilter;
     atlas.generateMipmaps = false;
     this.atlases.set(ramp, atlas);

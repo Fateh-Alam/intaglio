@@ -349,3 +349,15 @@ body {
   font-weight: 400;
   letter-spacing: -0.015em;
 }
+
+/* The Mac editor's photo is drawn by the Metal view underneath WKWebView. */
+html[data-etch-metal],
+html[data-etch-metal] body,
+html[data-etch-metal] .ui-root {
+  background: transparent;
+}
+
+html[data-etch-metal] .etch-photo-surface {
+  background: transparent !important;
+  transition: none;
+}

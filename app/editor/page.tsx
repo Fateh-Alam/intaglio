@@ -18,15 +18,24 @@ import { TopBar } from "./shell/TopBar";
 import { PhotoCanvas } from "./shell/PhotoCanvas";
 import { LeftPanel, RightPanel } from "./shell/SidePanels";
 import { EditorModals } from "./shell/EditorModals";
+import { useNativeViewportBenchmark } from "./render/nativeViewportBenchmark";
+import { isDesktopApp } from "../lib/platform";
 import { FloatingHistogram } from "./develop/FloatingHistogram";
+import { createDefaultGradeGraph } from "../lib/gradeGraph";
+import { moveGradeNode } from "./render/compileGradeGraph";
 
 function EditorLayout() {
   const {
     showMobileWarning, setShowMobileWarning, imageSrc, setImageSrc, openImagePicker, openProjectPicker, openDroppedFile, setSettings,
-    setImageName, setImageInfo, setAssetMetadata, isCommandBarOpen, setIsCommandBarOpen, appCommands, isShortcutHelpOpen,
-    setIsShortcutHelpOpen, handleUndo, handleRedo,
+    setImageName, setImageInfo, setAssetMetadata, isCommandBarOpen, setIsCommandBarOpen, appCommands, isShortcutHelpOpen, updateSettings,
+    setIsShortcutHelpOpen, handleUndo, handleRedo, setActivePlateId, setGradeGraph,
   } = useEditorState();
   const shell = useShell();
+  useNativeViewportBenchmark(imageSrc, setSettings, (brightness) => updateSettings({ brightness }, "Exposure"), () => {
+    setActivePlateId("lift");
+    shell.setRightMode("masks");
+    shell.setShowMaskOverlay(true);
+  }, () => setGradeGraph(moveGradeNode(createDefaultGradeGraph(), "curve", 1)));
   const commands = [...appCommands, ...useShellCommands()];
   useShellShortcuts(Boolean(imageSrc) && !isCommandBarOpen && !isShortcutHelpOpen);
   useDesktopBridge({
@@ -50,8 +59,14 @@ function EditorLayout() {
   React.useEffect(() => {
     if (sampleRequested.current || imageSrc) return;
     sampleRequested.current = true;
-    if (new URLSearchParams(window.location.search).has("sample")) openSample();
-  }, [imageSrc, openSample]);
+    const query = new URLSearchParams(window.location.search);
+    const profile = query.get("etchViewportBench");
+    if (isDesktopApp() && (profile === "large" || profile === "large-custom")) {
+      setImageSrc(profile === "large" ? "/parity/viewport-bench-24mp.jpg" : "/parity/viewport-bench-24mp-p3.jpg");
+      setImageName("Viewport benchmark");
+      setImageInfo({ width: 4382, height: 5477, fileType: "image/jpeg" });
+    } else if (query.has("sample")) openSample();
+  }, [imageSrc, openSample, setImageInfo, setImageName, setImageSrc]);
 
   if (!imageSrc) {
     return (

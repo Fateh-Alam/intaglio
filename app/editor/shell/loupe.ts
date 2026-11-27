@@ -115,7 +115,7 @@ const TILE_MARGIN = 64;
  * Creative Effects can read anywhere in the frame, so they render the whole
  * frame at the needed resolution instead of a tile.
  */
-export function planLoupeRender(layout: LoupeLayout, output: Size, dpr: number, creative: boolean, maxSize: number): LoupeRenderPlan {
+export function planLoupeRender(layout: LoupeLayout, output: Size, dpr: number, creative: boolean, maxSize: number, glowPadding = 0): LoupeRenderPlan {
   const { window } = layout;
   const neededResolution = Math.min(1, (layout.visible.width * dpr) / Math.max(1e-6, (window.x1 - window.x0) * output.width));
   if (creative) {
@@ -133,10 +133,12 @@ export function planLoupeRender(layout: LoupeLayout, output: Size, dpr: number, 
   const resolution = neededResolution;
   const fullWidth = Math.max(1, Math.round(output.width * resolution));
   const fullHeight = Math.max(1, Math.round(output.height * resolution));
-  const left = Math.max(0, Math.floor(window.x0 * fullWidth) - TILE_MARGIN);
-  const top = Math.max(0, Math.floor(window.y0 * fullHeight) - TILE_MARGIN);
-  const right = Math.min(fullWidth, Math.ceil(window.x1 * fullWidth) + TILE_MARGIN);
-  const bottom = Math.min(fullHeight, Math.ceil(window.y1 * fullHeight) + TILE_MARGIN);
+  const margin = Math.max(TILE_MARGIN, Math.ceil(glowPadding * resolution));
+  const align = glowPadding > 0 ? 4 : 1;
+  const left = Math.max(0, Math.floor((window.x0 * fullWidth - margin) / align) * align);
+  const top = Math.max(0, Math.floor((window.y0 * fullHeight - margin) / align) * align);
+  const right = Math.min(fullWidth, Math.ceil((window.x1 * fullWidth + margin) / align) * align);
+  const bottom = Math.min(fullHeight, Math.ceil((window.y1 * fullHeight + margin) / align) * align);
   const width = Math.max(1, Math.min(maxSize, right - left));
   const height = Math.max(1, Math.min(maxSize, bottom - top));
   return {

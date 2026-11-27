@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { IconX, IconLayoutGrid } from "@tabler/icons-react";
 import { useEditorState } from "../hooks/useEditorState";
 import { ExportEngine } from "../render/ExportEngine";
+import { loadImageTexture } from "../render/sourceTexture";
 import { EditorSettings } from "../../types/editor";
 import { cropSize } from "../../lib/cropGeometry";
 
@@ -55,12 +56,9 @@ export function ProofSheetModal() {
         engineRef.current = new ExportEngine();
       }
 
-      const textureLoader = new THREE.TextureLoader();
       let texture: THREE.Texture;
       try {
-        texture = await new Promise((resolve, reject) => {
-          textureLoader.load(imageSrc || "", resolve, undefined, reject);
-        });
+        texture = await loadImageTexture(imageSrc || "");
       } catch {
         if (isActive) setIsGenerating(false);
         return;

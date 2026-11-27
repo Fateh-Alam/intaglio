@@ -36,11 +36,12 @@ void main() {
   );
   vec2 uv = sourceUv(uncropUv(globalUv, uCrop), uAspect, uRotation, uZoom,
     uAnamorphic, uKeystoneH, uKeystoneV, uLensDistortion);
-  if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
-    gl_FragColor = vec4(0.0);
-  } else {
-    gl_FragColor = texture2D(tDiffuse, uv);
-  }
+  // Sample unconditionally: inside an if, pixels on the photo's edge have no
+  // valid neighbours for mip selection, and WebKit then reads the smallest mip
+  // (a smear of the whole photo's average colour) along the boundary.
+  vec4 sampled = texture2D(tDiffuse, uv);
+  bool outside = any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)));
+  gl_FragColor = outside ? vec4(0.0) : sampled;
 }`;
 
 export class GeometryPass extends RenderPass {

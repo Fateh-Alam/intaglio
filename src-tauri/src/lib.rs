@@ -145,11 +145,23 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             native_viewport::viewport_load,
             #[cfg(target_os = "macos")]
+            native_viewport::viewport_load_linear,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_set_comparison,
+            #[cfg(target_os = "macos")]
             native_viewport::viewport_update,
             #[cfg(target_os = "macos")]
             native_viewport::viewport_close,
             #[cfg(target_os = "macos")]
             native_viewport::viewport_log,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_set_lut,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_sample,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_capture_snapshot,
+            #[cfg(target_os = "macos")]
+            native_viewport::viewport_pick_mask_color,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Etch");

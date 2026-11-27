@@ -14,6 +14,8 @@ import CinematicTextOverlay, {
 } from "./CinematicTextOverlay";
 import RenderedOverlayCanvas from "./RenderedOverlayCanvas";
 import type { MaskColorSampler } from "../lib/maskGeometry";
+import { useNativeViewport, type NativeSnapshotProvider } from "../editor/render/nativeViewport";
+import { nativeGradePath } from "../editor/render/nativeGrade";
 import { cropSize, fitPhoto } from "../lib/cropGeometry";
 import type {
   CompositionGuide,
@@ -43,6 +45,8 @@ export default function CinematicEditor({
   rawSource = null,
   view,
   onOutputSize,
+  nativeSurround = "#141415",
+  snapshotProvider,
 }: {
   /**
    * Loupe view. The parent zooms its DOM overlays with a CSS transform about
@@ -50,6 +54,8 @@ export default function CinematicEditor({
    * transform and renders real image pixels for the visible region instead.
    */
   view?: LoupeView & { pan: { x: number; y: number } };
+  nativeSurround?: string;
+  snapshotProvider?: React.RefObject<NativeSnapshotProvider | null>;
   onOutputSize?: (width: number, height: number) => void;
   gradeGraph?: import("../types/document").GradeGraph;
   settings: EditorSettings;
@@ -80,6 +86,15 @@ export default function CinematicEditor({
   }, [performanceMode, zoomed]);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const viewportRef = React.useRef<HTMLDivElement>(null);
+  const nativeGrade = useMemo(() => {
+    try { return nativeGradePath(gradeGraph); } catch { return undefined; }
+  }, [gradeGraph]);
+  const { renderer, dimensions: nativeDimensions } = useNativeViewport({
+    enabled: nativeGrade !== undefined,
+    imageUrl, rawSource, element: viewportRef, settings, grade: nativeGrade ?? null, performanceMode, surround: nativeSurround,
+    maskPlate: maskOverlayPlateId, picking: pickingMaskColor, showClipping, split, maskColorSampler: maskColorSamplerRef, snapshotProvider, view, onStats: onStatsUpdate,
+  });
   const { crop } = settings;
 
   // Image bounds drive every DOM overlay (brush, guides, compare). Recompute
@@ -104,32 +119,42 @@ export default function CinematicEditor({
       setImageBounds(bounds);
       onBoundsChange?.(bounds);
     };
-    const img = new Image();
-    img.onload = () => {
-      const dimensions = cropSize(img.naturalWidth, img.naturalHeight, crop);
+    const updateAspect = (width: number, height: number) => {
+      const dimensions = cropSize(width, height, crop);
       aspect = dimensions.width / dimensions.height;
+      if (nativeDimensions) onOutputSize?.(dimensions.width, dimensions.height);
       measure();
     };
-    img.src = imageUrl;
+    if (nativeDimensions) {
+      updateAspect(...nativeDimensions);
+    } else if (renderer === "webgl") {
+      const img = new Image();
+      img.onload = () => { if (!cancelled) updateAspect(img.naturalWidth, img.naturalHeight); };
+      img.src = imageUrl;
+    }
     const observer = new ResizeObserver(measure);
     observer.observe(container);
     return () => {
       cancelled = true;
       observer.disconnect();
     };
-  }, [crop, imageUrl, onBoundsChange]);
+  }, [crop, imageUrl, onBoundsChange, onOutputSize, nativeDimensions, renderer]);
 
   return (
     <div
       id="cinematic-editor-container"
       ref={containerRef}
+      data-renderer={renderer}
+      data-zoom={view?.zoom ?? 1}
+      data-mask-overlay={maskOverlayPlateId ?? undefined}
       className="relative h-full w-full overflow-hidden"
     >
       <div
         className="absolute inset-0"
+        ref={viewportRef}
         style={zoomed && view ? { transform: `scale(${1 / view.zoom}) translate(${-view.pan.x}px, ${-view.pan.y}px)`, transformOrigin: "center" } : undefined}
       >
-      <Canvas
+      {renderer === "webgl" && <Canvas
         id="main-editor-canvas"
         flat
         frameloop="demand"
@@ -153,7 +178,7 @@ export default function CinematicEditor({
             onOutputSize={onOutputSize}
           />
         </Suspense>
-      </Canvas>
+      </Canvas>}
       </div>
 
       {imageBounds && (
